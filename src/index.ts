@@ -60,5 +60,40 @@ server.tool(
   }
 );
 
+// get_schema tool
+server.tool(
+  'get_schema',
+  'Get a Horreum schema by id or name.',
+  {
+    id: z.number().int().positive().optional(),
+    name: z.string().optional(),
+  },
+  async (args) => {
+    if (!args.id && !args.name) {
+      return {
+        content: [
+          { type: 'text', text: 'Provide id or name.' },
+        ],
+        isError: true,
+      };
+    }
+    const env = await loadEnv();
+    const client = createHorreumClient({
+      baseUrl: env.HORREUM_BASE_URL,
+      token: env.HORREUM_TOKEN ?? undefined,
+      timeoutMs: env.HORREUM_TIMEOUT ?? undefined,
+    });
+    const res = await client.getSchema({ id: args.id, name: args.name });
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(res, null, 2),
+        },
+      ],
+    };
+  }
+);
+
 const transport = new StdioServerTransport();
 await server.connect(transport);

@@ -73,6 +73,18 @@ export function createHorreumClient(config: HorreumClientConfig) {
       }
       return { tests: [] };
     },
+    async getSchema(params: { id?: number | undefined; name?: string | undefined }): Promise<unknown> {
+      if (params.id != null) {
+        const path = `/api/schema/${params.id}`;
+        return request<unknown>(path);
+      }
+      if (params.name) {
+        const q = new URLSearchParams({ name: params.name });
+        const path = `/api/schema?${q.toString()}`;
+        return request<unknown>(path);
+      }
+      throw new Error('getSchema: either id or name must be provided');
+    },
   };
 }
 
