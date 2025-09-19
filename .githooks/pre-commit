@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# Pre-commit hook script
+#
+# This script is run by 'git commit' command before creating a commit.
+#
+# To enable this hook, run the following command in your terminal:
+# git config core.hooksPath .githooks
+#
+
+# --- Run secretlint ---
+echo "Running secret scan..."
+npm run lint:secrets
+if [ $? -ne 0 ]; then
+    echo "Secret scan failed. Aborting commit."
+    exit 1
+fi
+echo "Secret scan passed."
+
+# --- Run linter and type-checker ---
+echo "Running code quality checks..."
+npm run check
+if [ $? -ne 0 ]; then
+    echo "Code quality checks failed. Aborting commit."
+    exit 1
+fi
+echo "Code quality checks passed."
+
+exit 0

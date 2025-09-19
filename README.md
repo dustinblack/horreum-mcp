@@ -34,6 +34,18 @@ Connect from an MCP client and call the `ping` tool.
 - `npm run format`
 - `npm run build`
 
+### Git Hooks
+
+This repository includes a pre-commit hook to ensure code quality and security.
+The hook runs `secretlint` to prevent committing secrets and `eslint` for code
+style.
+
+To enable the hook, run the following command in your terminal:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ### Generate Horreum OpenAPI client (optional)
 
 Provide an OpenAPI JSON URL (typically `<HORREUM_BASE_URL>/q/openapi?format=json`)
