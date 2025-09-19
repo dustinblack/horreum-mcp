@@ -1,7 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { Env } from '../config/env.js';
-import type { FetchLike } from '../horreum/http.js';
 import { OpenAPI } from '../horreum/generated/core/OpenAPI.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
@@ -9,7 +8,8 @@ import { RunService } from '../horreum/generated/services/RunService.js';
 
 type RegisterOptions = {
   getEnv: () => Promise<Env>;
-  fetchImpl?: FetchLike | undefined;
+  // Minimal fetch-like signature for tests; real runtime uses global fetch
+  fetchImpl?: ((input: any, init?: any) => Promise<any>) | undefined;
 };
 
 export async function registerTools(
