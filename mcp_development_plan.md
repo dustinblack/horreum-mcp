@@ -155,7 +155,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - `[c]` cancelled
 
 4. Current execution directive
-   - Development is authorized for Phase 1 implementation. Proceed with scaffolding and read tools.
+   - Development is authorized for Phase 2 and Phase 3 hardening.
+     Proceed with optional `create_test` and observability (logging/metrics).
 
 5. Status checklist
    - Phase 1 — Planning
@@ -170,6 +171,10 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - Phase 2 — Write tools
      - [x] Implement `upload_run` with basic validation and smoke tests (2025-09-19)
      - [ ] Optional: `create_test` and related utilities (pending)
+   - Phase 3 — Observability & Hardening
+     - [x] Implement client-side retries/backoff and rate limiting (2025-09-19)
+     - [ ] Add structured logging with correlation IDs (pending)
+     - [ ] Optional: metrics/tracing (pending)
 
 6. How to update this document
    1. Review open tasks and repository state (commits, CI, issues).
@@ -178,6 +183,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-19 — Implemented rate-limited fetch with retries/backoff; exposed MCP
+     resources for tests, schemas, and runs; updated README with tools/resources.
    - 2025-09-19 — Implemented read tools (`list_tests`, `get_schema`, `list_runs`) using generated OpenAPI client; added `upload_run` with smoke test; CI runs all smokes.
    - 2025-09-19 — Completed scaffolding, env validation, ESLint/Prettier, CI, and npm scripts.
    - 2025-09-19 — Authorized Phase 1 implementation and marked scaffolding as in progress.
