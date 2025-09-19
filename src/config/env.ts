@@ -1,0 +1,39 @@
+import { z } from "zod";
+
+const EnvSchema = z.object({
+  HORREUM_BASE_URL: z.string().url({ message: "HORREUM_BASE_URL must be a valid URL" }),
+  HORREUM_TOKEN: z.string().min(1).optional(),
+  HORREUM_RATE_LIMIT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(1000)
+    .default(10),
+  HORREUM_TIMEOUT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(300000)
+    .default(30000),
+  HORREUM_API_VERSION: z.string().optional().default("latest"),
+});
+
+export type Env = z.infer<typeof EnvSchema>;
+
+export async function loadEnv(): Promise<Env> {
+  // dotenv is optional; only used in dev. In production, rely on real env vars.
+  try {
+    const { config } = await import("dotenv");
+    config();
+  } catch {
+    // ignore if dotenv is not present
+  }
+  const parsed = EnvSchema.safeParse(process.env);
+  if (!parsed.success) {
+    const details = parsed.error.issues
+      .map((i) => `${i.path.join(".")}: ${i.message}`)
+      .join(", ");
+    throw new Error(`Invalid environment: ${details}`);
+  }
+  return parsed.data;
+}
