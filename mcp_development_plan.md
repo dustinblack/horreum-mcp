@@ -1,5 +1,5 @@
 # Original prompt
-I would like to start a project to build a generalized MCP server for Horreum. Help me devise a strategy for developing and testing this project. Suggest what language and standards we should use.                    │
+I would like to start a project to build a generalized Model Context Protocol server for Horreum. Help me devise a strategy for developing and testing this project. Suggest what language and standards we should use.
 
 # Horreum MCP Server: Development and Testing Strategy
 
@@ -150,7 +150,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - `[c]` cancelled
 
 4. Current execution directive
-   - Development is paused until explicitly approved by the user. Plan edits are allowed.
+   - Development is authorized for Phase 1 implementation. Proceed with scaffolding and read tools.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -158,7 +158,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Confirm MCP server scope and TypeScript stack (2025-09-19)
      - [x] Embed AI maintenance instructions and status tracking (2025-09-19)
    - Phase 1 — Implementation (read-first)
-     - [ ] Scaffold TypeScript MCP server project (pending)
+     - [ip] Scaffold TypeScript MCP server project (in progress)
      - [ ] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional auth support (pending)
      - [ ] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (pending)
      - [ ] Set up CI (Node 20: lint, build, test, license) (pending)
@@ -173,6 +173,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-19 — Authorized Phase 1 implementation and marked scaffolding as in progress.
    - 2025-09-19 — Added OpenAPI client generation wrapper, MCP resource exposure, cancellation/streaming behavior, CI optional live smoke test, SemVer and schema deprecation policy, and Quickstart with `.env` example.
    - 2025-09-19 — Added support for optional authentication: read tools work in anonymous mode, write tools require auth, updated configuration to make HORREUM_TOKEN optional, enhanced error handling and logging for auth modes.
    - 2025-09-19 — Enhanced plan with specific technical details: API versioning support, tool discovery implementation, concrete rate limiting values (10 req/sec), error handling timeouts (30s), and expanded configuration variables.

@@ -2,6 +2,8 @@
 - The Horreum API spec is at: https://horreum.hyperfoil.io/openapi/
 - Horrem code is part of the Hyperfoil project at: https://github.com/Hyperfoil
 - All git commits should include the tag "AI-assisted-by: <AI agent model(s)>" when any AI agents were used for the development work.
+- All git commit messages should be thorough and detailed
+- All code should be well-documented
 
 ## Horreum/Hyperfoil Development Standards
 
