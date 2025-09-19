@@ -6,6 +6,7 @@
 - All code should be well-documented.
 - The README.md and any other documentation files should be kept up-to-date with changes.
 - Try to maintain a line length of 88 characters max in all code and markdown files.
+- When testing the 'horreum-mcp' project, use the local '.env' file for configuration and real-world testing scenarios.
 
 ## Horreum/Hyperfoil Development Standards
 
