@@ -12,7 +12,8 @@
     "prepare": "npm run build",
     "lint": "eslint 'src/**/*.ts'",
     "format": "prettier --write .",
-    "check": "npm run typecheck && npm run lint"
+    "check": "npm run typecheck && npm run lint",
+    "smoke": "node scripts/smoke-ping.mjs"
   },
   "repository": {
     "type": "git",
