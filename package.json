@@ -16,7 +16,8 @@
     "smoke": "node scripts/smoke-ping.mjs",
     "smoke:tests": "node scripts/smoke-list-tests.mjs",
     "smoke:schema": "node scripts/smoke-get-schema.mjs",
-    "gen:api": "openapi --useOptions --useUnionTypes --exportCore false --exportServices true --exportModels true --client fetch --output src/horreum/generated"
+    "gen:api": "openapi --useOptions --useUnionTypes --exportServices true --exportModels true --client fetch --output src/horreum/generated",
+    "postgen:api": "node scripts/fix-generated-extensions.mjs"
   },
   "repository": {
     "type": "git",
