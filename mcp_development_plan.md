@@ -1,4 +1,5 @@
 # Original prompt
+
 I would like to start a project to build a generalized Model Context Protocol server for Horreum. Help me devise a strategy for developing and testing this project. Suggest what language and standards we should use.
 
 # Horreum MCP Server: Development and Testing Strategy
@@ -9,11 +10,11 @@ This document outlines a strategy for developing and testing a Model Context Pro
 
 To align with the MCP ecosystem and integrate with Horreum via its HTTP APIs, the project will use the following stack:
 
-*   **Language**: TypeScript (Node.js 20 LTS)
-*   **MCP SDK**: `@modelcontextprotocol/sdk` (server)
-*   **Package Manager**: `pnpm` (or `npm`)
-*   **Tooling**: ESLint, Prettier, tsup (bundling), ts-node (dev)
-*   **Licensing**: Apache 2.0
+- **Language**: TypeScript (Node.js 20 LTS)
+- **MCP SDK**: `@modelcontextprotocol/sdk` (server)
+- **Package Manager**: `pnpm` (or `npm`)
+- **Tooling**: ESLint, Prettier, tsup (bundling), ts-node (dev)
+- **Licensing**: Apache 2.0
 
 Note: We will still adhere to Horreum/Hyperfoil contribution expectations for licensing and general code quality, while choosing TypeScript for first-class MCP support.
 
@@ -22,22 +23,25 @@ Note: We will still adhere to Horreum/Hyperfoil contribution expectations for li
 The development will follow an iterative, phased approach with a read-first priority: implement and stabilize read-oriented tools before write-capable tools.
 
 **Phase 1: Core MCP Server and Read Tools**
+
 1.  **Project Scaffolding**: Initialize a TypeScript project and MCP server using the official SDK.
 2.  **MCP Manifest**: Define server metadata and register initial tools/resources.
 3.  **Read Tools (Horreum API)**: Implement tools that fetch data from Horreum (optional token-based auth):
-    *   `list_tests`: List Horreum tests with pagination and filters.
-    *   `get_schema`: Retrieve a Horreum schema by name or ID.
-    *   `list_runs`: List runs for a test with pagination and time filters.
+    - `list_tests`: List Horreum tests with pagination and filters.
+    - `get_schema`: Retrieve a Horreum schema by name or ID.
+    - `list_runs`: List runs for a test with pagination and time filters.
 4.  **Config & Auth**: Use environment variables for `HORREUM_BASE_URL` and optional `HORREUM_TOKEN` (omit for anonymous access).
 5.  **Horreum Client Generation**: Generate a TypeScript client from the Horreum OpenAPI spec (e.g., via `openapi-typescript-codegen`) and wrap it with a small HTTP layer that centralizes headers (`Accept`, auth), timeouts, retries/backoff, and client-side rate limiting.
 
 **Phase 2: Write Tools and Uploads**
+
 1.  **upload_run**: Upload a run/dataset into a target test, with validation.
 2.  **create_test (optional)**: Create a new test with a given schema reference.
 3.  **Idempotency & Safety**: Support dry-run mode and idempotency keys where applicable.
 4.  **Error Scenarios**: Handle specific error cases (network timeouts: 30s, auth failures: clear messaging, Horreum unavailable: graceful degradation).
 
 **Phase 3: Observability and Hardening**
+
 1.  **Logging/Tracing**: Structured logs; optional OpenTelemetry.
 2.  **Rate Limits/Backoff**: Handle Horreum API backoff and error propagation.
 3.  **Caching (optional)**: In-memory cache for hot reads with TTL.
@@ -66,6 +70,7 @@ A multi-layered testing approach will be implemented, following the read-first p
 ### 5. Data Model and Persistence
 
 No database is required for the MCP server. Optional components:
+
 1. Caching: In-memory LRU cache (TTL) for frequent read endpoints.
 2. Config: Environment-based configuration with validation at startup.
 
@@ -158,10 +163,10 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Confirm MCP server scope and TypeScript stack (2025-09-19)
      - [x] Embed AI maintenance instructions and status tracking (2025-09-19)
    - Phase 1 — Implementation (read-first)
-     - [ip] Scaffold TypeScript MCP server project (in progress)
+     - [x] Scaffold TypeScript MCP server project (2025-09-19)
      - [ ] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional auth support (pending)
-     - [ ] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (pending)
-     - [ ] Set up CI (Node 20: lint, build, test, license) (pending)
+     - [x] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (2025-09-19)
+     - [x] Set up CI (Node 20: lint, build, type-check) (2025-09-19)
    - Phase 2 — Write tools
      - [ ] Implement `upload_run` with validation and dry-run (pending)
      - [ ] Optional: `create_test` and related utilities (pending)
@@ -173,6 +178,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-19 — Completed scaffolding, env validation, ESLint/Prettier, CI, and npm scripts.
    - 2025-09-19 — Authorized Phase 1 implementation and marked scaffolding as in progress.
    - 2025-09-19 — Added OpenAPI client generation wrapper, MCP resource exposure, cancellation/streaming behavior, CI optional live smoke test, SemVer and schema deprecation policy, and Quickstart with `.env` example.
    - 2025-09-19 — Added support for optional authentication: read tools work in anonymous mode, write tools require auth, updated configuration to make HORREUM_TOKEN optional, enhanced error handling and logging for auth modes.
@@ -199,8 +205,9 @@ HORREUM_API_VERSION=latest
 ```
 
 3. Install and run (development)
-   - Install dependencies: `pnpm install`
-   - Start the server in dev mode: `pnpm dev`
+   - Install dependencies: `npm ci`
+   - Build: `npm run build`
+   - Start the server: `npm start`
 
 4. Exercise with an MCP client
    - Use your preferred MCP client (e.g., `mcp-cli`) to connect to the server.
