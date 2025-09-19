@@ -4,7 +4,7 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 
 export default [
-  { ignores: ['build/**', 'node_modules/**'] },
+  { ignores: ['build/**', 'node_modules/**', 'src/horreum/generated/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
