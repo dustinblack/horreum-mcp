@@ -31,7 +31,7 @@ The development will follow an iterative, phased approach with a read-first prio
     - `get_schema`: Retrieve a Horreum schema by name or ID.
     - `list_runs`: List runs for a test with pagination and time filters.
 4.  **Config & Auth**: Use environment variables for `HORREUM_BASE_URL` and optional `HORREUM_TOKEN` (omit for anonymous access).
-5.  **Horreum Client Generation**: Generate a TypeScript client from the Horreum OpenAPI spec (e.g., via `openapi-typescript-codegen`) and wrap it with a small HTTP layer that centralizes headers (`Accept`, auth), timeouts, retries/backoff, and client-side rate limiting.
+5.  **Horreum Client Generation**: Generate a TypeScript client from the Horreum OpenAPI spec (via `openapi-typescript-codegen`) and use it directly. Centralize auth/headers via the generated `OpenAPI` config; optional retries/backoff and rate limiting remain in scope.
 
 **Phase 2: Write Tools and Uploads**
 
@@ -164,11 +164,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Embed AI maintenance instructions and status tracking (2025-09-19)
    - Phase 1 — Implementation (read-first)
      - [x] Scaffold TypeScript MCP server project (2025-09-19)
-     - [ ] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional auth support (pending)
+     - [x] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional auth support (2025-09-19)
      - [x] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (2025-09-19)
-     - [x] Set up CI (Node 20: lint, build, type-check) (2025-09-19)
+     - [x] Set up CI (Node 20: lint, build, type-check + smokes) (2025-09-19)
    - Phase 2 — Write tools
-     - [ ] Implement `upload_run` with validation and dry-run (pending)
+     - [x] Implement `upload_run` with basic validation and smoke tests (2025-09-19)
      - [ ] Optional: `create_test` and related utilities (pending)
 
 6. How to update this document
@@ -178,6 +178,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-19 — Implemented read tools (`list_tests`, `get_schema`, `list_runs`) using generated OpenAPI client; added `upload_run` with smoke test; CI runs all smokes.
    - 2025-09-19 — Completed scaffolding, env validation, ESLint/Prettier, CI, and npm scripts.
    - 2025-09-19 — Authorized Phase 1 implementation and marked scaffolding as in progress.
    - 2025-09-19 — Added OpenAPI client generation wrapper, MCP resource exposure, cancellation/streaming behavior, CI optional live smoke test, SemVer and schema deprecation policy, and Quickstart with `.env` example.
