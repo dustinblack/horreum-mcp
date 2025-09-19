@@ -5,6 +5,8 @@ import { OpenAPI } from '../horreum/generated/core/OpenAPI.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
+import { createRateLimitedFetch } from '../horreum/fetch.js';
+import { fetch as undiciFetch } from 'undici';
 
 type RegisterOptions = {
   getEnv: () => Promise<Env>;
@@ -23,10 +25,84 @@ export async function registerTools(
   if (env.HORREUM_TOKEN) {
     OpenAPI.TOKEN = env.HORREUM_TOKEN;
   }
-  // Allow tests to inject a mock fetch implementation
-  if (fetchImpl) {
-    (globalThis as { fetch: unknown }).fetch = fetchImpl as unknown;
-  }
+  // Configure global fetch with rate limiting and retries.
+  // Prefer injected fetch for tests; else use global or undici's fetch.
+  const baseFetch = (fetchImpl as unknown as typeof fetch | undefined)
+    ?? (globalThis as { fetch?: typeof fetch }).fetch
+    ?? (undiciFetch as unknown as typeof fetch);
+  const rlFetch = createRateLimitedFetch({
+    baseFetch,
+    requestsPerSecond: env.HORREUM_RATE_LIMIT,
+    timeoutMs: env.HORREUM_TIMEOUT,
+    maxRetries: 3,
+    backoffInitialMs: 1000,
+    backoffMaxMs: 30000,
+    jitterRatio: 0.25,
+  });
+  (globalThis as { fetch: typeof fetch }).fetch = rlFetch as unknown as typeof fetch;
+
+  // Resources
+  // Test resource: horreum://tests/{id}
+  server.resource(
+    'test',
+    'horreum://tests/{id}',
+    { mimeType: 'application/json' },
+    async (uri) => {
+      const id = Number(uri.pathname.replace(/^\//, ''));
+      if (!Number.isFinite(id)) {
+        return { contents: [{ uri, text: 'Invalid test id' }], isError: true } as any;
+      }
+      const data = await TestService.testServiceGetTest({ id });
+      return {
+        contents: [
+          { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+        ],
+      };
+    }
+  );
+
+  // Schema resource: horreum://schemas/{id}
+  server.resource(
+    'schema',
+    'horreum://schemas/{id}',
+    { mimeType: 'application/json' },
+    async (uri) => {
+      const id = Number(uri.pathname.replace(/^\//, ''));
+      if (!Number.isFinite(id)) {
+        return { contents: [{ uri, text: 'Invalid schema id' }], isError: true } as any;
+      }
+      const data = await SchemaService.schemaServiceGetSchema({ id });
+      return {
+        contents: [
+          { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+        ],
+      };
+    }
+  );
+
+  // Run resource: horreum://tests/{testId}/runs/{runId}
+  server.resource(
+    'run',
+    'horreum://tests/{testId}/runs/{runId}',
+    { mimeType: 'application/json' },
+    async (uri) => {
+      const parts = uri.pathname.replace(/^\//, '').split('/');
+      // expected structure: tests/{testId}/runs/{runId}
+      if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
+        return { contents: [{ uri, text: 'Invalid run URI' }], isError: true } as any;
+      }
+      const runId = Number(parts[3]);
+      if (!Number.isFinite(runId)) {
+        return { contents: [{ uri, text: 'Invalid run id' }], isError: true } as any;
+      }
+      const data = await RunService.runServiceGetRun({ id: runId });
+      return {
+        contents: [
+          { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+        ],
+      };
+    }
+  );
 
   // ping
   server.tool(

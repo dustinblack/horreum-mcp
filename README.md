@@ -5,7 +5,7 @@ resources for AI clients.
 
 ## Status
 
-Phase 1 authorized and in progress. Core scaffold complete; read tools next.
+Phase 1 implemented. Core scaffold complete; read tools and upload supported.
 See `mcp_development_plan.md` for the authoritative plan and status.
 
 ## Quickstart
@@ -27,6 +27,35 @@ HORREUM_API_VERSION=latest
 - `npm start`
 
 Connect from an MCP client and call the `ping` tool.
+
+### Available Tools
+
+- `ping`: Simple connectivity check.
+- `list_tests`: List Horreum tests (supports pagination and filters).
+- `get_schema`: Retrieve a schema by id or name.
+- `list_runs`: List runs for a test id (pagination/sorting supported).
+- `upload_run`: Upload a run JSON payload (requires `HORREUM_TOKEN`).
+
+### Exposed Resources
+
+- `horreum://tests/{id}`: Test by ID (JSON).
+- `horreum://schemas/{id}`: Schema by ID (JSON).
+- `horreum://tests/{testId}/runs/{runId}`: Run summary by run ID (JSON).
+
+### Configuration
+
+Environment variables (can be provided via `.env` during development):
+
+```
+HORREUM_BASE_URL=https://horreum.example.com
+# HORREUM_TOKEN= # optional for read tools; required for write tools
+HORREUM_RATE_LIMIT=10          # client-side rate limit (req/sec)
+HORREUM_TIMEOUT=30000          # per-request timeout (ms)
+HORREUM_API_VERSION=latest
+```
+
+The client uses retries with exponential backoff (±25% jitter) on 429/5xx.
+Secrets are never logged.
 
 ## Development
 
