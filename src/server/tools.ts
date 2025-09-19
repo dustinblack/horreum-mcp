@@ -9,7 +9,7 @@ import { RunService } from '../horreum/generated/services/RunService.js';
 type RegisterOptions = {
   getEnv: () => Promise<Env>;
   // Minimal fetch-like signature for tests; real runtime uses global fetch
-  fetchImpl?: ((input: any, init?: any) => Promise<any>) | undefined;
+  fetchImpl?: ((input: unknown, init?: unknown) => Promise<unknown>) | undefined;
 };
 
 export async function registerTools(
@@ -25,8 +25,7 @@ export async function registerTools(
   }
   // Allow tests to inject a mock fetch implementation
   if (fetchImpl) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (globalThis as any).fetch = fetchImpl;
+    (globalThis as { fetch: unknown }).fetch = fetchImpl as unknown;
   }
 
   // ping
@@ -122,6 +121,41 @@ export async function registerTools(
       });
       return {
         content: [{ type: 'text', text: JSON.stringify(res, null, 2) }],
+      };
+    }
+  );
+
+  // upload_run
+  server.tool(
+    'upload_run',
+    'Upload a Run JSON payload to a test (name or ID).',
+    {
+      test: z.string(),
+      start: z.string().describe('Start timestamp or JSONPath'),
+      stop: z.string().describe('Stop timestamp or JSONPath'),
+      data: z.union([z.string(), z.record(z.any())]).describe('Run JSON payload'),
+      owner: z.string().optional(),
+      access: z.string().optional(),
+      schema: z.string().optional().describe('Schema URI'),
+      description: z.string().optional(),
+    },
+    async (args) => {
+      const payload = typeof args.data === 'string' ? args.data : JSON.stringify(args.data);
+      const res = await RunService.runServiceAddRunFromData({
+        start: args.start,
+        stop: args.stop,
+        test: args.test,
+        requestBody: payload,
+        ...(args.owner ? { owner: args.owner } : {}),
+        // Access is an enum type; string is accepted by client
+        ...(args.access
+          ? { access: args.access as unknown as import('../horreum/generated/models/Access.js').Access }
+          : {}),
+        ...(args.schema ? { schema: args.schema } : {}),
+        ...(args.description ? { description: args.description } : {}),
+      });
+      return {
+        content: [{ type: 'text', text: typeof res === 'string' ? res : JSON.stringify(res) }],
       };
     }
   );
