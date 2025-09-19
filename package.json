@@ -13,7 +13,10 @@
     "lint": "eslint 'src/**/*.ts'",
     "format": "prettier --write .",
     "check": "npm run typecheck && npm run lint",
-    "smoke": "node scripts/smoke-ping.mjs"
+    "smoke": "node scripts/smoke-ping.mjs",
+    "smoke:tests": "node scripts/smoke-list-tests.mjs",
+    "smoke:schema": "node scripts/smoke-get-schema.mjs",
+    "gen:api": "openapi --useOptions --useUnionTypes --exportCore false --exportServices true --exportModels true --client fetch --output src/horreum/generated"
   },
   "repository": {
     "type": "git",
@@ -45,6 +48,7 @@
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "openapi-typescript-codegen": "^0.29.0",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "tsx": "^4.20.5",

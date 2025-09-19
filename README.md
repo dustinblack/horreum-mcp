@@ -34,6 +34,17 @@ Connect from an MCP client and call the `ping` tool.
 - `npm run format`
 - `npm run build`
 
+### Generate Horreum OpenAPI client (optional)
+
+Provide an OpenAPI JSON URL (typically `<HORREUM_BASE_URL>/q/openapi?format=json`)
+when generating. Some public docs endpoints serve HTML; prefer a live instance.
+
+```bash
+npm run gen:api -- --input https://your-horreum.example.com/q/openapi?format=json
+```
+
+Generated code will be placed under `src/horreum/generated/`.
+
 ## License
 
 Apache 2.0
