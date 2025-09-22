@@ -54,6 +54,9 @@ A multi-layered testing approach will be implemented, following the read-first p
 2.  **Integration Tests**: Use `nock` or `msw` to simulate Horreum endpoints; verify schema and error handling.
 3.  **End-to-End (E2E)**: Exercise the MCP server via an MCP client (e.g., `mcp-cli`) to validate tool registration and execution.
 4.  **Continuous Integration (CI)**: GitHub Actions on Node 20: install, lint, build, test, and type-check.
+5.  **Smokes (in-memory transport)**: Lightweight smoke tests validate `ping`,
+    `list_tests` (folder-aware), `get_schema`, `list_runs` (time filters), and
+    `upload_run` without external dependencies; executed in CI.
 
 ### 4. MCP Tool Design Details
 
@@ -165,14 +168,24 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Embed AI maintenance instructions and status tracking (2025-09-19)
    - Phase 1 — Implementation (read-first)
      - [x] Scaffold TypeScript MCP server project (2025-09-19)
-     - [x] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional auth support (2025-09-19)
+    - [x] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional
+          auth support (2025-09-19)
+    - [x] Enhance `list_tests`: folder-aware aggregation across all folders when no
+          folder is specified (2025-09-22)
+    - [x] Enhance `list_runs`: support `from`/`to` time filters and test name
+          resolution to ID; client-side filtering across pages when needed
+          (2025-09-22)
      - [x] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (2025-09-19)
-     - [x] Set up CI (Node 20: lint, build, type-check + smokes) (2025-09-19)
+    - [x] Set up CI (Node 20: lint, build, type-check + smokes) (2025-09-19)
+    - [x] CI smokes cover `list_tests`, `get_schema`, `list_runs`, `upload_run`
+          (2025-09-22)
    - Phase 2 — Write tools
-     - [x] Implement `upload_run` with basic validation and smoke tests (2025-09-19)
+    - [x] Implement `upload_run` with basic validation and smoke tests (2025-09-19)
      - [ ] Optional: `create_test` and related utilities (pending)
    - Phase 3 — Observability & Hardening
-     - [x] Implement client-side retries/backoff and rate limiting (2025-09-19)
+    - [x] Implement client-side retries/backoff and rate limiting (2025-09-19)
+    - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
+          (2025-09-22)
      - [ ] Add structured logging with correlation IDs (pending)
      - [ ] Optional: metrics/tracing (pending)
 
@@ -183,6 +196,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — `list_tests` made folder-aware (aggregates across folders);
+     `list_runs` gained `from`/`to` time filters and test name resolution with
+     client-side filtering across pages; CI smokes expanded; README clarified
+     AI client connection steps; removed redundant HTTP client in favor of the
+     generated OpenAPI client.
    - 2025-09-19 — Implemented rate-limited fetch with retries/backoff; exposed MCP
      resources for tests, schemas, and runs; updated README with tools/resources.
    - 2025-09-19 — Implemented read tools (`list_tests`, `get_schema`, `list_runs`) using generated OpenAPI client; added `upload_run` with smoke test; CI runs all smokes.
