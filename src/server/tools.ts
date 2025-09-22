@@ -78,15 +78,16 @@ export async function registerTools(
     'test',
     'horreum://tests/{id}',
     { mimeType: 'application/json' },
-    async (uri) => {
+    async (uri: URL) => {
+      const uriStr = String(uri);
       const id = Number(uri.pathname.replace(/^\//, ''));
       if (!Number.isFinite(id)) {
-        return { contents: [{ uri, text: 'Invalid test id' }], isError: true } as any;
+        return { contents: [{ uri: uriStr, text: 'Invalid test id' }], isError: true };
       }
       const data = await TestService.testServiceGetTest({ id });
       return {
         contents: [
-          { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+          { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
         ],
       };
     }
@@ -97,19 +98,20 @@ export async function registerTools(
     'schema',
     'horreum://schemas/{id}',
     { mimeType: 'application/json' },
-    async (uri) => {
+    async (uri: URL) => {
       const cid = genCid();
       const started = Date.now();
-      log('info', { event: 'resource.start', resource: 'schema', cid, uri: String(uri) });
+      const uriStr = String(uri);
+      log('info', { event: 'resource.start', resource: 'schema', cid, uri: uriStr });
       try {
         const id = Number(uri.pathname.replace(/^\//, ''));
         if (!Number.isFinite(id)) {
-          return { contents: [{ uri, text: 'Invalid schema id' }], isError: true } as any;
+          return { contents: [{ uri: uriStr, text: 'Invalid schema id' }], isError: true };
         }
         const data = await SchemaService.schemaServiceGetSchema({ id });
         const res = {
           contents: [
-            { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+            { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
           ],
         };
         log('info', { event: 'resource.end', resource: 'schema', cid, durationMs: Date.now() - started });
@@ -117,7 +119,7 @@ export async function registerTools(
       } catch (err) {
         const errObj = errorToObject(err, cid);
         log('error', { event: 'resource.error', resource: 'schema', cid, durationMs: Date.now() - started, error: errObj });
-        return { contents: [{ uri, text: JSON.stringify(errObj) }], isError: true } as any;
+        return { contents: [{ uri: uriStr, text: JSON.stringify(errObj) }], isError: true };
       }
     }
   );
@@ -127,24 +129,25 @@ export async function registerTools(
     'run',
     'horreum://tests/{testId}/runs/{runId}',
     { mimeType: 'application/json' },
-    async (uri) => {
+    async (uri: URL) => {
       const cid = genCid();
       const started = Date.now();
-      log('info', { event: 'resource.start', resource: 'run', cid, uri: String(uri) });
+      const uriStr = String(uri);
+      log('info', { event: 'resource.start', resource: 'run', cid, uri: uriStr });
       try {
         const parts = uri.pathname.replace(/^\//, '').split('/');
         // expected structure: tests/{testId}/runs/{runId}
         if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
-          return { contents: [{ uri, text: 'Invalid run URI' }], isError: true } as any;
+          return { contents: [{ uri: uriStr, text: 'Invalid run URI' }], isError: true };
         }
         const runId = Number(parts[3]);
         if (!Number.isFinite(runId)) {
-          return { contents: [{ uri, text: 'Invalid run id' }], isError: true } as any;
+          return { contents: [{ uri: uriStr, text: 'Invalid run id' }], isError: true };
         }
         const data = await RunService.runServiceGetRun({ id: runId });
         const res = {
           contents: [
-            { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+            { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
           ],
         };
         log('info', { event: 'resource.end', resource: 'run', cid, durationMs: Date.now() - started });
@@ -152,29 +155,30 @@ export async function registerTools(
       } catch (err) {
         const errObj = errorToObject(err, cid);
         log('error', { event: 'resource.error', resource: 'run', cid, durationMs: Date.now() - started, error: errObj });
-        return { contents: [{ uri, text: JSON.stringify(errObj) }], isError: true } as any;
+        return { contents: [{ uri: uriStr, text: JSON.stringify(errObj) }], isError: true };
       }
     }
   );
 
   // ping
   type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean };
+  type ToolArgs = Record<string, unknown>;
   const withTool = (
     toolName: string,
     description: string,
     shape: z.ZodRawShape,
-    handler: (args: any) => Promise<ToolResult>
+    handler: (args: ToolArgs) => Promise<ToolResult>
   ) => {
     server.tool(
       toolName,
       description,
       shape,
-      async (args: any): Promise<ToolResult> => {
+      async (args: ToolArgs): Promise<ToolResult> => {
         const cid = genCid();
         const started = Date.now();
         log('info', { event: 'tool.start', tool: toolName, cid, args });
         try {
-          const res = await handler(args as any);
+          const res = await handler(args);
           log('info', { event: 'tool.end', tool: toolName, cid, durationMs: Date.now() - started });
           return res;
         } catch (err) {
@@ -190,7 +194,7 @@ export async function registerTools(
     'ping',
     'Ping the server to verify connectivity.',
     { message: z.string().optional() },
-    async (args) => ({ content: [text(args?.message ?? 'pong')] })
+    async (args: ToolArgs) => ({ content: [text(typeof args.message === 'string' ? args.message : 'pong')] })
   );
 
   // list_tests
@@ -211,7 +215,7 @@ export async function registerTools(
       if (args.folder) {
         const res = await TestService.testServiceGetTestSummary({
           ...(args.roles !== undefined ? { roles: args.roles as string } : {}),
-          folder: args.folder,
+          folder: args.folder as string,
           ...(args.limit !== undefined ? { limit: args.limit as number } : {}),
           ...(args.page !== undefined ? { page: args.page as number } : {}),
           ...(args.direction ? { direction: args.direction as SortDirection } : {}),
