@@ -20,15 +20,22 @@ To ensure our work aligns with the Hyperfoil project for future integration, thi
 
 ### Core Technology Stack
 
-- **Java:** The project uses Java 17 (Quarkus 3 baseline).
-- **Build Tool:** Maven will be used for dependency management and building the project.
-- **Framework:** Quarkus 3.x
+- **Language:** TypeScript
+- **Runtime:** Node.js (v20 or higher)
+- **Build Tool:** npm and the TypeScript Compiler (`tsc`)
 
 ### Licensing
 
-- **Apache 2.0:** All code contributed to this project will be licensed under the Apache License, Version 2.0.
+- **Apache 2.0:** All code contributed to this project will be licensed under the
+  Apache License, Version 2.0.
 
 ### Code Style & Quality
 
-- **Code Formatting:** The project enforces a strict code style using the Eclipse code formatter. The configuration files are located in the `config/` directory of the official Horreum repository.
-- **Automatic Formatting:** Running `mvn install` or `mvn process-sources` will automatically format the code according to the project's style. All code should be formatted before being submitted in a pull request.
+- **Code Formatting:** The project uses [Prettier](https://prettier.io/) for
+  consistent code formatting. The configuration can be found in the
+  `.prettierrc.json` file.
+- **Linting:** ESLint with TypeScript-ESLint is used to enforce code quality and
+  catch potential errors. The configuration is in `eslint.config.js`.
+- **Automatic Formatting and Checks:**
+  - Run `npm run format` to format all code.
+  - Run `npm run check` to perform type checking and linting.
