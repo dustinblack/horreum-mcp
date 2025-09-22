@@ -7,11 +7,15 @@ import { SchemaService } from '../horreum/generated/services/SchemaService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
 import { createRateLimitedFetch } from '../horreum/fetch.js';
 import { fetch as undiciFetch } from 'undici';
+import type { TestListing } from '../horreum/generated/models/TestListing.js';
+import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
+import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 
+type FetchLike = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => ReturnType<typeof fetch>;
 type RegisterOptions = {
   getEnv: () => Promise<Env>;
   // Minimal fetch-like signature for tests; real runtime uses global fetch
-  fetchImpl?: ((input: unknown, init?: unknown) => Promise<unknown>) | undefined;
+  fetchImpl?: FetchLike | undefined;
 };
 
 export async function registerTools(
@@ -25,6 +29,7 @@ export async function registerTools(
     const entry = { level, ts: new Date().toISOString(), ...data };
     (level === 'error' ? console.error : console.log)(JSON.stringify(entry));
   };
+  const text = (s: string) => ({ type: 'text' as const, text: s });
   const env = await getEnv();
   // Configure generated client
   OpenAPI.BASE = env.HORREUM_BASE_URL;
@@ -33,9 +38,9 @@ export async function registerTools(
   }
   // Configure global fetch with rate limiting and retries.
   // Prefer injected fetch for tests; else use global or undici's fetch.
-  const baseFetch = (fetchImpl as unknown as typeof fetch | undefined)
-    ?? (globalThis as { fetch?: typeof fetch }).fetch
-    ?? (undiciFetch as unknown as typeof fetch);
+  const baseFetch: FetchLike = (fetchImpl as FetchLike | undefined)
+    ?? ((globalThis as { fetch?: FetchLike }).fetch as FetchLike | undefined)
+    ?? (undiciFetch as unknown as FetchLike);
   const rlFetch = createRateLimitedFetch({
     baseFetch,
     requestsPerSecond: env.HORREUM_RATE_LIMIT,
@@ -115,20 +120,18 @@ export async function registerTools(
     'ping',
     'Ping the server to verify connectivity.',
     { message: z.string().optional() },
-    async (args): Promise<any> => {
+    async (args): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
       const cid = genCid();
       const started = Date.now();
       log('info', { event: 'tool.start', tool: 'ping', cid, args });
-      const out = {
-        content: [{ type: 'text', text: args?.message ?? 'pong' }],
-      };
+      const out = { content: [text(args?.message ?? 'pong')] };
       log('info', {
         event: 'tool.end',
         tool: 'ping',
         cid,
         durationMs: Date.now() - started,
       });
-      return out as any;
+      return out;
     }
   );
 
@@ -145,7 +148,7 @@ export async function registerTools(
       name: z.string().optional(),
       folder: z.string().optional(),
     },
-    async (args): Promise<any> => {
+    async (args): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
       const cid = genCid();
       const started = Date.now();
       log('info', { event: 'tool.start', tool: 'list_tests', cid, args });
@@ -159,16 +162,14 @@ export async function registerTools(
           ...(args.direction ? { direction: args.direction } : {}),
           ...(args.name ? { name: args.name } : {}),
         });
-        const out = {
-          content: [{ type: 'text', text: JSON.stringify(res, null, 2) }],
-        };
+        const out = { content: [text(JSON.stringify(res, null, 2))] };
         log('info', {
           event: 'tool.end',
           tool: 'list_tests',
           cid,
           durationMs: Date.now() - started,
         });
-        return out as any;
+        return out;
       }
 
       // Otherwise, aggregate across top-level and all folders
@@ -177,20 +178,20 @@ export async function registerTools(
       });
 
       const targets: (string | undefined)[] = [undefined, ...(folders ?? [])];
-      const listings = await Promise.all(
+      const listings: TestListing[] = await Promise.all(
         targets.map((folderName) =>
           TestService.testServiceGetTestSummary({
             ...(args.roles ? { roles: args.roles } : {}),
             ...(folderName ? { folder: folderName } : {}),
             // page=0 => return all results for this folder to aggregate client-side
             page: 0,
-            ...(args.direction ? { direction: args.direction } : {}),
+            ...(args.direction ? { direction: args.direction as SortDirection } : {}),
             ...(args.name ? { name: args.name } : {}),
-          }).catch(() => ({ tests: [], count: 0 } as unknown as { tests: unknown[]; count: number }))
+          }).catch(() => ({ tests: [], count: 0 } as unknown as TestListing))
         )
       );
 
-      const aggregated = listings.flatMap((l: any) => Array.isArray(l?.tests) ? l.tests : []);
+      const aggregated: TestSummary[] = listings.flatMap((l) => Array.isArray(l?.tests) ? l.tests : []);
       const total = aggregated.length;
 
       // Optional client-side pagination after aggregation
@@ -203,17 +204,15 @@ export async function registerTools(
         paged = aggregated.slice(start, start + args.limit);
       }
 
-      const result = { tests: paged, count: total };
-      const out = {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
-      };
+      const result: { tests: TestSummary[]; count: number } = { tests: paged as TestSummary[], count: total };
+      const out = { content: [text(JSON.stringify(result, null, 2))] };
       log('info', {
         event: 'tool.end',
         tool: 'list_tests',
         cid,
         durationMs: Date.now() - started,
       });
-      return out as any;
+      return out;
     }
   );
 
@@ -225,33 +224,26 @@ export async function registerTools(
       id: z.number().int().positive().optional(),
       name: z.string().optional(),
     },
-    async (args): Promise<any> => {
+    async (args): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> => {
       const cid = genCid();
       const started = Date.now();
       log('info', { event: 'tool.start', tool: 'get_schema', cid, args });
       if (!args.id && !args.name) {
-        const out = {
-          content: [
-            { type: 'text', text: 'Provide id or name.' },
-          ],
-          isError: true,
-        } as any;
+        const out = { content: [text('Provide id or name.')], isError: true };
         log('info', {
           event: 'tool.end',
           tool: 'get_schema',
           cid,
           durationMs: Date.now() - started,
         });
-        return out as any;
+        return out;
       }
       const res = args.id
         ? await SchemaService.schemaServiceGetSchema({ id: args.id })
         : await SchemaService.schemaServiceListSchemas({
             ...(args.name ? { name: args.name } : {}),
           });
-      const out = {
-        content: [{ type: 'text', text: JSON.stringify(res, null, 2) }],
-      };
+      const out = { content: [text(JSON.stringify(res, null, 2))] };
       log('info', {
         event: 'tool.end',
         tool: 'get_schema',
@@ -277,7 +269,7 @@ export async function registerTools(
       from: z.string().optional().describe('ISO timestamp or epoch millis'),
       to: z.string().optional().describe('ISO timestamp or epoch millis'),
     },
-    async (args): Promise<any> => {
+    async (args): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
       const cid = genCid();
       const started = Date.now();
       log('info', { event: 'tool.start', tool: 'list_runs', cid, args });
@@ -293,19 +285,14 @@ export async function registerTools(
         }
       }
       if (!resolvedTestId) {
-        const out = {
-          content: [
-            { type: 'text', text: 'Provide testId or test (name or ID).' },
-          ],
-          isError: true,
-        } as any;
+        const out = { content: [text('Provide testId or test (name or ID).')], isError: true } as any;
         log('info', {
           event: 'tool.end',
           tool: 'list_runs',
           cid,
           durationMs: Date.now() - started,
         });
-        return out as any;
+        return out;
       }
 
       const parseTime = (s?: string): number | undefined => {
@@ -327,9 +314,7 @@ export async function registerTools(
           ...(args.sort ? { sort: args.sort } : {}),
           ...(args.direction ? { direction: args.direction } : {}),
         });
-        const out = {
-          content: [{ type: 'text', text: JSON.stringify(res, null, 2) }],
-        };
+        const out = { content: [text(JSON.stringify(res, null, 2))] };
         log('info', {
           event: 'tool.end',
           tool: 'list_runs',
@@ -356,7 +341,7 @@ export async function registerTools(
           limit: pageSize,
           page,
           sort: sortField,
-          direction: sortDir as any,
+          direction: sortDir as SortDirection,
         });
         const runs = Array.isArray(res.runs) ? res.runs : [];
         aggregated.push(...runs);
@@ -392,17 +377,18 @@ export async function registerTools(
         finalRuns = withinRange.slice(start, start + args.limit);
       }
 
-      const result = { total: withinRange.length, runs: finalRuns };
-      const out = {
-        content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+      const result: import('../horreum/generated/models/RunsSummary.js').RunsSummary = {
+        total: withinRange.length,
+        runs: finalRuns,
       };
+      const out = { content: [text(JSON.stringify(result, null, 2))] };
       log('info', {
         event: 'tool.end',
         tool: 'list_runs',
         cid,
         durationMs: Date.now() - started,
       });
-      return out as any;
+      return out;
     }
   );
 
@@ -414,13 +400,13 @@ export async function registerTools(
       test: z.string(),
       start: z.string().describe('Start timestamp or JSONPath'),
       stop: z.string().describe('Stop timestamp or JSONPath'),
-      data: z.union([z.string(), z.record(z.any())]).describe('Run JSON payload'),
+      data: z.union([z.string(), z.record(z.unknown())]).describe('Run JSON payload'),
       owner: z.string().optional(),
       access: z.string().optional(),
       schema: z.string().optional().describe('Schema URI'),
       description: z.string().optional(),
     },
-    async (args): Promise<any> => {
+    async (args): Promise<{ content: Array<{ type: 'text'; text: string }> }> => {
       const cid = genCid();
       const started = Date.now();
       log('info', { event: 'tool.start', tool: 'upload_run', cid });
@@ -438,9 +424,7 @@ export async function registerTools(
         ...(args.schema ? { schema: args.schema } : {}),
         ...(args.description ? { description: args.description } : {}),
       });
-      const out = {
-        content: [{ type: 'text', text: typeof res === 'string' ? res : JSON.stringify(res) }],
-      };
+      const out = { content: [text(typeof res === 'string' ? res : JSON.stringify(res))] };
       log('info', {
         event: 'tool.end',
         tool: 'upload_run',

@@ -56,7 +56,8 @@ A multi-layered testing approach will be implemented, following the read-first p
 4.  **Continuous Integration (CI)**: GitHub Actions on Node 20: install, lint, build, test, and type-check.
 5.  **Smokes (in-memory transport)**: Lightweight smoke tests validate `ping`,
     `list_tests` (folder-aware), `get_schema`, `list_runs` (time filters), and
-    `upload_run` without external dependencies; executed in CI.
+    `upload_run` without external dependencies; executed in CI. Smokes use generic
+    fixtures (e.g., `example-test`, id `123`) to avoid internal references.
 
 ### 4. MCP Tool Design Details
 
@@ -168,24 +169,27 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Embed AI maintenance instructions and status tracking (2025-09-19)
    - Phase 1 — Implementation (read-first)
      - [x] Scaffold TypeScript MCP server project (2025-09-19)
-    - [x] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional
-          auth support (2025-09-19)
-    - [x] Enhance `list_tests`: folder-aware aggregation across all folders when no
-          folder is specified (2025-09-22)
-    - [x] Enhance `list_runs`: support `from`/`to` time filters and test name
-          resolution to ID; client-side filtering across pages when needed
-          (2025-09-22)
+     - [x] Implement read tools: `list_tests`, `get_schema`, `list_runs` with optional
+           auth support (2025-09-19)
+     - [x] Enhance `list_tests`: folder-aware aggregation across all folders when no
+           folder is specified (2025-09-22)
+     - [x] Enhance `list_runs`: support `from`/`to` time filters and test name
+           resolution to ID; client-side filtering across pages when needed
+           (2025-09-22)
      - [x] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (2025-09-19)
-    - [x] Set up CI (Node 20: lint, build, type-check + smokes) (2025-09-19)
-    - [x] CI smokes cover `list_tests`, `get_schema`, `list_runs`, `upload_run`
-          (2025-09-22)
+     - [x] Set up CI (Node 20: lint, build, type-check + smokes) (2025-09-19)
+     - [x] CI smokes cover `list_tests`, `get_schema`, `list_runs`, `upload_run`
+           (2025-09-22)
+     - [x] Tighten TypeScript types in server; remove explicit anys in
+           `src/server/tools.ts` (2025-09-22)
    - Phase 2 — Write tools
-    - [x] Implement `upload_run` with basic validation and smoke tests (2025-09-19)
+     - [x] Implement `upload_run` with basic validation and smoke tests (2025-09-19)
      - [ ] Optional: `create_test` and related utilities (pending)
    - Phase 3 — Observability & Hardening
-    - [x] Implement client-side retries/backoff and rate limiting (2025-09-19)
-    - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
-          (2025-09-22)
+     - [x] Implement client-side retries/backoff and rate limiting (2025-09-19)
+     - [x] Add structured logging with correlation IDs and durations for all tools (2025-09-22)
+     - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
+           (2025-09-22)
      - [ ] Refactor to inject rate-limited fetch into OpenAPI client instead of
            patching global fetch.
      - [ ] Implement structured error handling in all tools to return uniform error
@@ -212,6 +216,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Structured logging (correlation IDs + durations) added for all tools; type tightening across `src/server/tools.ts` (removed explicit anys); smoke tests now use generic fixtures (`example-test`, id `123`) for `list_runs`.
    - 2025-09-22 — Added Phase 4 (Testing) and Phase 5 (Data Analysis) to the
      plan. Updated Phase 3 (Hardening) to include specific refactoring tasks
      for fetch logic, error handling, and logging based on code review.
