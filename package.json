@@ -1,7 +1,7 @@
 {
   "name": "horreum-mcp",
   "version": "0.1.0",
-  "description": "",
+  "description": "Model Context Protocol (MCP) server for Horreum, exposing Horreum APIs as MCP tools and resources.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -26,8 +26,15 @@
     "type": "git",
     "url": "git+https://github.com/dustinblack/horreum-mcp.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "mcp",
+    "horreum",
+    "hyperfoil",
+    "ai",
+    "logging",
+    "performance"
+  ],
+  "author": "Dustin Black and contributors",
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/dustinblack/horreum-mcp/issues"
@@ -37,7 +44,7 @@
   "engines": {
     "node": ">=20"
   },
-  "private": "true",
+  "private": true,
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.1",
     "pino": "9.11.0",

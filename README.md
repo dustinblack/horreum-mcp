@@ -6,9 +6,18 @@ interact with Horreum to manage tests, schemas, runs, and more.
 
 ## Status
 
-This project is in Phase 1 of development. The core scaffold is complete, with
-support for read-only tools and data uploads. For a detailed project roadmap,
-please see the [mcp_development_plan.md](mcp_development_plan.md).
+This project is in Phase 3 (Observability & Hardening). Core functionality is
+implemented with enhancements:
+
+- Read tools stabilized with folder-aware `list_tests` and time-filtered
+  `list_runs` (test name to ID resolution supported)
+- `upload_run` implemented
+- Structured logging with correlation IDs (pino)
+- Rate-limited fetch with retries/backoff injected via `OpenAPI.FETCH`
+- CI runs typecheck, lint, build, and all smoke tests
+
+For a detailed roadmap, see
+[mcp_development_plan.md](mcp_development_plan.md).
 
 ## Features
 
@@ -17,15 +26,21 @@ The server provides the following tools for AI clients:
 -   `ping`: A simple connectivity check.
 -   `list_tests`: Lists Horreum tests with support for pagination and filters.
 -   `get_schema`: Retrieves a schema by its ID or name.
--   `list_runs`: Lists runs for a given test ID, with support for pagination and
-    sorting.
+-   `list_runs`: Lists runs for a given test (by ID or name), with pagination,
+    sorting, and optional time filters (`from`/`to`).
 -   `upload_run`: Uploads a run JSON payload to a specified test.
+
+In addition to tools, the server exposes key resources as URIs:
+
+-   `horreum://tests/{id}`
+-   `horreum://schemas/{id}`
+-   `horreum://tests/{testId}/runs/{runId}`
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
 
--   [Node.js](https://nodejs.org/) (v18 or higher)
+-   [Node.js](https://nodejs.org/) (v20 or higher)
 -   [npm](https://www.npmjs.com/)
 
 ## Installation
@@ -68,6 +83,7 @@ HORREUM_API_VERSION=latest
 | `HORREUM_RATE_LIMIT` | Client-side rate limit in requests per second.                           |
 | `HORREUM_TIMEOUT`    | Per-request timeout in milliseconds.                                     |
 | `HORREUM_API_VERSION`| The version of the Horreum API to use.                                   |
+| `LOG_LEVEL`          | Logging level for pino (`info`, `debug`, `error`). Default: `info`.      |
 
 > [!NOTE]
 > When using an AI client, these environment variables are typically set in the client's configuration, and a local `.env` file is not required.

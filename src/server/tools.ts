@@ -98,16 +98,27 @@ export async function registerTools(
     'horreum://schemas/{id}',
     { mimeType: 'application/json' },
     async (uri) => {
-      const id = Number(uri.pathname.replace(/^\//, ''));
-      if (!Number.isFinite(id)) {
-        return { contents: [{ uri, text: 'Invalid schema id' }], isError: true } as any;
+      const cid = genCid();
+      const started = Date.now();
+      log('info', { event: 'resource.start', resource: 'schema', cid, uri: String(uri) });
+      try {
+        const id = Number(uri.pathname.replace(/^\//, ''));
+        if (!Number.isFinite(id)) {
+          return { contents: [{ uri, text: 'Invalid schema id' }], isError: true } as any;
+        }
+        const data = await SchemaService.schemaServiceGetSchema({ id });
+        const res = {
+          contents: [
+            { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+          ],
+        };
+        log('info', { event: 'resource.end', resource: 'schema', cid, durationMs: Date.now() - started });
+        return res;
+      } catch (err) {
+        const errObj = errorToObject(err, cid);
+        log('error', { event: 'resource.error', resource: 'schema', cid, durationMs: Date.now() - started, error: errObj });
+        return { contents: [{ uri, text: JSON.stringify(errObj) }], isError: true } as any;
       }
-      const data = await SchemaService.schemaServiceGetSchema({ id });
-      return {
-        contents: [
-          { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
-        ],
-      };
     }
   );
 
@@ -117,21 +128,32 @@ export async function registerTools(
     'horreum://tests/{testId}/runs/{runId}',
     { mimeType: 'application/json' },
     async (uri) => {
-      const parts = uri.pathname.replace(/^\//, '').split('/');
-      // expected structure: tests/{testId}/runs/{runId}
-      if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
-        return { contents: [{ uri, text: 'Invalid run URI' }], isError: true } as any;
+      const cid = genCid();
+      const started = Date.now();
+      log('info', { event: 'resource.start', resource: 'run', cid, uri: String(uri) });
+      try {
+        const parts = uri.pathname.replace(/^\//, '').split('/');
+        // expected structure: tests/{testId}/runs/{runId}
+        if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
+          return { contents: [{ uri, text: 'Invalid run URI' }], isError: true } as any;
+        }
+        const runId = Number(parts[3]);
+        if (!Number.isFinite(runId)) {
+          return { contents: [{ uri, text: 'Invalid run id' }], isError: true } as any;
+        }
+        const data = await RunService.runServiceGetRun({ id: runId });
+        const res = {
+          contents: [
+            { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+          ],
+        };
+        log('info', { event: 'resource.end', resource: 'run', cid, durationMs: Date.now() - started });
+        return res;
+      } catch (err) {
+        const errObj = errorToObject(err, cid);
+        log('error', { event: 'resource.error', resource: 'run', cid, durationMs: Date.now() - started, error: errObj });
+        return { contents: [{ uri, text: JSON.stringify(errObj) }], isError: true } as any;
       }
-      const runId = Number(parts[3]);
-      if (!Number.isFinite(runId)) {
-        return { contents: [{ uri, text: 'Invalid run id' }], isError: true } as any;
-      }
-      const data = await RunService.runServiceGetRun({ id: runId });
-      return {
-        contents: [
-          { uri, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
-        ],
-      };
     }
   );
 
