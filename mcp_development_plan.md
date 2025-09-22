@@ -203,7 +203,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Extend structured error handling and logging to resources
           (tests/schemas/runs) (2025-09-22)
     - [x] Optional: Prometheus metrics endpoint (counters/histograms) (2025-09-22)
-    - [ ] Optional: tracing (OpenTelemetry) (pending)
+    - [x] Optional: tracing (OpenTelemetry) with undici auto-instrumentation and
+          tool/resource spans (2025-09-22)
    - Phase 4 — Testing
      - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
      - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
@@ -222,6 +223,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Added optional OpenTelemetry tracing (OTLP); auto-instrumented
+     undici and wrapped tools/resources with spans; documented enablement.
    - 2025-09-22 — Added optional Prometheus metrics endpoint with counters for
      invocations and histograms for durations; documented env and usage.
    - 2025-09-22 — Extended structured error handling and pino logging to

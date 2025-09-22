@@ -9,6 +9,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { loadEnv } from './config/env.js';
 import { registerTools } from './server/tools.js';
 import { createMetrics } from './observability/metrics.js';
+import { initTracing } from './observability/tracing.js';
 
 const env = await loadEnv();
 
@@ -26,6 +27,13 @@ const metrics = createMetrics({
   serviceVersion: '0.1.0',
 });
 metrics.startServer();
+
+// Optional OpenTelemetry tracing
+await initTracing({
+  enabled: env.TRACING_ENABLED,
+  serviceName: 'horreum-mcp',
+  serviceVersion: '0.1.0',
+});
 
 await registerTools(server, { getEnv: loadEnv, metrics });
 

@@ -12,6 +12,7 @@ import { fetch as undiciFetch } from 'undici';
 import type { TestListing } from '../horreum/generated/models/TestListing.js';
 import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
 import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
+import { startSpan } from '../observability/tracing.js';
 
 type FetchLike = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => ReturnType<typeof fetch>;
 type RegisterOptions = {
@@ -106,16 +107,18 @@ export async function registerTools(
       const uriStr = String(uri);
       log('info', { event: 'resource.start', resource: 'schema', cid, uri: uriStr });
       try {
-        const id = Number(uri.pathname.replace(/^\//, ''));
-        if (!Number.isFinite(id)) {
-          return { contents: [{ uri: uriStr, text: 'Invalid schema id' }], isError: true };
-        }
-        const data = await SchemaService.schemaServiceGetSchema({ id });
-        const res = {
-          contents: [
-            { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
-          ],
-        };
+        const res = await startSpan('resource.schema', async () => {
+          const id = Number(uri.pathname.replace(/^\//, ''));
+          if (!Number.isFinite(id)) {
+            return { contents: [{ uri: uriStr, text: 'Invalid schema id' }], isError: true };
+          }
+          const data = await SchemaService.schemaServiceGetSchema({ id });
+          return {
+            contents: [
+              { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+            ],
+          };
+        });
         const duration = Date.now() - started;
         log('info', { event: 'resource.end', resource: 'schema', cid, durationMs: duration });
         metrics?.recordResource('schema', duration, true);
@@ -141,21 +144,23 @@ export async function registerTools(
       const uriStr = String(uri);
       log('info', { event: 'resource.start', resource: 'run', cid, uri: uriStr });
       try {
-        const parts = uri.pathname.replace(/^\//, '').split('/');
-        // expected structure: tests/{testId}/runs/{runId}
-        if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
-          return { contents: [{ uri: uriStr, text: 'Invalid run URI' }], isError: true };
-        }
-        const runId = Number(parts[3]);
-        if (!Number.isFinite(runId)) {
-          return { contents: [{ uri: uriStr, text: 'Invalid run id' }], isError: true };
-        }
-        const data = await RunService.runServiceGetRun({ id: runId });
-        const res = {
-          contents: [
-            { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
-          ],
-        };
+        const res = await startSpan('resource.run', async () => {
+          const parts = uri.pathname.replace(/^\//, '').split('/');
+          // expected structure: tests/{testId}/runs/{runId}
+          if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
+            return { contents: [{ uri: uriStr, text: 'Invalid run URI' }], isError: true };
+          }
+          const runId = Number(parts[3]);
+          if (!Number.isFinite(runId)) {
+            return { contents: [{ uri: uriStr, text: 'Invalid run id' }], isError: true };
+          }
+          const data = await RunService.runServiceGetRun({ id: runId });
+          return {
+            contents: [
+              { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+            ],
+          };
+        });
         const duration = Date.now() - started;
         log('info', { event: 'resource.end', resource: 'run', cid, durationMs: duration });
         metrics?.recordResource('run', duration, true);
@@ -188,7 +193,7 @@ export async function registerTools(
         const started = Date.now();
         log('info', { event: 'tool.start', tool: toolName, cid, args });
         try {
-          const res = await handler(args);
+          const res = await startSpan(`tool.${toolName}`, async () => handler(args));
           const duration = Date.now() - started;
           log('info', { event: 'tool.end', tool: toolName, cid, durationMs: duration });
           metrics?.recordTool(toolName, duration, !(res as { isError?: boolean }).isError);

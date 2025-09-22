@@ -53,6 +53,14 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.56.0",
+    "@opentelemetry/instrumentation": "^0.56.0",
+    "@opentelemetry/instrumentation-undici": "^0.46.0",
+    "@opentelemetry/resources": "^1.26.0",
+    "@opentelemetry/sdk-trace-base": "^1.26.0",
+    "@opentelemetry/sdk-trace-node": "^1.26.0",
+    "@opentelemetry/semantic-conventions": "^1.26.0",
     "@eslint/js": "^9.35.0",
     "@secretlint/secretlint-rule-preset-recommend": "^11.2.4",
     "@types/node": "^24.5.2",

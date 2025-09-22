@@ -9,6 +9,7 @@ const EnvSchema = z.object({
   METRICS_ENABLED: z.coerce.boolean().optional().default(false),
   METRICS_PORT: z.coerce.number().int().positive().max(65535).optional().default(9464),
   METRICS_PATH: z.string().optional().default('/metrics'),
+  TRACING_ENABLED: z.coerce.boolean().optional().default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

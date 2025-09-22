@@ -1,8 +1,20 @@
+### Tracing (optional)
+
+OpenTelemetry tracing can be enabled to export spans (including HTTP calls via undici):
+
+```bash
+export TRACING_ENABLED=true
+# Configure OTLP endpoint via standard envs, e.g. OTEL_EXPORTER_OTLP_ENDPOINT
+npm start
+```
+
+Spans include per-tool and per-resource operations and all outbound fetch calls.
 # Horreum MCP Server
 
-A Model Context Protocol (MCP) server that exposes [Horreum](https://horreum.hyperfoil.io/)
-capabilities as tools and resources for AI clients. This allows AI agents to
-interact with Horreum to manage tests, schemas, runs, and more.
+A Model Context Protocol (MCP) server that exposes
+[Horreum](https://horreum.hyperfoil.io/) capabilities as tools and resources for
+AI clients. This allows AI agents to interact with Horreum to manage tests,
+schemas, runs, and more.
 
 ## Status
 
@@ -79,7 +91,8 @@ HORREUM_API_VERSION=latest
 | Variable             | Description                                                              |
 | -------------------- | ------------------------------------------------------------------------ |
 | `HORREUM_BASE_URL`   | The base URL of your Horreum instance.                                   |
-| `HORREUM_TOKEN`      | Your Horreum API token. Required for writes and private resource access. |
+| `HORREUM_TOKEN`      | Your Horreum API token. Required for writes and private resource     |
+|                      | access.                                                          |
 | `HORREUM_RATE_LIMIT` | Client-side rate limit in requests per second.                           |
 | `HORREUM_TIMEOUT`    | Per-request timeout in milliseconds.                                     |
 | `HORREUM_API_VERSION`| The version of the Horreum API to use.                                   |
@@ -89,7 +102,8 @@ HORREUM_API_VERSION=latest
 | `METRICS_PATH`       | Path for metrics endpoint. Default: `/metrics`.                            |
 
 > [!NOTE]
-> When using an AI client, these environment variables are typically set in the client's configuration, and a local `.env` file is not required.
+> When using an AI client, these environment variables are typically set in the
+> client's configuration, and a local `.env` file is not required.
 
 ## Usage
 
@@ -109,7 +123,7 @@ validate its functionality.
 
     This will run the compiled server from `./build/index.js`.
 
-3.  **Enable Prometheus metrics (optional):**
+2.  **Enable Prometheus metrics (optional):**
 
     Set environment variables and scrape from Prometheus:
 
@@ -121,7 +135,7 @@ validate its functionality.
     # Scrape http://localhost:9464/metrics
     ```
 
-2.  **Run smoke tests:**
+3.  **Run smoke tests:**
 
     The smoke tests provide a quick way to validate the server's tools from the
     command line.
@@ -135,8 +149,8 @@ validate its functionality.
 ### Usage with AI Clients (MCP)
 
 This server communicates with AI clients over stdio using the [Model Context
-Protocol](https://modelcontextprotocol.io/). After building the server (`npm run build`), you can configure your AI
-client to spawn it.
+Protocol](https://modelcontextprotocol.io/). After building the server (`npm run
+build`), you can configure your AI client to spawn it.
 
 The core configuration is the same for all clients:
 
@@ -147,7 +161,8 @@ The core configuration is the same for all clients:
     -   `HORREUM_TOKEN=${HORREUM_TOKEN}` (if required)
 
 > [!WARNING]
-> Always use an absolute path for the `args` value. Many clients do not expand `~` or resolve relative paths correctly.
+> Always use an absolute path for the `args` value. Many clients do not expand
+> `~` or resolve relative paths correctly.
 
 Below are examples of how to configure popular AI clients.
 
