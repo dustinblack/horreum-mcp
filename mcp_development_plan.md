@@ -194,8 +194,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [ ] Fix package.json metadata (description, author) and type issues (private field)
      - [ ] Implement uniform error handling in all tools to return consistent error
            objects `{ code, message, details, correlationId }` per the plan specification
-     - [ ] Refactor to inject rate-limited fetch into OpenAPI client instead of
-           patching global fetch
+    - [x] Refactor to inject rate-limited fetch into OpenAPI client instead of
+          patching global fetch (2025-09-22)
      - [ ] Refactor tool implementations to reduce boilerplate (logging, CID) using a
            wrapper or utility function
      - [ ] Replace console.log with a dedicated structured logging library (e.g.,
@@ -219,6 +219,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Injected rate-limited fetch via `OpenAPI.FETCH` (no global
+     patch); updated postgen to enforce NodeNext import extensions and FETCH
+     typing; adjusted server to wire custom fetch.
    - 2025-09-22 — Project review completed: Implementation is well-aligned with plan; identified testing framework gap and error handling inconsistencies; CI is working well with comprehensive smoke tests; recommended priority adjustments for Phase 4 testing framework setup.
    - 2025-09-22 — Structured logging (correlation IDs + durations) added for all tools; type tightening across `src/server/tools.ts` (removed explicit anys); smoke tests now use generic fixtures (`example-test`, id `123`) for `list_runs`.
    - 2025-09-22 — Added Phase 4 (Testing) and Phase 5 (Data Analysis) to the

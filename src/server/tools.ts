@@ -36,7 +36,7 @@ export async function registerTools(
   if (env.HORREUM_TOKEN) {
     OpenAPI.TOKEN = env.HORREUM_TOKEN;
   }
-  // Configure global fetch with rate limiting and retries.
+  // Configure rate-limited fetch and inject into OpenAPI instead of patching global fetch.
   // Prefer injected fetch for tests; else use global or undici's fetch.
   const baseFetch: FetchLike = (fetchImpl as FetchLike | undefined)
     ?? ((globalThis as { fetch?: FetchLike }).fetch as FetchLike | undefined)
@@ -50,7 +50,8 @@ export async function registerTools(
     backoffMaxMs: 30000,
     jitterRatio: 0.25,
   });
-  (globalThis as { fetch: typeof fetch }).fetch = rlFetch as unknown as typeof fetch;
+  // Inject custom fetch into generated client config
+  (OpenAPI as unknown as { FETCH?: typeof fetch }).FETCH = rlFetch as unknown as typeof fetch;
 
   // Resources
   // Test resource: horreum://tests/{id}

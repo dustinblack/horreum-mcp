@@ -216,7 +216,8 @@ export const sendRequest = async (
 
     onCancel(() => controller.abort());
 
-    return await fetch(url, request);
+    const runtimeFetch = config.FETCH ?? fetch;
+    return await runtimeFetch(url, request);
 };
 
 export const getResponseHeader = (response: Response, responseHeader?: string): string | undefined => {

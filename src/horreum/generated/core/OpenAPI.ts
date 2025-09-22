@@ -17,6 +17,11 @@ export type OpenAPIConfig = {
     PASSWORD?: string | Resolver<string> | undefined;
     HEADERS?: Headers | Resolver<Headers> | undefined;
     ENCODE_PATH?: ((path: string) => string) | undefined;
+    /** Optional custom fetch implementation injected by host */
+    FETCH?: (
+        input: RequestInfo | URL,
+        init?: RequestInit
+    ) => Promise<Response>;
 };
 
 export const OpenAPI: OpenAPIConfig = {
