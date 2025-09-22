@@ -14,11 +14,46 @@ await registerTools(server, {
     HORREUM_TOKEN: undefined,
   }),
   fetchImpl: async (url) => {
-    // Minimal mock: return empty tests
-    return new Response(JSON.stringify({ tests: [] }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const u = new URL(url);
+    // Mock folders endpoint
+    if (u.pathname === '/api/test/folders') {
+      return new Response(JSON.stringify(['FolderA', 'FolderB']), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    // Mock summary endpoint with optional folder
+    if (u.pathname === '/api/test/summary') {
+      const folder = u.searchParams.get('folder');
+      const makeTest = (id, name, folderName = null) => ({
+        access: 'PUBLIC',
+        owner: 'mock-owner',
+        id,
+        name,
+        folder: folderName,
+        description: '',
+        datasets: 0,
+        runs: 0,
+        watching: null,
+        datastoreId: null,
+      });
+      if (folder) {
+        const tests = [
+          makeTest(100 + folder.length, `test-${folder}-1`, folder),
+          makeTest(200 + folder.length, `test-${folder}-2`, folder),
+        ];
+        return new Response(
+          JSON.stringify({ tests, count: tests.length }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      const tests = [makeTest(1, 'top-level-1'), makeTest(2, 'top-level-2')];
+      return new Response(
+        JSON.stringify({ tests, count: tests.length }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    return new Response('Not Found', { status: 404 });
   },
 });
 await server.connect(serverT);
