@@ -1,92 +1,140 @@
 # Horreum MCP Server
 
-A Model Context Protocol (MCP) server exposing Horreum capabilities as tools and
-resources for AI clients.
+A Model Context Protocol (MCP) server that exposes [Horreum](https://horreum.hyperfoil.io/)
+capabilities as tools and resources for AI clients. This allows AI agents to
+interact with Horreum to manage tests, schemas, runs, and more.
 
 ## Status
 
-Phase 1 implemented. Core scaffold complete; read tools and upload supported.
-See `mcp_development_plan.md` for the authoritative plan and status.
+This project is in Phase 1 of development. The core scaffold is complete, with
+support for read-only tools and data uploads. For a detailed project roadmap,
+please see the [mcp_development_plan.md](mcp_development_plan.md).
 
-## Quickstart
+## Features
 
-1. Create `.env`:
+The server provides the following tools for AI clients:
 
+-   `ping`: A simple connectivity check.
+-   `list_tests`: Lists Horreum tests with support for pagination and filters.
+-   `get_schema`: Retrieves a schema by its ID or name.
+-   `list_runs`: Lists runs for a given test ID, with support for pagination and
+    sorting.
+-   `upload_run`: Uploads a run JSON payload to a specified test.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+-   [Node.js](https://nodejs.org/) (v18 or higher)
+-   [npm](https://www.npmjs.com/)
+
+## Installation
+
+To get started, clone the repository and install the dependencies:
+
+```bash
+git clone https://github.com/your-username/horreum-mcp.git
+cd horreum-mcp
+npm ci
 ```
+
+Next, build the project.
+
+> [!IMPORTANT]
+> This build step is required before the server can be run, either manually or by an AI client.
+
+```bash
+npm run build
+```
+
+## Configuration
+
+The server is configured using environment variables. For local development and
+manual runs, you can create a `.env` file in the root of the project.
+
+```bash
+# .env
 HORREUM_BASE_URL=https://horreum.example.com
-# HORREUM_TOKEN=
+# HORREUM_TOKEN=your-horreum-api-token
 HORREUM_RATE_LIMIT=10
 HORREUM_TIMEOUT=30000
 HORREUM_API_VERSION=latest
 ```
 
-2. Install and build:
+| Variable             | Description                                                              |
+| -------------------- | ------------------------------------------------------------------------ |
+| `HORREUM_BASE_URL`   | The base URL of your Horreum instance.                                   |
+| `HORREUM_TOKEN`      | Your Horreum API token. Required for writes and private resource access. |
+| `HORREUM_RATE_LIMIT` | Client-side rate limit in requests per second.                           |
+| `HORREUM_TIMEOUT`    | Per-request timeout in milliseconds.                                     |
+| `HORREUM_API_VERSION`| The version of the Horreum API to use.                                   |
 
-- `npm ci`
-- `npm run build` (required)
+> [!NOTE]
+> When using an AI client, these environment variables are typically set in the client's configuration, and a local `.env` file is not required.
 
-Note: For AI chat clients (Claude, Cursor, Gemini) you usually do NOT start the
-server manually; those clients will spawn it. Manual runs are documented below.
+## Usage
 
-Connect from an MCP client and call the `ping` tool.
+There are two primary ways to use the server: running it manually for local
+testing or integrating it with an AI client that supports MCP.
 
-## Manual runs and local testing (no AI client)
+### Manual (Local) Testing
 
-Use this when you want to run the server yourself and/or validate locally with
-the included smoke tests.
+For local testing, you can start the server and use the provided smoke tests to
+validate its functionality.
 
-1) Configure `.env` in the repo root (required for manual runs)
+1.  **Start the server:**
 
-```
-HORREUM_BASE_URL=https://horreum.example.com
-# HORREUM_TOKEN= # required for write tools
-HORREUM_RATE_LIMIT=10
-HORREUM_TIMEOUT=30000
-HORREUM_API_VERSION=latest
-```
+    ```bash
+    npm start
+    ```
 
-2) Build and start the server
+    This will run the compiled server from `./build/index.js`.
 
-- `npm ci`
-- `npm run build`
-- `npm start` (runs `./build/index.js`)
+2.  **Run smoke tests:**
 
-3) Run smoke tests (fast, in-memory validation)
+    The smoke tests provide a quick way to validate the server's tools from the
+    command line.
 
-- `npm run smoke` (ping)
-- `npm run smoke:tests` (list_tests)
-- `npm run smoke:schema` (get_schema)
-- `npm run smoke:runs` (list_runs)
-- `npm run smoke:upload` (upload_run; mocked)
+    -   `npm run smoke`: Pings the server.
+    -   `npm run smoke:tests`: Lists tests.
+    -   `npm run smoke:schema`: Gets a schema.
+    -   `npm run smoke:runs`: Lists runs.
+    -   `npm run smoke:upload`: Mocks an upload.
 
-## Use with AI chat agents (MCP clients)
+### Usage with AI Clients (MCP)
 
-This server speaks MCP over stdio. Build once (`npm run build`). AI clients will
-spawn the server using the env you put in THEIR config. A local `.env` file is
-not required for AI clients.
+This server communicates with AI clients over stdio using the [Model Context
+Protocol](https://modelcontextprotocol.io/). After building the server (`npm run build`), you can configure your AI
+client to spawn it.
 
-### Shared stdio configuration (works for Claude Code/Desktop, Cursor, Gemini CLI)
+The core configuration is the same for all clients:
 
-All of these clients ultimately need the same three fields. The embedding format
-differs per client, but the values are identical:
+-   **Command:** `node`
+-   **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
+-   **Environment:**
+    -   `HORREUM_BASE_URL=https://horreum.example.com`
+    -   `HORREUM_TOKEN=${HORREUM_TOKEN}` (if required)
 
-- Command: `node`
-- Args: `./build/index.js` (use an absolute path in GUI-based clients)
-- Environment:
-  - `HORREUM_BASE_URL=https://horreum.example.com`
-  - `HORREUM_TOKEN=${HORREUM_TOKEN}` (required for writes and for reads of
-    PRIVATE resources; may be optional for public reads)
+> [!WARNING]
+> Always use an absolute path for the `args` value. Many clients do not expand `~` or resolve relative paths correctly.
 
-Example JSON block (for clients that accept JSON server definitions; otherwise
-map the same fields via UI). This SAME block applies to Claude, Cursor and
-Gemini CLI—only the surrounding file/location differs:
+Below are examples of how to configure popular AI clients.
+
+<details>
+<summary>Claude (VS Code & Desktop)</summary>
+
+-   **Claude Code (VS Code/JetBrains):** Add the server configuration to your
+    `claude_mcp.json` file.
+-   **Claude Desktop:** Add the server via **Preferences → MCP**.
+
+Example `claude_mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "horreum": {
       "command": "node",
-      "args": ["/absolute/path/to/build/index.js"],
+      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
       "env": {
         "HORREUM_BASE_URL": "https://horreum.example.com",
         "HORREUM_TOKEN": "${HORREUM_TOKEN}"
@@ -96,123 +144,87 @@ Gemini CLI—only the surrounding file/location differs:
 }
 ```
 
-Client-specific steps and how to embed the shared config:
+</details>
 
-### Claude (Code & Desktop)
+<details>
+<summary>Cursor</summary>
 
-- Claude Code (VS Code/JetBrains) uses a JSON file with `mcpServers`.
-- Claude Desktop adds servers via Preferences → MCP (UI fields map to the same
-  command/args/env).
+Open **Settings → MCP → Add Server** and provide the following:
 
-Embed the shared JSON block under a server key (e.g., `horreum`) or use the UI
-to enter the same fields.
+-   **Command:** `node`
+-   **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
+-   **Env:** `HORREUM_BASE_URL`, `HORREUM_TOKEN` (if needed)
 
-Ask Claude: “List tests I can access,” or “Get schema by name
-amq-broker-message-processing.”
+</details>
 
-See also: Anthropic docs → “Model Context Protocol (MCP) Overview”.
+<details>
+<summary>Gemini CLI</summary>
 
-Config locations:
+Add the server configuration to your Gemini settings file (typically
+`~/.gemini/settings.json`).
 
-- Claude Code (VS Code/JetBrains): typically a `claude_mcp.json` in the
-  workspace or a user-level settings store; exact path varies by editor/OS —
-  see Claude Code MCP docs.
-- Claude Desktop: Preferences → MCP (UI). Settings are stored in the app data
-  directory per OS — see Desktop docs for paths.
-
-### Cursor
-
-Open Cursor → Settings → MCP → Add Server and fill:
-
-- Command: `node`
-- Args: `/absolute/path/to/build/index.js`
-- Env: `HORREUM_BASE_URL`, `HORREUM_TOKEN` (if needed)
-
-Then try: “List runs for test 114.”
-
-Config location: Cursor → Settings → MCP (UI). Cursor persists configuration
-internally; see Cursor docs for details.
-
-### Gemini CLI
-
-Gemini’s CLI supports MCP via a config file. Add a server entry that contains
-the shared config (command/args/env). The surrounding file/location varies by
-installation—consult the Gemini CLI MCP documentation for the current schema.
-
-Then run the CLI and ask: “List tests from Horreum.”
-
-Config location: typically `~/.gemini/settings.json` (Gemini CLI). Paths can
-vary by install/version — see Gemini CLI docs for authoritative locations.
-
-References:
-
-- Model Context Protocol: [modelcontextprotocol.io](https://modelcontextprotocol.io)
-- Claude + MCP: Anthropic docs → “MCP Overview”, “MCP in Desktop/Code”.
-- Gemini CLI + MCP: Gemini CLI documentation for MCP configuration.
-
-Troubleshooting
-
-- Paths: Use absolute paths for `args` (many clients do not expand `~`).
-- Build: Always run `npm run build` after changes so the client executes fresh
-  code from `./build/index.js`.
-- Env: Missing `HORREUM_BASE_URL` (or token if needed) will cause immediate
-  startup failure.
-## Testing and expected behavior
-
-- Natural-language prompts that work well:
-  - “List tests I can access.” (use roles="__all" internally)
-  - “Get schema by id 65.” or “Get schema by name amq-broker-…”.
-  - “Show the latest 5 runs for test 114.”
-
-- Pagination and roles:
-  - Some endpoints are 1‑based for `page`. If a page looks empty, try `page: 1`.
-  - For large results, prefer `limit` + `page`. Use roles="__all" for global
-    listings when allowed by policy.
-
-- Authentication:
-  - PUBLIC resources may be readable anonymously (instance-dependent). PRIVATE
-    resources require `HORREUM_TOKEN` even for reads. Writes always require a
-    token. See Horreum docs on access control.
-  - Errors are surfaced with helpful text; avoid logging secrets.
-
-- Writes (upload_run):
-  - Provide `test`, `start`, `stop`, and JSON `data`. Prefer a dry‑run flow in
-    production to verify payloads before committing changes.
-
-### Available Tools
-
-- `ping`: Simple connectivity check.
-- `list_tests`: List Horreum tests (supports pagination and filters).
-- `get_schema`: Retrieve a schema by id or name.
-- `list_runs`: List runs for a test id (pagination/sorting supported).
-- `upload_run`: Upload a run JSON payload (requires `HORREUM_TOKEN`).
-
-### Exposed Resources
-
-- `horreum://tests/{id}`: Test by ID (JSON).
-- `horreum://schemas/{id}`: Schema by ID (JSON).
-- `horreum://tests/{testId}/runs/{runId}`: Run summary by run ID (JSON).
-
-### Configuration
-
-Environment variables (for manual runs via `.env`):
-
-```
-HORREUM_BASE_URL=https://horreum.example.com
-# HORREUM_TOKEN= # required for writes and for reads of PRIVATE resources
-HORREUM_RATE_LIMIT=10          # client-side rate limit (req/sec)
-HORREUM_TIMEOUT=30000          # per-request timeout (ms)
-HORREUM_API_VERSION=latest
+```json
+{
+  "mcpServers": {
+    "horreum": {
+      "command": "node",
+      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
+      "env": {
+        "HORREUM_BASE_URL": "https://horreum.example.com",
+        "HORREUM_TOKEN": "${HORREUM_TOKEN}"
+      }
+    }
+  }
+}
 ```
 
-The client uses retries with exponential backoff (±25% jitter) on 429/5xx.
-Secrets are never logged. PRIVATE resource access requires a token.
+</details>
+
+<br>
+
+## Sample Prompts
+
+Below are some examples of natural language prompts you can use with your AI
+client.
+
+-   **"List all available tests."**
+
+    > **Expected behavior:** The AI client will use the `list_tests` tool to
+    > retrieve a list of all tests you have access to.
+
+-   **"Get the schema with the name `my-schema-name`."**
+
+    > **Expected behavior:** The AI client will use the `get_schema` tool to
+    > retrieve the schema with the specified name.
+
+-   **"Show me the latest 5 runs for test ID 123."**
+
+    > **Expected behavior:** The AI client will use the `list_runs` tool with a
+    > limit of 5 to retrieve the most recent runs for the specified test.
+
+-   **"Upload a new run to the `my-test` test."**
+
+    > **Expected behavior:** The AI client will use the `upload_run` tool. It may
+    > ask for the required data, such as the start and stop times and the JSON
+    > payload for the run.
 
 ## Development
 
-- `npm run check` (typecheck + lint)
-- `npm run format`
-- `npm run build`
+This section provides information for developers contributing to the project.
+
+### Code Quality
+
+-   **Type checking and linting:**
+
+    ```bash
+    npm run check
+    ```
+
+-   **Formatting:**
+
+    ```bash
+    npm run format
+    ```
 
 ### Git Hooks
 
@@ -220,23 +232,24 @@ This repository includes a pre-commit hook to ensure code quality and security.
 The hook runs `secretlint` to prevent committing secrets and `eslint` for code
 style.
 
-To enable the hook, run the following command in your terminal:
+To enable the hook, run the following command:
 
 ```bash
 git config core.hooksPath .githooks
 ```
 
-### Generate Horreum OpenAPI client (optional)
+### Generating the Horreum OpenAPI Client
 
-Provide an OpenAPI JSON URL (typically `<HORREUM_BASE_URL>/q/openapi?format=json`)
-when generating. Some public docs endpoints serve HTML; prefer a live instance.
+The Horreum API client is generated from an OpenAPI specification. To regenerate
+the client:
 
 ```bash
 npm run gen:api -- --input https://your-horreum.example.com/q/openapi?format=json
 ```
 
-Generated code will be placed under `src/horreum/generated/`.
+The generated code will be placed in `src/horreum/generated/`.
 
 ## License
 
-Apache 2.0
+This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE)
+file for details.
