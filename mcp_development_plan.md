@@ -50,14 +50,15 @@ The development will follow an iterative, phased approach with a read-first prio
 
 A multi-layered testing approach will be implemented, following the read-first priority by stabilizing read tools before write tools.
 
-1.  **Unit Tests (Vitest or Jest)**: Test tool handlers with mocked HTTP clients.
-2.  **Integration Tests**: Use `nock` or `msw` to simulate Horreum endpoints; verify schema and error handling.
-3.  **End-to-End (E2E)**: Exercise the MCP server via an MCP client (e.g., `mcp-cli`) to validate tool registration and execution.
-4.  **Continuous Integration (CI)**: GitHub Actions on Node 20: install, lint, build, test, and type-check.
-5.  **Smokes (in-memory transport)**: Lightweight smoke tests validate `ping`,
+1.  **Smoke Tests (in-memory transport)**: Innovative lightweight smoke tests validate `ping`,
     `list_tests` (folder-aware), `get_schema`, `list_runs` (time filters), and
     `upload_run` without external dependencies; executed in CI. Smokes use generic
-    fixtures (e.g., `example-test`, id `123`) to avoid internal references.
+    fixtures (e.g., `example-test`, id `123`) and in-memory MCP transport with mocked
+    HTTP responses - this approach is highly effective for MCP server validation.
+2.  **Unit Tests (Vitest or Jest)**: Test tool handlers and core utilities with mocked HTTP clients.
+3.  **Integration Tests**: Use `nock` or `msw` to simulate Horreum endpoints; verify schema and error handling.
+4.  **End-to-End (E2E)**: Exercise the MCP server via an MCP client (e.g., `mcp-cli`) to validate tool registration and execution.
+5.  **Continuous Integration (CI)**: GitHub Actions on Node 20: install, lint, build, comprehensive smoke tests, and type-check.
 
 ### 4. MCP Tool Design Details
 
@@ -177,9 +178,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
            resolution to ID; client-side filtering across pages when needed
            (2025-09-22)
      - [x] Configure env (`HORREUM_BASE_URL`, optional `HORREUM_TOKEN`) and validation (2025-09-19)
-     - [x] Set up CI (Node 20: lint, build, type-check + smokes) (2025-09-19)
-     - [x] CI smokes cover `list_tests`, `get_schema`, `list_runs`, `upload_run`
-           (2025-09-22)
+     - [x] Set up CI (Node 20: lint, build, type-check + comprehensive smoke tests) (2025-09-19)
+     - [x] CI smokes cover all core tools (`ping`, `list_tests`, `get_schema`, `list_runs`, `upload_run`)
+           with mocked responses using in-memory transport (2025-09-22)
      - [x] Tighten TypeScript types in server; remove explicit anys in
            `src/server/tools.ts` (2025-09-22)
    - Phase 2 — Write tools
@@ -190,19 +191,21 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Add structured logging with correlation IDs and durations for all tools (2025-09-22)
      - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
            (2025-09-22)
+     - [ ] Fix package.json metadata (description, author) and type issues (private field)
+     - [ ] Implement uniform error handling in all tools to return consistent error
+           objects `{ code, message, details, correlationId }` per the plan specification
      - [ ] Refactor to inject rate-limited fetch into OpenAPI client instead of
-           patching global fetch.
-     - [ ] Implement structured error handling in all tools to return uniform error
-           objects per the plan.
+           patching global fetch
      - [ ] Refactor tool implementations to reduce boilerplate (logging, CID) using a
-           wrapper or utility function.
+           wrapper or utility function
      - [ ] Replace console.log with a dedicated structured logging library (e.g.,
-           pino).
+           pino)
      - [ ] Optional: metrics/tracing (pending)
    - Phase 4 — Testing
-     - [ ] Set up a formal testing framework (e.g., Vitest).
-     - [ ] Add unit tests for core utilities (e.g., rate-limited fetch).
-     - [ ] Add integration tests for each MCP tool, mocking the Horreum API.
+     - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
+     - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
+     - [ ] Add integration tests for each MCP tool, building on current mocked API approach
+     - [ ] Document the innovative smoke test strategy using in-memory MCP transport
    - Phase 5 — Data Analysis
      - [ ] Design `analyze_run_data` tool for server-side statistical analysis.
      - [ ] Implement `analyze_run_data` tool, leveraging a suitable statistics
@@ -216,6 +219,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Project review completed: Implementation is well-aligned with plan; identified testing framework gap and error handling inconsistencies; CI is working well with comprehensive smoke tests; recommended priority adjustments for Phase 4 testing framework setup.
    - 2025-09-22 — Structured logging (correlation IDs + durations) added for all tools; type tightening across `src/server/tools.ts` (removed explicit anys); smoke tests now use generic fixtures (`example-test`, id `123`) for `list_runs`.
    - 2025-09-22 — Added Phase 4 (Testing) and Phase 5 (Data Analysis) to the
      plan. Updated Phase 3 (Hardening) to include specific refactoring tasks
