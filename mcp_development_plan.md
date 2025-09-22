@@ -186,8 +186,24 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Implement client-side retries/backoff and rate limiting (2025-09-19)
     - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
           (2025-09-22)
-     - [ ] Add structured logging with correlation IDs (pending)
+     - [ ] Refactor to inject rate-limited fetch into OpenAPI client instead of
+           patching global fetch.
+     - [ ] Implement structured error handling in all tools to return uniform error
+           objects per the plan.
+     - [ ] Refactor tool implementations to reduce boilerplate (logging, CID) using a
+           wrapper or utility function.
+     - [ ] Replace console.log with a dedicated structured logging library (e.g.,
+           pino).
      - [ ] Optional: metrics/tracing (pending)
+   - Phase 4 — Testing
+     - [ ] Set up a formal testing framework (e.g., Vitest).
+     - [ ] Add unit tests for core utilities (e.g., rate-limited fetch).
+     - [ ] Add integration tests for each MCP tool, mocking the Horreum API.
+   - Phase 5 — Data Analysis
+     - [ ] Design `analyze_run_data` tool for server-side statistical analysis.
+     - [ ] Implement `analyze_run_data` tool, leveraging a suitable statistics
+           library.
+     - [ ] Add unit and integration tests for the new analysis tool.
 
 6. How to update this document
    1. Review open tasks and repository state (commits, CI, issues).
@@ -196,6 +212,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Added Phase 4 (Testing) and Phase 5 (Data Analysis) to the
+     plan. Updated Phase 3 (Hardening) to include specific refactoring tasks
+     for fetch logic, error handling, and logging based on code review.
    - 2025-09-22 — `list_tests` made folder-aware (aggregates across folders);
      `list_runs` gained `from`/`to` time filters and test name resolution with
      client-side filtering across pages; CI smokes expanded; README clarified
