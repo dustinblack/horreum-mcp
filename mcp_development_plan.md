@@ -192,14 +192,13 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
            (2025-09-22)
      - [ ] Fix package.json metadata (description, author) and type issues (private field)
-     - [ ] Implement uniform error handling in all tools to return consistent error
-           objects `{ code, message, details, correlationId }` per the plan specification
+    - [x] Implement uniform error handling in all tools to return consistent error
+          objects `{ code, message, details, correlationId }` per the plan specification (2025-09-22)
     - [x] Refactor to inject rate-limited fetch into OpenAPI client instead of
           patching global fetch (2025-09-22)
      - [ ] Refactor tool implementations to reduce boilerplate (logging, CID) using a
            wrapper or utility function
-     - [ ] Replace console.log with a dedicated structured logging library (e.g.,
-           pino)
+    - [x] Replace console.log with a dedicated structured logging library (pino) (2025-09-22)
      - [ ] Optional: metrics/tracing (pending)
    - Phase 4 — Testing
      - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
@@ -219,6 +218,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Structured error handling wrapper added for all tools; migrated
+     logging to pino with correlation IDs and durations; refactored tool
+     registrations to reduce boilerplate.
    - 2025-09-22 — Injected rate-limited fetch via `OpenAPI.FETCH` (no global
      patch); updated postgen to enforce NodeNext import extensions and FETCH
      typing; adjusted server to wire custom fetch.
