@@ -110,14 +110,22 @@ No database is required for the MCP server. Optional components:
 3. Logging: Structured JSON logs with event types and correlation IDs.
 4. Health: Startup self-check for configuration and Horreum connectivity (optional).
 
+### 8.1. Production Readiness & Operational Concerns
+
+1. **Resource Consistency**: All MCP resources (tests, schemas, runs) must implement uniform error handling with correlation IDs, structured logging, metrics recording, and tracing spans.
+2. **Security Hardening**: Implement token redaction in all error messages and logs; validate tokens at startup with secure error handling; never expose sensitive data in debug output.
+3. **Health Monitoring**: Provide startup connectivity validation to Horreum; implement optional health check endpoint for operational monitoring.
+4. **Error Boundaries**: Ensure all resource URI validation returns structured error objects rather than generic text responses.
+5. **Dependency Security**: Continuous monitoring of dependencies for vulnerabilities; automated security scanning in CI pipeline.
+
 ### 9. CI/CD
 
 1. Build/format: Node 20, ESLint/Prettier, type-check with `tsc`.
 2. Tests: Unit/integration/E2E orchestrated via GitHub Actions.
-3. Security: Dependency scan (e.g., `npm audit`/`osv-scanner`); fail on high severity.
+3. Security: **REQUIRED** - Dependency scan (`npm audit`, `osv-scanner`); fail on high/critical severity; run on every PR and main branch push.
 4. Releases: Tag-based npm package and/or Docker image.
 5. Live smoke (optional, gated): Provide an optional workflow that runs a minimal read-only smoke test against a sandbox Horreum instance using repository/environment secrets. Skip on forks and by default; keep main CI fully mocked.
-6. Versioning: Use SemVer for the npm package. Version MCP tool JSON Schemas; when making breaking changes, deprecate previous versions with warnings for at least one minor release before removal. Maintain a human-readable `CHANGELOG.md`.
+6. Versioning: Use SemVer for the npm package. Version MCP tool JSON Schemas; when making breaking changes, deprecate previous versions with warnings for at least one minor release before removal. **REQUIRED** - Maintain a human-readable `CHANGELOG.md` with all changes documented.
 
 ### 10. Deployment and Configuration
 
@@ -205,11 +213,17 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Optional: Prometheus metrics endpoint (counters/histograms) (2025-09-22)
     - [x] Optional: tracing (OpenTelemetry) with undici auto-instrumentation and
           tool/resource spans (2025-09-22)
-   - Phase 4 — Testing
+   - Phase 4 — Testing & Security Hardening
      - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
      - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
      - [ ] Add integration tests for each MCP tool, building on current mocked API approach
      - [ ] Document the innovative smoke test strategy using in-memory MCP transport
+     - [ ] Add CI security scanning (`npm audit`, dependency vulnerability checks)
+     - [ ] Implement startup health check endpoint with Horreum connectivity validation
+     - [ ] Add token redaction to startup error messages and logs
+     - [ ] Standardize resource error handling (add structured logging/metrics to `test` resource)
+     - [ ] Improve resource URI validation with structured error responses
+     - [ ] Create and maintain `CHANGELOG.md` file following SemVer practices
    - Phase 5 — Data Analysis
      - [ ] Design `analyze_run_data` tool for server-side statistical analysis.
      - [ ] Implement `analyze_run_data` tool, leveraging a suitable statistics
@@ -223,6 +237,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-22 — Expanded Phase 4 to "Testing & Security Hardening" to address
+     operational concerns identified during implementation review: CI security
+     scanning, health checks, token redaction, resource error handling
+     consistency, and required CHANGELOG.md maintenance. Added Production
+     Readiness section (8.1) with specific operational requirements.
    - 2025-09-22 — Added optional OpenTelemetry tracing (OTLP); auto-instrumented
      undici and wrapped tools/resources with spans; documented enablement.
    - 2025-09-22 — Added optional Prometheus metrics endpoint with counters for
