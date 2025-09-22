@@ -6,6 +6,9 @@ const EnvSchema = z.object({
   HORREUM_RATE_LIMIT: z.coerce.number().int().positive().max(1000).default(10),
   HORREUM_TIMEOUT: z.coerce.number().int().positive().max(300000).default(30000),
   HORREUM_API_VERSION: z.string().optional().default('latest'),
+  METRICS_ENABLED: z.coerce.boolean().optional().default(false),
+  METRICS_PORT: z.coerce.number().int().positive().max(65535).optional().default(9464),
+  METRICS_PATH: z.string().optional().default('/metrics'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

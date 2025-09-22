@@ -84,6 +84,9 @@ HORREUM_API_VERSION=latest
 | `HORREUM_TIMEOUT`    | Per-request timeout in milliseconds.                                     |
 | `HORREUM_API_VERSION`| The version of the Horreum API to use.                                   |
 | `LOG_LEVEL`          | Logging level for pino (`info`, `debug`, `error`). Default: `info`.      |
+| `METRICS_ENABLED`    | Enable Prometheus metrics endpoint. Default: `false`.                     |
+| `METRICS_PORT`       | Port for metrics endpoint. Default: `9464`.                               |
+| `METRICS_PATH`       | Path for metrics endpoint. Default: `/metrics`.                            |
 
 > [!NOTE]
 > When using an AI client, these environment variables are typically set in the client's configuration, and a local `.env` file is not required.
@@ -105,6 +108,18 @@ validate its functionality.
     ```
 
     This will run the compiled server from `./build/index.js`.
+
+3.  **Enable Prometheus metrics (optional):**
+
+    Set environment variables and scrape from Prometheus:
+
+    ```bash
+    export METRICS_ENABLED=true
+    export METRICS_PORT=9464
+    export METRICS_PATH=/metrics
+    npm start
+    # Scrape http://localhost:9464/metrics
+    ```
 
 2.  **Run smoke tests:**
 

@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import pino from 'pino';
 import { z } from 'zod';
 import type { Env } from '../config/env.js';
+import type { Metrics } from '../observability/metrics.js';
 import { OpenAPI } from '../horreum/generated/core/OpenAPI.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
@@ -17,13 +18,14 @@ type RegisterOptions = {
   getEnv: () => Promise<Env>;
   // Minimal fetch-like signature for tests; real runtime uses global fetch
   fetchImpl?: FetchLike | undefined;
+  metrics?: Metrics | undefined;
 };
 
 export async function registerTools(
   server: McpServer,
   options: RegisterOptions
 ): Promise<void> {
-  const { getEnv, fetchImpl } = options;
+  const { getEnv, fetchImpl, metrics } = options;
   const genCid = (): string =>
     Math.random().toString(16).slice(2, 10) + Date.now().toString(16);
   const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
@@ -114,11 +116,15 @@ export async function registerTools(
             { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
           ],
         };
-        log('info', { event: 'resource.end', resource: 'schema', cid, durationMs: Date.now() - started });
+        const duration = Date.now() - started;
+        log('info', { event: 'resource.end', resource: 'schema', cid, durationMs: duration });
+        metrics?.recordResource('schema', duration, true);
         return res;
       } catch (err) {
         const errObj = errorToObject(err, cid);
-        log('error', { event: 'resource.error', resource: 'schema', cid, durationMs: Date.now() - started, error: errObj });
+        const duration = Date.now() - started;
+        log('error', { event: 'resource.error', resource: 'schema', cid, durationMs: duration, error: errObj });
+        metrics?.recordResource('schema', duration, false);
         return { contents: [{ uri: uriStr, text: JSON.stringify(errObj) }], isError: true };
       }
     }
@@ -150,11 +156,15 @@ export async function registerTools(
             { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
           ],
         };
-        log('info', { event: 'resource.end', resource: 'run', cid, durationMs: Date.now() - started });
+        const duration = Date.now() - started;
+        log('info', { event: 'resource.end', resource: 'run', cid, durationMs: duration });
+        metrics?.recordResource('run', duration, true);
         return res;
       } catch (err) {
         const errObj = errorToObject(err, cid);
-        log('error', { event: 'resource.error', resource: 'run', cid, durationMs: Date.now() - started, error: errObj });
+        const duration = Date.now() - started;
+        log('error', { event: 'resource.error', resource: 'run', cid, durationMs: duration, error: errObj });
+        metrics?.recordResource('run', duration, false);
         return { contents: [{ uri: uriStr, text: JSON.stringify(errObj) }], isError: true };
       }
     }
@@ -179,11 +189,15 @@ export async function registerTools(
         log('info', { event: 'tool.start', tool: toolName, cid, args });
         try {
           const res = await handler(args);
-          log('info', { event: 'tool.end', tool: toolName, cid, durationMs: Date.now() - started });
+          const duration = Date.now() - started;
+          log('info', { event: 'tool.end', tool: toolName, cid, durationMs: duration });
+          metrics?.recordTool(toolName, duration, !(res as { isError?: boolean }).isError);
           return res;
         } catch (err) {
           const errObj = errorToObject(err, cid);
-          log('error', { event: 'tool.error', tool: toolName, cid, durationMs: Date.now() - started, error: errObj });
+          const duration = Date.now() - started;
+          log('error', { event: 'tool.error', tool: toolName, cid, durationMs: duration, error: errObj });
+          metrics?.recordTool(toolName, duration, false);
           return { content: [{ type: 'text', text: JSON.stringify(errObj) }], isError: true };
         }
       }
