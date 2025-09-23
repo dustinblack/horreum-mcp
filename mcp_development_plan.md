@@ -46,6 +46,32 @@ The development will follow an iterative, phased approach with a read-first prio
 2.  **Rate Limits/Backoff**: Handle Horreum API backoff and error propagation.
 3.  **Caching (optional)**: In-memory cache for hot reads with TTL.
 
+**Phase 4: HTTP Standalone Mode**
+
+1.  **HTTP Transport**: Implement HTTP server mode using `StreamableHTTPServerTransport` from MCP SDK with Express.js.
+2.  **Dual Mode Support**: Support both stdio (current) and HTTP modes via configuration.
+3.  **External LLM Integration**: Add configurable LLM API client for external inference (OpenAI, Anthropic, Azure, etc.).
+4.  **Session Management**: Implement HTTP session management with UUIDs and optional resumability.
+5.  **HTTP Security**: CORS configuration, Bearer token authentication, DNS rebinding protection.
+6.  **Deployment Options**: Enable containerized deployments and cloud hosting scenarios.
+
+**Phase 5: Testing & Security Hardening**
+
+1.  **Testing Framework**: Set up formal testing framework (Vitest) to complement existing smoke tests.
+2.  **Unit Tests**: Add unit tests for core utilities (rate-limited fetch, environment validation).
+3.  **Integration Tests**: Add integration tests for each MCP tool, building on current mocked API approach.
+4.  **Security Scanning**: Add CI security scanning (`npm audit`, dependency vulnerability checks).
+5.  **Health Monitoring**: Implement startup health check endpoint with Horreum connectivity validation.
+6.  **Security Hardening**: Add token redaction to startup error messages and logs.
+7.  **Resource Consistency**: Standardize resource error handling and improve URI validation.
+8.  **Documentation**: Document testing strategy and maintain `CHANGELOG.md` following SemVer practices.
+
+**Phase 6: Data Analysis**
+
+1.  **Analysis Tool Design**: Design `analyze_run_data` tool for server-side statistical analysis.
+2.  **Statistics Integration**: Implement analysis tool leveraging suitable statistics library.
+3.  **Analysis Testing**: Add unit and integration tests for the new analysis capabilities.
+
 ### 3. Testing Strategy
 
 A multi-layered testing approach will be implemented, following the read-first priority by stabilizing read tools before write tools.
@@ -78,6 +104,7 @@ No database is required for the MCP server. Optional components:
 
 1. Caching: In-memory LRU cache (TTL) for frequent read endpoints.
 2. Config: Environment-based configuration with validation at startup.
+3. HTTP Mode: Optional HTTP server transport with session management and external LLM integration.
 
 ### 6. MCP Server Protocol and Horreum Auth
 
@@ -132,7 +159,8 @@ No database is required for the MCP server. Optional components:
 1. Runtime: Node 20 LTS.
 2. Packaging: NPM package and/or container image using non-root user and minimal base.
 3. Config: Required variables (`HORREUM_BASE_URL`) and optional (`HORREUM_TOKEN` for authenticated access, `HORREUM_RATE_LIMIT=10`, `HORREUM_TIMEOUT=30000`, `HORREUM_API_VERSION=latest`); document all variables with examples and auth modes.
-4. Kubernetes: Minimal manifests (optional initially).
+4. HTTP Mode Config: Optional HTTP server variables (`HTTP_MODE_ENABLED=false`, `HTTP_PORT=3000`) and LLM integration (`LLM_PROVIDER=openai`, `LLM_API_KEY`, `LLM_MODEL=gpt-4`).
+5. Kubernetes: Minimal manifests (optional initially).
 
 Note: A minimal Quickstart with an example `.env` is provided below.
 
@@ -168,8 +196,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - `[c]` cancelled
 
 4. Current execution directive
-   - Development is authorized for Phase 2 and Phase 3 hardening.
-     Proceed with optional `create_test` and observability (logging/metrics).
+   - Development is authorized for Phase 4 (HTTP Standalone Mode).
+     Proceed with HTTP transport implementation and external LLM integration.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -213,7 +241,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Optional: Prometheus metrics endpoint (counters/histograms) (2025-09-22)
     - [x] Optional: tracing (OpenTelemetry) with undici auto-instrumentation and
           tool/resource spans (2025-09-22)
-   - Phase 4 — Testing & Security Hardening
+   - Phase 4 — HTTP Standalone Mode
+     - [ ] Extend environment configuration for HTTP mode and LLM settings
+     - [ ] Implement HTTP transport using StreamableHTTPServerTransport with Express.js
+     - [ ] Add configurable LLM client for external API calls (OpenAI, Anthropic, Azure)
+     - [ ] Create hybrid entrypoint supporting both stdio and HTTP modes
+     - [ ] Implement session management with UUIDs and optional resumability
+     - [ ] Add HTTP security features (CORS, Bearer auth, DNS rebinding protection)
+     - [ ] Update documentation with HTTP standalone mode usage and deployment
+     - [ ] Add smoke tests for HTTP mode functionality
+   - Phase 5 — Testing & Security Hardening
      - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
      - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
      - [ ] Add integration tests for each MCP tool, building on current mocked API approach
@@ -224,7 +261,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [ ] Standardize resource error handling (add structured logging/metrics to `test` resource)
      - [ ] Improve resource URI validation with structured error responses
      - [ ] Create and maintain `CHANGELOG.md` file following SemVer practices
-   - Phase 5 — Data Analysis
+   - Phase 6 — Data Analysis
      - [ ] Design `analyze_run_data` tool for server-side statistical analysis.
      - [ ] Implement `analyze_run_data` tool, leveraging a suitable statistics
            library.
@@ -237,6 +274,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-23 — Synchronized Development Strategy section with Status Checklist by
+     adding missing Phase 5 "Testing & Security Hardening" and Phase 6 "Data
+     Analysis" to the strategy section. All phases now properly documented in both
+     sections for consistency.
+   - 2025-09-23 — Added Phase 4 "HTTP Standalone Mode" to support HTTP transport
+     using StreamableHTTPServerTransport, external LLM API integration, session
+     management, and deployment flexibility. Renumbered existing phases: Testing
+     & Security Hardening is now Phase 5, Data Analysis is Phase 6. Updated
+     execution directive to authorize Phase 4 implementation.
    - 2025-09-22 — Expanded Phase 4 to "Testing & Security Hardening" to address
      operational concerns identified during implementation review: CI security
      scanning, health checks, token redaction, resource error handling
@@ -292,6 +338,13 @@ HORREUM_BASE_URL=https://horreum.example.com
 HORREUM_RATE_LIMIT=10
 HORREUM_TIMEOUT=30000
 HORREUM_API_VERSION=latest
+
+# Optional: HTTP standalone mode (Phase 4)
+# HTTP_MODE_ENABLED=true
+# HTTP_PORT=3000
+# LLM_PROVIDER=openai
+# LLM_API_KEY=your-api-key
+# LLM_MODEL=gpt-4
 ```
 
 3. Install and run (development)
@@ -300,6 +353,8 @@ HORREUM_API_VERSION=latest
    - Start the server: `npm start`
 
 4. Exercise with an MCP client
-   - Use your preferred MCP client (e.g., `mcp-cli`) to connect to the server.
+   - **Stdio mode (default)**: Use your preferred MCP client (e.g., `mcp-cli`) to connect to the server.
+   - **HTTP mode (Phase 4)**: Set `HTTP_MODE_ENABLED=true` and access via HTTP at `http://localhost:3000/mcp`.
    - Try read tools first: `list_tests`, `get_schema`, `list_runs`.
    - For write tools (e.g., `upload_run`), set `HORREUM_TOKEN`.
+   - For LLM integration (Phase 4), configure `LLM_PROVIDER` and `LLM_API_KEY`.
