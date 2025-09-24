@@ -55,7 +55,21 @@ The development will follow an iterative, phased approach with a read-first prio
 5.  **HTTP Security**: CORS configuration, Bearer token authentication, DNS rebinding protection.
 6.  **Deployment Options**: Enable containerized deployments and cloud hosting scenarios.
 
-**Phase 5: Testing & Security Hardening**
+**Phase 5: External MCP Integration**
+
+To support connectivity with external MCP servers, this phase introduces stable, service-based HTTP endpoints. These endpoints are designed for machine-to-machine communication and will mirror the functionality of existing MCP tools but with a stable HTTP contract.
+
+1.  **Independent MCPs Topology**: The server will support an "Independent MCPs" topology where a client can fetch data from this Horreum MCP and pass it to another Domain MCP. In this "raw mode," no new server-side changes are required.
+2.  **Service-Based HTTP Endpoints**: For a more integrated approach, the following stable HTTP endpoints will be implemented:
+    *   `POST /tools/tests.list`
+    *   `POST /tools/runs.list`
+    *   `POST /tools/datasets.search`
+    *   `POST /tools/datasets.get`
+    *   `POST /tools/artifacts.get`
+3.  **Response Shapes**: The JSON response shapes for these endpoints will be compatible with Pydantic models used by consuming services. Responses will include pagination and cache hints where applicable.
+4.  **Future Work (MCP-to-MCP Adapter)**: As an optional future enhancement, a non-HTTP, MCP-accessible side channel or a minimal bridge could be exposed for more direct MCP-to-MCP communication.
+
+**Phase 6: Testing & Security Hardening**
 
 1.  **Testing Framework**: Set up formal testing framework (Vitest) to complement existing smoke tests.
 2.  **Unit Tests**: Add unit tests for core utilities (rate-limited fetch, environment validation).
@@ -66,7 +80,7 @@ The development will follow an iterative, phased approach with a read-first prio
 7.  **Resource Consistency**: Standardize resource error handling and improve URI validation.
 8.  **Documentation**: Document testing strategy and maintain `CHANGELOG.md` following SemVer practices.
 
-**Phase 6: Data Analysis**
+**Phase 7: Data Analysis**
 
 1.  **Analysis Tool Design**: Design `analyze_run_data` tool for server-side statistical analysis.
 2.  **Statistics Integration**: Implement analysis tool leveraging suitable statistics library.
@@ -250,7 +264,13 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [ ] Add HTTP security features (CORS, Bearer auth, DNS rebinding protection)
      - [ ] Update documentation with HTTP standalone mode usage and deployment
      - [ ] Add smoke tests for HTTP mode functionality
-   - Phase 5 — Testing & Security Hardening
+   - Phase 5 — External MCP Integration
+     - [ ] Design stable HTTP endpoints for external MCP consumption
+     - [ ] Implement `POST /tools/tests.list` and `POST /tools/runs.list`
+     - [ ] Implement `POST /tools/datasets.search`, `POST /tools/datasets.get`, and `POST /tools/artifacts.get`
+     - [ ] Ensure response shapes are compatible with Pydantic models
+     - [ ] Add documentation for external MCP integration topologies
+   - Phase 6 — Testing & Security Hardening
      - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
      - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
      - [ ] Add integration tests for each MCP tool, building on current mocked API approach
@@ -261,7 +281,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [ ] Standardize resource error handling (add structured logging/metrics to `test` resource)
      - [ ] Improve resource URI validation with structured error responses
      - [ ] Create and maintain `CHANGELOG.md` file following SemVer practices
-   - Phase 6 — Data Analysis
+   - Phase 7 — Data Analysis
      - [ ] Design `analyze_run_data` tool for server-side statistical analysis.
      - [ ] Implement `analyze_run_data` tool, leveraging a suitable statistics
            library.
@@ -274,6 +294,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-24 — Added Phase 5 "External MCP Integration" to support service-based HTTP endpoints for external MCPs. Renumbered subsequent phases from 5, 6 to 6, 7.
    - 2025-09-23 — Synchronized Development Strategy section with Status Checklist by
      adding missing Phase 5 "Testing & Security Hardening" and Phase 6 "Data
      Analysis" to the strategy section. All phases now properly documented in both
