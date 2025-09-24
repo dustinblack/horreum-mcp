@@ -1,14 +1,3 @@
-### Tracing (optional)
-
-OpenTelemetry tracing can be enabled to export spans (including HTTP calls via undici):
-
-```bash
-export TRACING_ENABLED=true
-# Configure OTLP endpoint via standard envs, e.g. OTEL_EXPORTER_OTLP_ENDPOINT
-npm start
-```
-
-Spans include per-tool and per-resource operations and all outbound fetch calls.
 # Horreum MCP Server
 
 A Model Context Protocol (MCP) server that exposes
@@ -18,18 +7,21 @@ schemas, runs, and more.
 
 ## Status
 
-This project is in Phase 3 (Observability & Hardening). Core functionality is
-implemented with enhancements:
+This project is in Phase 4 (HTTP Standalone Mode) development. Core functionality is
+implemented with comprehensive observability:
 
+- **Phase 1-3 Complete**: Read tools, write tools, and observability hardening
+- **Current Focus**: HTTP transport with external LLM integration
 - Read tools stabilized with folder-aware `list_tests` and time-filtered
   `list_runs` (test name to ID resolution supported)
-- `upload_run` implemented
+- `upload_run` implemented with full validation
 - Structured logging with correlation IDs (pino)
 - Rate-limited fetch with retries/backoff injected via `OpenAPI.FETCH`
+- Prometheus metrics and OpenTelemetry tracing support
 - CI runs typecheck, lint, build, and all smoke tests
 
-For a detailed roadmap, see
-[mcp_development_plan.md](mcp_development_plan.md).
+For a detailed roadmap, see [mcp_development_plan.md](mcp_development_plan.md).
+Architecture diagrams below show both current stdio mode and planned HTTP mode.
 
 ## Features
 
@@ -47,6 +39,198 @@ In addition to tools, the server exposes key resources as URIs:
 -   `horreum://tests/{id}`
 -   `horreum://schemas/{id}`
 -   `horreum://tests/{testId}/runs/{runId}`
+
+## Architecture
+
+### System Overview
+
+```mermaid
+graph TB
+    subgraph "AI Client Environment"
+        AI[AI Client<br/>Claude/Cursor/etc<br/>✅ IMPLEMENTED]
+    end
+    
+    subgraph "MCP Server Modes"
+        direction TB
+        MCP[Horreum MCP Server<br/>✅ IMPLEMENTED]
+        
+        subgraph "Transport Options"
+            STDIO[Stdio Transport<br/>✅ CURRENT DEFAULT]
+            HTTP[HTTP Transport<br/>🚧 PHASE 4 PLANNED]
+        end
+        
+        MCP --> STDIO
+        MCP -.-> HTTP
+    end
+    
+    subgraph "External Services"
+        direction TB
+        HORREUM[Horreum Instance<br/>Performance Testing<br/>✅ INTEGRATED]
+        LLM[LLM APIs<br/>OpenAI/Anthropic/Azure<br/>🚧 PHASE 4 PLANNED]
+    end
+    
+    subgraph "Observability Stack"
+        direction TB
+        PROM[Prometheus Metrics<br/>✅ IMPLEMENTED]
+        OTEL[OpenTelemetry Tracing<br/>✅ IMPLEMENTED]
+        LOGS[Structured Logging<br/>✅ IMPLEMENTED]
+    end
+    
+    AI -->|stdio/spawn| STDIO
+    AI -.->|HTTP requests| HTTP
+    MCP -->|API calls| HORREUM
+    HTTP -.->|inference| LLM
+    MCP --> PROM
+    MCP --> OTEL
+    MCP --> LOGS
+    
+    classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
+    classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5
+    classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    
+    class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS implemented
+    class HTTP,LLM planned
+    
+    %% Legend
+    subgraph Legend[" "]
+        L1[✅ Implemented - Phase 1-3 Complete]
+        L2[🚧 Planned - Phase 4+ Roadmap]
+        L3[🔗 External - Third-party Services]
+    end
+    
+    class L1 implemented
+    class L2 planned
+    class L3 external
+```
+
+### Request Flow - Stdio Mode (✅ Implemented)
+
+```mermaid
+sequenceDiagram
+    participant AI as AI Client<br/>✅ Working
+    participant MCP as MCP Server<br/>✅ Phase 1-3 Complete
+    participant H as Horreum API<br/>✅ Integrated
+    participant OBS as Observability<br/>✅ Full Stack
+    
+    AI->>MCP: spawn process (stdio)
+    MCP->>MCP: initialize transport
+    MCP->>AI: capabilities & tools
+    
+    AI->>MCP: tool call (e.g., list_tests)
+    MCP->>OBS: log start + correlation ID
+    MCP->>OBS: start span
+    MCP->>H: HTTP request (rate limited)
+    H-->>MCP: response data
+    MCP->>OBS: record metrics
+    MCP->>OBS: end span
+    MCP->>OBS: log completion
+    MCP-->>AI: tool response
+    
+    Note over MCP,H: ✅ Retries & backoff implemented
+    Note over MCP,OBS: ✅ Correlation IDs across all logs
+    Note over AI,OBS: ✅ All components fully operational
+```
+
+### Request Flow - HTTP Mode (🚧 Phase 4 Planned)
+
+```mermaid
+sequenceDiagram
+    participant CLIENT as HTTP Client<br/>🚧 To Be Built
+    participant MCP as MCP Server<br/>🚧 HTTP Transport Needed
+    participant LLM as LLM API<br/>🚧 Integration Planned
+    participant H as Horreum API<br/>✅ Ready to Reuse
+    participant OBS as Observability<br/>✅ Ready to Reuse
+    
+    CLIENT->>MCP: POST /mcp (initialize)
+    MCP->>MCP: create session + UUID
+    MCP->>OBS: log session start
+    MCP-->>CLIENT: session ID + capabilities
+    
+    CLIENT->>MCP: POST /mcp (tool call + session ID)
+    MCP->>OBS: log start + correlation ID
+    MCP->>OBS: start span
+    
+    alt Tool requires LLM inference
+        MCP->>LLM: API request (configurable provider)
+        LLM-->>MCP: inference result
+    end
+    
+    MCP->>H: HTTP request (rate limited)
+    H-->>MCP: Horreum data
+    MCP->>OBS: record metrics
+    MCP->>OBS: end span
+    MCP->>OBS: log completion
+    MCP-->>CLIENT: JSON response or SSE stream
+    
+    Note over CLIENT,MCP: 🚧 CORS, Bearer auth, DNS rebinding protection
+    Note over MCP,LLM: 🚧 Multi-provider support (OpenAI, Anthropic, Azure)
+    Note over MCP,H: ✅ Same rate limiting & retry logic (reuse existing)
+    Note over MCP,OBS: ✅ Same observability stack (reuse existing)
+```
+
+### Component Architecture
+
+```mermaid
+graph TB
+    subgraph "MCP Server Core ✅"
+        direction TB
+        ENTRY[Entry Point<br/>index.ts<br/>✅ IMPLEMENTED]
+        TOOLS[Tool Registry<br/>server/tools.ts<br/>✅ IMPLEMENTED]
+        ENV[Environment Config<br/>config/env.ts<br/>✅ IMPLEMENTED]
+    end
+    
+    subgraph "Transport Layer"
+        direction TB
+        STDIO_T[StdioServerTransport<br/>✅ CURRENT DEFAULT]
+        HTTP_T[StreamableHTTPServerTransport<br/>+ Express.js<br/>🚧 PHASE 4 TODO]
+    end
+    
+    subgraph "Horreum Integration ✅"
+        direction TB
+        CLIENT[Generated OpenAPI Client<br/>✅ IMPLEMENTED]
+        FETCH[Rate-Limited Fetch<br/>+ Retries/Backoff<br/>✅ IMPLEMENTED]
+    end
+    
+    subgraph "LLM Integration 🚧"
+        direction TB
+        LLM_CLIENT[Configurable LLM Client<br/>🚧 PHASE 4 TODO]
+        PROVIDERS[OpenAI / Anthropic / Azure<br/>🚧 PHASE 4 TODO]
+    end
+    
+    subgraph "Observability ✅"
+        direction TB
+        METRICS[Prometheus Metrics<br/>metrics.ts<br/>✅ IMPLEMENTED]
+        TRACING[OpenTelemetry<br/>tracing.ts<br/>✅ IMPLEMENTED]
+        LOGGING[Pino Structured Logs<br/>✅ IMPLEMENTED]
+    end
+    
+    ENTRY --> ENV
+    ENTRY --> TOOLS
+    ENTRY --> STDIO_T
+    ENTRY -.-> HTTP_T
+    TOOLS --> CLIENT
+    CLIENT --> FETCH
+    HTTP_T -.-> LLM_CLIENT
+    LLM_CLIENT -.-> PROVIDERS
+    TOOLS --> METRICS
+    TOOLS --> TRACING
+    TOOLS --> LOGGING
+    
+    classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
+    classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5
+    
+    class ENTRY,TOOLS,ENV,STDIO_T,CLIENT,FETCH,METRICS,TRACING,LOGGING implemented
+    class HTTP_T,LLM_CLIENT,PROVIDERS planned
+    
+    %% Implementation Status
+    subgraph Status[" "]
+        S1[✅ Implemented & Tested]
+        S2[🚧 Phase 4 Development]
+    end
+    
+    class S1 implemented
+    class S2 planned
+```
 
 ## Prerequisites
 
@@ -135,7 +319,19 @@ validate its functionality.
     # Scrape http://localhost:9464/metrics
     ```
 
-3.  **Run smoke tests:**
+3.  **Enable OpenTelemetry tracing (optional):**
+
+    OpenTelemetry tracing can be enabled to export spans (including HTTP calls via undici):
+
+    ```bash
+    export TRACING_ENABLED=true
+    # Configure OTLP endpoint via standard envs, e.g. OTEL_EXPORTER_OTLP_ENDPOINT
+    npm start
+    ```
+
+    Spans include per-tool and per-resource operations and all outbound fetch calls.
+
+4.  **Run smoke tests:**
 
     The smoke tests provide a quick way to validate the server's tools from the
     command line.
