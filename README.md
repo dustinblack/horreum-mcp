@@ -84,9 +84,9 @@ graph TB
     MCP --> OTEL
     MCP --> LOGS
     
-    classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
-    classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5
-    classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px,color:#000000
+    classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5,color:#000000
+    classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#000000
     
     class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS implemented
     class HTTP,LLM planned
@@ -216,8 +216,8 @@ graph TB
     TOOLS --> TRACING
     TOOLS --> LOGGING
     
-    classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
-    classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5
+    classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px,color:#000000
+    classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5,color:#000000
     
     class ENTRY,TOOLS,ENV,STDIO_T,CLIENT,FETCH,METRICS,TRACING,LOGGING implemented
     class HTTP_T,LLM_CLIENT,PROVIDERS planned
