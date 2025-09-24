@@ -10,6 +10,14 @@ const EnvSchema = z.object({
   METRICS_PORT: z.coerce.number().int().positive().max(65535).optional().default(9464),
   METRICS_PATH: z.string().optional().default('/metrics'),
   TRACING_ENABLED: z.coerce.boolean().optional().default(false),
+
+  // Phase 4: HTTP Standalone Mode
+  HTTP_MODE_ENABLED: z.coerce.boolean().optional().default(false),
+  HTTP_PORT: z.coerce.number().int().positive().max(65535).optional().default(3000),
+  HTTP_AUTH_TOKEN: z.string().min(1).optional(),
+  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'azure']).optional(),
+  LLM_API_KEY: z.string().min(1).optional(),
+  LLM_MODEL: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

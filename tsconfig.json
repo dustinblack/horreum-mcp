@@ -43,5 +43,10 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "nodenext"
-  }
+  },
+  "exclude": [
+    "build",
+    "node_modules",
+    "**/*.config.*"
+  ]
 }

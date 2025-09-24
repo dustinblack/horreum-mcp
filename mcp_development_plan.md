@@ -210,8 +210,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - `[c]` cancelled
 
 4. Current execution directive
-   - Development is authorized for Phase 4 (HTTP Standalone Mode).
-     Proceed with HTTP transport implementation and external LLM integration.
+   - Phase 4 (HTTP Standalone Mode) completed (2025-09-24).
+   - Development is now authorized for Phase 5 (External MCP Integration).
+     Proceed with stable HTTP endpoints for external MCP consumption.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -256,14 +257,14 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Optional: tracing (OpenTelemetry) with undici auto-instrumentation and
           tool/resource spans (2025-09-22)
    - Phase 4 — HTTP Standalone Mode
-     - [ ] Extend environment configuration for HTTP mode and LLM settings
-     - [ ] Implement HTTP transport using StreamableHTTPServerTransport with Express.js
-     - [ ] Add configurable LLM client for external API calls (OpenAI, Anthropic, Azure)
-     - [ ] Create hybrid entrypoint supporting both stdio and HTTP modes
-     - [ ] Implement session management with UUIDs and optional resumability
-     - [ ] Add HTTP security features (CORS, Bearer auth, DNS rebinding protection)
-     - [ ] Update documentation with HTTP standalone mode usage and deployment
-     - [ ] Add smoke tests for HTTP mode functionality
+     - [x] Extend environment configuration for HTTP mode and LLM settings (2025-09-24)
+     - [x] Implement HTTP transport using StreamableHTTPServerTransport with Express.js (2025-09-24)
+     - [x] Add configurable LLM client for external API calls (OpenAI, Anthropic, Azure) (2025-09-24)
+     - [x] Create hybrid entrypoint supporting both stdio and HTTP modes (2025-09-24)
+     - [x] Implement session management with UUIDs and optional resumability (2025-09-24)
+     - [x] Add HTTP security features (CORS, Bearer auth, DNS rebinding protection) (2025-09-24)
+     - [x] Update documentation with HTTP standalone mode usage and deployment (2025-09-24)
+     - [x] Add smoke tests for HTTP mode functionality (2025-09-24)
    - Phase 5 — External MCP Integration
      - [ ] Design stable HTTP endpoints for external MCP consumption
      - [ ] Implement `POST /tools/tests.list` and `POST /tools/runs.list`
@@ -294,6 +295,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-24 — **Phase 4 (HTTP Standalone Mode) completed**. Implemented comprehensive HTTP transport with StreamableHTTPServerTransport, Express.js middleware, session management, Bearer token authentication, CORS support, and external LLM client integration (OpenAI, Anthropic, Azure). Added hybrid entrypoint supporting both stdio and HTTP modes. Updated documentation with Mermaid architecture diagrams and comprehensive usage examples. All HTTP smoke tests passing. Ready for production deployment.
    - 2025-09-24 — Added Phase 5 "External MCP Integration" to support service-based HTTP endpoints for external MCPs. Renumbered subsequent phases from 5, 6 to 6, 7.
    - 2025-09-23 — Synchronized Development Strategy section with Status Checklist by
      adding missing Phase 5 "Testing & Security Hardening" and Phase 6 "Data

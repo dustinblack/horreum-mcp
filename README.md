@@ -7,11 +7,11 @@ schemas, runs, and more.
 
 ## Status
 
-This project is in Phase 4 (HTTP Standalone Mode) development. Core functionality is
+This project is in Phase 4 (HTTP Standalone Mode) complete. Core functionality is
 implemented with comprehensive observability:
 
-- **Phase 1-3 Complete**: Read tools, write tools, and observability hardening
-- **Current Focus**: HTTP transport with external LLM integration
+- **Phase 1-4 Complete**: Read tools, write tools, observability, and HTTP mode.
+- **Current Focus**: Hardening and expanding test coverage.
 - Read tools stabilized with folder-aware `list_tests` and time-filtered
   `list_runs` (test name to ID resolution supported)
 - `upload_run` implemented with full validation
@@ -55,18 +55,18 @@ graph TB
         MCP[Horreum MCP Server<br/>✅ IMPLEMENTED]
         
         subgraph "Transport Options"
-            STDIO[Stdio Transport<br/>✅ CURRENT DEFAULT]
-            HTTP[HTTP Transport<br/>🚧 PHASE 4 PLANNED]
+            STDIO[Stdio Transport<br/>✅ DEFAULT]
+            HTTP[HTTP Transport<br/>✅ IMPLEMENTED]
         end
         
         MCP --> STDIO
-        MCP -.-> HTTP
+        MCP --> HTTP
     end
     
     subgraph "External Services"
         direction TB
         HORREUM[Horreum Instance<br/>Performance Testing<br/>✅ INTEGRATED]
-        LLM[LLM APIs<br/>OpenAI/Anthropic/Azure<br/>🚧 PHASE 4 PLANNED]
+        LLM[LLM APIs<br/>OpenAI/Anthropic/Azure<br/>✅ IMPLEMENTED]
     end
     
     subgraph "Observability Stack"
@@ -77,9 +77,9 @@ graph TB
     end
     
     AI -->|stdio/spawn| STDIO
-    AI -.->|HTTP requests| HTTP
+    AI -->|HTTP requests| HTTP
     MCP -->|API calls| HORREUM
-    HTTP -.->|inference| LLM
+    HTTP -->|inference| LLM
     MCP --> PROM
     MCP --> OTEL
     MCP --> LOGS
@@ -88,13 +88,12 @@ graph TB
     classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5,color:#000000
     classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#000000
     
-    class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS implemented
-    class HTTP,LLM planned
+    class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS,HTTP,LLM implemented
     
     %% Legend
     subgraph Legend[" "]
-        L1[✅ Implemented - Phase 1-3 Complete]
-        L2[🚧 Planned - Phase 4+ Roadmap]
+        L1[✅ Implemented - Phase 1-4 Complete]
+        L2[🚧 Planned - Phase 5+ Roadmap]
         L3[🔗 External - Third-party Services]
     end
     
@@ -131,15 +130,15 @@ sequenceDiagram
     Note over AI,OBS: ✅ All components fully operational
 ```
 
-### Request Flow - HTTP Mode (🚧 Phase 4 Planned)
+### Request Flow - HTTP Mode (✅ Implemented)
 
 ```mermaid
 sequenceDiagram
-    participant CLIENT as HTTP Client<br/>🚧 To Be Built
-    participant MCP as MCP Server<br/>🚧 HTTP Transport Needed
-    participant LLM as LLM API<br/>🚧 Integration Planned
-    participant H as Horreum API<br/>✅ Ready to Reuse
-    participant OBS as Observability<br/>✅ Ready to Reuse
+    participant CLIENT as HTTP Client<br/>✅ Ready
+    participant MCP as MCP Server<br/>✅ HTTP Transport Ready
+    participant LLM as LLM API<br/>✅ Integrated
+    participant H as Horreum API<br/>✅ Integrated
+    participant OBS as Observability<br/>✅ Full Stack
     
     CLIENT->>MCP: POST /mcp (initialize)
     MCP->>MCP: create session + UUID
@@ -162,10 +161,10 @@ sequenceDiagram
     MCP->>OBS: log completion
     MCP-->>CLIENT: JSON response or SSE stream
     
-    Note over CLIENT,MCP: 🚧 CORS, Bearer auth, DNS rebinding protection
-    Note over MCP,LLM: 🚧 Multi-provider support (OpenAI, Anthropic, Azure)
-    Note over MCP,H: ✅ Same rate limiting & retry logic (reuse existing)
-    Note over MCP,OBS: ✅ Same observability stack (reuse existing)
+    Note over CLIENT,MCP: ✅ CORS, Bearer auth supported
+    Note over MCP,LLM: ✅ Multi-provider support (OpenAI, Anthropic, Azure)
+    Note over MCP,H: ✅ Same rate limiting & retry logic
+    Note over MCP,OBS: ✅ Same observability stack
 ```
 
 ### Component Architecture
@@ -179,10 +178,10 @@ graph TB
         ENV[Environment Config<br/>config/env.ts<br/>✅ IMPLEMENTED]
     end
     
-    subgraph "Transport Layer"
+    subgraph "Transport Layer ✅"
         direction TB
-        STDIO_T[StdioServerTransport<br/>✅ CURRENT DEFAULT]
-        HTTP_T[StreamableHTTPServerTransport<br/>+ Express.js<br/>🚧 PHASE 4 TODO]
+        STDIO_T[StdioServerTransport<br/>✅ DEFAULT]
+        HTTP_T[StreamableHTTPServerTransport<br/>+ Express.js<br/>✅ IMPLEMENTED]
     end
     
     subgraph "Horreum Integration ✅"
@@ -191,10 +190,10 @@ graph TB
         FETCH[Rate-Limited Fetch<br/>+ Retries/Backoff<br/>✅ IMPLEMENTED]
     end
     
-    subgraph "LLM Integration 🚧"
+    subgraph "LLM Integration ✅"
         direction TB
-        LLM_CLIENT[Configurable LLM Client<br/>🚧 PHASE 4 TODO]
-        PROVIDERS[OpenAI / Anthropic / Azure<br/>🚧 PHASE 4 TODO]
+        LLM_CLIENT[Configurable LLM Client<br/>✅ IMPLEMENTED]
+        PROVIDERS[OpenAI / Anthropic / Azure<br/>✅ IMPLEMENTED]
     end
     
     subgraph "Observability ✅"
@@ -207,11 +206,11 @@ graph TB
     ENTRY --> ENV
     ENTRY --> TOOLS
     ENTRY --> STDIO_T
-    ENTRY -.-> HTTP_T
+    ENTRY --> HTTP_T
     TOOLS --> CLIENT
     CLIENT --> FETCH
-    HTTP_T -.-> LLM_CLIENT
-    LLM_CLIENT -.-> PROVIDERS
+    HTTP_T --> LLM_CLIENT
+    LLM_CLIENT --> PROVIDERS
     TOOLS --> METRICS
     TOOLS --> TRACING
     TOOLS --> LOGGING
@@ -219,13 +218,12 @@ graph TB
     classDef implemented fill:#c8e6c9,stroke:#4caf50,stroke-width:2px,color:#000000
     classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5,color:#000000
     
-    class ENTRY,TOOLS,ENV,STDIO_T,CLIENT,FETCH,METRICS,TRACING,LOGGING implemented
-    class HTTP_T,LLM_CLIENT,PROVIDERS planned
+    class ENTRY,TOOLS,ENV,STDIO_T,CLIENT,FETCH,METRICS,TRACING,LOGGING,HTTP_T,LLM_CLIENT,PROVIDERS implemented
     
     %% Implementation Status
     subgraph Status[" "]
         S1[✅ Implemented & Tested]
-        S2[🚧 Phase 4 Development]
+        S2[🚧 Phase 5+ Development]
     end
     
     class S1 implemented
@@ -291,8 +289,156 @@ HORREUM_API_VERSION=latest
 
 ## Usage
 
-There are two primary ways to use the server: running it manually for local
-testing or integrating it with an AI client that supports MCP.
+The server can be run in two modes: **stdio** (default) for local integration with
+MCP-native AI clients, and **HTTP** for connecting to a running server instance
+over the network.
+
+### Usage with AI Clients
+
+Most MCP-enabled AI clients support connecting to a server via either spawning a
+local process (`stdio`) or connecting to a URL (`HTTP`).
+
+#### Stdio Mode (Spawning a Local Process)
+
+In this mode, the client starts the MCP server as a child process and
+communicates with it over standard input/output.
+
+-   **Pros:** Simple setup for local development; no networking required.
+-   **Cons:** The server only runs when the client is active.
+
+The core configuration is the same for all clients:
+
+-   **Command:** `node`
+-   **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
+-   **Environment:**
+    -   `HORREUM_BASE_URL=https://horreum.example.com`
+    -   `HORREUM_TOKEN=${HORREUM_TOKEN}` (if required)
+
+> [!WARNING]
+> Always use an absolute path for the `args` value. Many clients do not expand
+> `~` or resolve relative paths correctly.
+
+#### HTTP Mode (Connecting to a URL)
+
+In this mode, you run the MCP server as a persistent process, and the client
+connects to it via an HTTP endpoint.
+
+1.  **Configure `.env` for HTTP mode:**
+
+    ```bash
+    # .env
+    HORREUM_BASE_URL=https://horreum.example.com
+    HTTP_MODE_ENABLED=true
+    HTTP_PORT=3000
+    HTTP_AUTH_TOKEN=my-secret-token # Optional but recommended
+    ```
+
+2.  **Start the server:**
+
+    ```bash
+    npm start
+    ```
+
+-   **Pros:** The server can run continuously, be shared by multiple clients, and
+    be deployed remotely.
+-   **Cons:** Requires managing a running process and network configuration.
+
+---
+
+Below are examples of how to configure popular AI clients for both modes.
+
+<details>
+<summary>Gemini CLI</summary>
+
+Add the server configuration to your Gemini settings file (typically
+`~/.gemini/settings.json`).
+
+**Stdio Mode:**
+```json
+{
+  "mcpServers": {
+    "horreum-local": {
+      "command": "node",
+      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
+      "env": {
+        "HORREUM_BASE_URL": "https://horreum.example.com",
+        "HORREUM_TOKEN": "${HORREUM_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+**HTTP Mode:**
+```json
+{
+  "mcpServers": {
+    "horreum-remote": {
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer my-secret-token"
+      },
+      "description": "A server to query Horreum for performance data."
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Claude (VS Code & Desktop)</summary>
+
+-   **Claude Code (VS Code/JetBrains):** Add the server configuration to your
+    `claude_mcp.json` file.
+-   **Claude Desktop:** Add the server via **Preferences → MCP**.
+
+**Stdio Mode:**
+```json
+{
+  "mcpServers": {
+    "horreum-local": {
+      "command": "node",
+      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
+      "env": {
+        "HORREUM_BASE_URL": "https://horreum.example.com",
+        "HORREUM_TOKEN": "${HORREUM_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+**HTTP Mode:**
+```json
+{
+  "mcpServers": {
+    "horreum-remote": {
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer my-secret-token"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Cursor</summary>
+
+Open **Settings → MCP → Add Server**. The `stdio` mode is confirmed to work. HTTP
+configuration via the UI is not documented at this time.
+
+**Stdio Mode:**
+-   **Command:** `node`
+-   **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
+-   **Env:** `HORREUM_BASE_URL`, `HORREUM_TOKEN` (if needed)
+
+</details>
+
+<br>
 
 ### Manual (Local) Testing
 
@@ -341,86 +487,6 @@ validate its functionality.
     -   `npm run smoke:schema`: Gets a schema.
     -   `npm run smoke:runs`: Lists runs.
     -   `npm run smoke:upload`: Mocks an upload.
-
-### Usage with AI Clients (MCP)
-
-This server communicates with AI clients over stdio using the [Model Context
-Protocol](https://modelcontextprotocol.io/). After building the server (`npm run
-build`), you can configure your AI client to spawn it.
-
-The core configuration is the same for all clients:
-
--   **Command:** `node`
--   **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
--   **Environment:**
-    -   `HORREUM_BASE_URL=https://horreum.example.com`
-    -   `HORREUM_TOKEN=${HORREUM_TOKEN}` (if required)
-
-> [!WARNING]
-> Always use an absolute path for the `args` value. Many clients do not expand
-> `~` or resolve relative paths correctly.
-
-Below are examples of how to configure popular AI clients.
-
-<details>
-<summary>Claude (VS Code & Desktop)</summary>
-
--   **Claude Code (VS Code/JetBrains):** Add the server configuration to your
-    `claude_mcp.json` file.
--   **Claude Desktop:** Add the server via **Preferences → MCP**.
-
-Example `claude_mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "horreum": {
-      "command": "node",
-      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
-      "env": {
-        "HORREUM_BASE_URL": "https://horreum.example.com",
-        "HORREUM_TOKEN": "${HORREUM_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Cursor</summary>
-
-Open **Settings → MCP → Add Server** and provide the following:
-
--   **Command:** `node`
--   **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
--   **Env:** `HORREUM_BASE_URL`, `HORREUM_TOKEN` (if needed)
-
-</details>
-
-<details>
-<summary>Gemini CLI</summary>
-
-Add the server configuration to your Gemini settings file (typically
-`~/.gemini/settings.json`).
-
-```json
-{
-  "mcpServers": {
-    "horreum": {
-      "command": "node",
-      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
-      "env": {
-        "HORREUM_BASE_URL": "https://horreum.example.com",
-        "HORREUM_TOKEN": "${HORREUM_TOKEN}"
-      }
-    }
-  }
-}
-```
-
-</details>
 
 <br>
 

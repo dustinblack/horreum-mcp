@@ -1,18 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import pino from 'pino';
 import { z } from 'zod';
-import type { Env } from '../config/env.js';
-import type { Metrics } from '../observability/metrics.js';
-import { OpenAPI } from '../horreum/generated/core/OpenAPI.js';
-import { TestService } from '../horreum/generated/services/TestService.js';
+import { logger } from '../observability/logging.js';
+import { startSpan } from '../observability/tracing.js';
+import { OpenAPI } from '../horreum/generated/index.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
+import { TestService } from '../horreum/generated/services/TestService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
-import { createRateLimitedFetch } from '../horreum/fetch.js';
-import { fetch as undiciFetch } from 'undici';
+import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 import type { TestListing } from '../horreum/generated/models/TestListing.js';
 import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
-import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
-import { startSpan } from '../observability/tracing.js';
+import { createRateLimitedFetch } from '../horreum/fetch.js';
+import { fetch as undiciFetch } from 'undici';
+import type { Env } from '../config/env.js';
+import { Metrics } from '../observability/metrics.js';
 
 type FetchLike = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => ReturnType<typeof fetch>;
 type RegisterOptions = {
@@ -29,7 +29,6 @@ export async function registerTools(
   const { getEnv, fetchImpl, metrics } = options;
   const genCid = (): string =>
     Math.random().toString(16).slice(2, 10) + Date.now().toString(16);
-  const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
   const log = (level: 'info' | 'error', data: Record<string, unknown>) => {
     if (level === 'error') logger.error(data);
     else logger.info(data);

@@ -10,12 +10,16 @@ import { loadEnv } from './config/env.js';
 import { registerTools } from './server/tools.js';
 import { createMetrics } from './observability/metrics.js';
 import { initTracing } from './observability/tracing.js';
+import { startHttpServer } from './server/http.js';
+import { logger } from './observability/logging.js';
+import { createLlmClient } from './llm/client.js';
 
 const env = await loadEnv();
 
 const server = new McpServer({
   name: 'horreum-mcp',
   version: '0.1.0',
+  inference: createLlmClient(env),
 });
 
 // Optional Prometheus metrics
@@ -37,5 +41,10 @@ await initTracing({
 
 await registerTools(server, { getEnv: loadEnv, metrics });
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+if (env.HTTP_MODE_ENABLED) {
+  await startHttpServer(server, env);
+} else {
+  logger.info('MCP server running in stdio mode');
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}

@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
+    "postbuild": "cp -r node_modules/@modelcontextprotocol/sdk/dist build/dist",
     "dev": "node --enable-source-maps --watch ./build/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node --enable-source-maps ./build/index.js",
@@ -20,7 +21,8 @@
     "gen:api": "openapi --useOptions --useUnionTypes --exportServices true --exportModels true --client fetch --output src/horreum/generated",
     "postgen:api": "node scripts/fix-generated-extensions.mjs",
     "smoke:runs": "node scripts/smoke-list-runs.mjs",
-    "smoke:upload": "node scripts/smoke-upload-run.mjs"
+    "smoke:upload": "node scripts/smoke-upload-run.mjs",
+    "smoke:http": "node scripts/smoke-http.mjs"
   },
   "repository": {
     "type": "git",
@@ -47,12 +49,15 @@
   "private": true,
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.1",
-    "prom-client": "^15.1.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "pino": "9.11.0",
+    "prom-client": "^15.1.3",
     "undici": "^7.16.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^9.35.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.205.0",
     "@opentelemetry/instrumentation": "^0.205.0",
@@ -61,8 +66,9 @@
     "@opentelemetry/sdk-trace-base": "^2.1.0",
     "@opentelemetry/sdk-trace-node": "^2.1.0",
     "@opentelemetry/semantic-conventions": "^1.37.0",
-    "@eslint/js": "^9.35.0",
     "@secretlint/secretlint-rule-preset-recommend": "^11.2.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
     "@typescript-eslint/eslint-plugin": "^8.44.0",
     "@typescript-eslint/parser": "^8.44.0",
@@ -70,6 +76,7 @@
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "execa": "^9.6.0",
     "openapi-typescript-codegen": "^0.29.0",
     "prettier": "^3.6.2",
     "secretlint": "^11.2.4",
