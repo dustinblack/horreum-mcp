@@ -55,19 +55,34 @@ The development will follow an iterative, phased approach with a read-first prio
 5.  **HTTP Security**: CORS configuration, Bearer token authentication, DNS rebinding protection.
 6.  **Deployment Options**: Enable containerized deployments and cloud hosting scenarios.
 
-**Phase 5: External MCP Integration**
+**Phase 5: External MCP Integration & Containerization**
 
-To support connectivity with external MCP servers, this phase introduces stable, service-based HTTP endpoints. These endpoints are designed for machine-to-machine communication and will mirror the functionality of existing MCP tools but with a stable HTTP contract.
+To support connectivity with external MCP servers, this phase introduces stable,
+service-based HTTP endpoints. These endpoints are designed for
+machine-to-machine communication and will mirror the functionality of existing
+MCP tools but with a stable HTTP contract. This phase also includes the initial
+containerization of the server.
 
-1.  **Independent MCPs Topology**: The server will support an "Independent MCPs" topology where a client can fetch data from this Horreum MCP and pass it to another Domain MCP. In this "raw mode," no new server-side changes are required.
-2.  **Service-Based HTTP Endpoints**: For a more integrated approach, the following stable HTTP endpoints will be implemented:
+1.  **Independent MCPs Topology**: The server will support an "Independent MCPs"
+    topology where a client can fetch data from this Horreum MCP and pass it to
+    another Domain MCP. In this "raw mode," no new server-side changes are
+    required.
+2.  **Service-Based HTTP Endpoints**: For a more integrated approach, the
+    following stable HTTP endpoints will be implemented:
     *   `POST /tools/tests.list`
     *   `POST /tools/runs.list`
     *   `POST /tools/datasets.search`
     *   `POST /tools/datasets.get`
     *   `POST /tools/artifacts.get`
-3.  **Response Shapes**: The JSON response shapes for these endpoints will be compatible with Pydantic models used by consuming services. Responses will include pagination and cache hints where applicable.
-4.  **Future Work (MCP-to-MCP Adapter)**: As an optional future enhancement, a non-HTTP, MCP-accessible side channel or a minimal bridge could be exposed for more direct MCP-to-MCP communication.
+3.  **Response Shapes**: The JSON response shapes for these endpoints will be
+    compatible with Pydantic models used by consuming services. Responses will
+    include pagination and cache hints where applicable.
+4.  **Containerization**: Create a `Containerfile` for Podman using a CentOS base
+    image. The container will run the server in HTTP mode. Add automation to
+    build and push the image to quay.io.
+5.  **Future Work (MCP-to-MCP Adapter)**: As an optional future enhancement, a
+    non-HTTP, MCP-accessible side channel or a minimal bridge could be exposed
+    for more direct MCP-to-MCP communication.
 
 **Phase 6: Testing & Security Hardening**
 
@@ -211,8 +226,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
 
 4. Current execution directive
    - Phase 4 (HTTP Standalone Mode) completed (2025-09-24).
-   - Development is now authorized for Phase 5 (External MCP Integration).
-     Proceed with stable HTTP endpoints for external MCP consumption.
+   - Development is now authorized for Phase 5 (External MCP Integration &
+     Containerization). Proceed with the initial containerization task first.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -265,12 +280,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Add HTTP security features (CORS, Bearer auth, DNS rebinding protection) (2025-09-24)
      - [x] Update documentation with HTTP standalone mode usage and deployment (2025-09-24)
      - [x] Add smoke tests for HTTP mode functionality (2025-09-24)
-   - Phase 5 — External MCP Integration
+   - Phase 5 — External MCP Integration & Containerization
      - [ ] Design stable HTTP endpoints for external MCP consumption
      - [ ] Implement `POST /tools/tests.list` and `POST /tools/runs.list`
      - [ ] Implement `POST /tools/datasets.search`, `POST /tools/datasets.get`, and `POST /tools/artifacts.get`
      - [ ] Ensure response shapes are compatible with Pydantic models
      - [ ] Add documentation for external MCP integration topologies
+     - [ ] Create `Containerfile` for Podman with CentOS base to run server in HTTP
+           mode
+     - [ ] Add automation to build and push container image to quay.io
    - Phase 6 — Testing & Security Hardening
      - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
      - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
@@ -295,6 +313,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-24 — Prioritized containerization into Phase 5. The next
+     development task is to create a `Containerfile` for Podman.
    - 2025-09-24 — **Phase 4 (HTTP Standalone Mode) completed**. Implemented comprehensive HTTP transport with StreamableHTTPServerTransport, Express.js middleware, session management, Bearer token authentication, CORS support, and external LLM client integration (OpenAI, Anthropic, Azure). Added hybrid entrypoint supporting both stdio and HTTP modes. Updated documentation with Mermaid architecture diagrams and comprehensive usage examples. All HTTP smoke tests passing. Ready for production deployment.
    - 2025-09-24 — Added Phase 5 "External MCP Integration" to support service-based HTTP endpoints for external MCPs. Renumbered subsequent phases from 5, 6 to 6, 7.
    - 2025-09-23 — Synchronized Development Strategy section with Status Checklist by
