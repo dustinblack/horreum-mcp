@@ -56,23 +56,27 @@ The development will follow an iterative, phased approach with a read-first prio
 6.  **Deployment Options**: Enable containerized deployments and cloud hosting scenarios.
 
 **Phase 5: Containerization & Multi-Architecture Support**
+
 - Multi-architecture containerization (amd64, arm64) with Podman/multi-stage builds
 - Automated registry deployment (quay.io) with vulnerability scanning
 - Container deployment modes supporting stdio/HTTP with health checks
 
 **Phase 6: Enhanced CI/CD Pipeline**
+
 - Multi-stage testing pipeline with parallel execution and performance regression testing
 - Comprehensive security scanning (osv-scanner, SAST, license compliance)
 - Performance optimizations (caching, job interruption, conditional workflows)
 - Release automation (semantic versioning, NPM/container publishing)
 
 **Phase 7: Architecture Refactoring & Modularity**
+
 - Extract shared logic into reusable modules with plugin architecture
 - Make observability features truly optional with dependency injection
 - Centralized error handling with circuit breaker patterns
 - Hierarchical configuration system with validation and hot-reload
 
 **Phase 8: Alternative HTTP API Mode & External MCP Integration**
+
 - REST API endpoints (`GET /api/v1/tests`, `POST /api/v1/tests/{id}/runs`, etc.)
 - OpenAPI 3.0 specification with Pydantic-compatible responses
 - API versioning strategy with rate limiting and backward compatibility
@@ -80,16 +84,19 @@ The development will follow an iterative, phased approach with a read-first prio
 - Support for "Independent MCPs" topology for MCP-to-MCP communication
 
 **Phase 9: Build System Enhancement**
+
 - Multi-architecture builds with cross-compilation and bundle optimization
 - Advanced dependency management with automated updates and vulnerability scanning
 - Build performance optimization (incremental builds, parallel processes)
 
 **Phase 10: Testing & Security Hardening**
+
 - Enhanced testing framework (unit, integration, contract, performance testing)
 - Runtime security monitoring with secrets management and audit logging
 - Operational readiness (health checks, metrics, graceful shutdown)
 
 **Phase 11: Data Analysis**
+
 - `analyze_run_data` tool for server-side statistical analysis with testing
 
 ### 3. Testing Strategy
@@ -178,13 +185,15 @@ No database is required for the MCP server. Optional components:
 The deployment strategy supports multiple deployment modes and environments, from simple CLI usage to enterprise container orchestration.
 
 #### Runtime Requirements
+
 1. **Runtime**: Node 20 LTS with ES modules support
 2. **Architecture Support**: Multi-architecture builds (amd64, arm64)
 3. **Container Support**: Podman/Docker with multi-stage builds
 
 #### Packaging Options
+
 1. **NPM Package**: Traditional Node.js package for CLI and programmatic usage
-2. **Container Images**: 
+2. **Container Images**:
    - Multi-architecture container images (amd64/arm64)
    - Minimal base images (Alpine/distroless) with non-root user
    - Optimized layer caching and build context filtering
@@ -192,13 +201,14 @@ The deployment strategy supports multiple deployment modes and environments, fro
 3. **Standalone Binaries**: Optional single-file executables for specific platforms
 
 #### Deployment Modes
+
 - **CLI Mode**: Direct Node.js execution for development and scripting
 - **Container Mode**: Multi-architecture containerized deployment
 - **HTTP Server Mode**: Persistent HTTP server for web API access
 - **Kubernetes**: Helm charts and manifests for orchestrated deployment
 - **Serverless**: Optional serverless function deployment
 
-*Configuration details provided in Quickstart section below.*
+_Configuration details provided in Quickstart section below._
 
 Note: A minimal Quickstart with an example `.env` is provided below.
 

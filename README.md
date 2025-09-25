@@ -14,6 +14,7 @@ schemas, runs, and more.
 - **🚀 Next Phase**: Containerization & multi-architecture support (Phase 5)
 
 ### Completed Features
+
 - MCP tools: `ping`, `list_tests`, `get_schema`, `list_runs`, `upload_run`
 - Dual transport modes: stdio (default) and HTTP server
 - External LLM integration (OpenAI, Anthropic, Azure)
@@ -22,6 +23,7 @@ schemas, runs, and more.
 - Session management and security (CORS, Bearer auth)
 
 ### Upcoming Enhancements (Phases 5-11)
+
 - **Phase 5**: Multi-architecture containerization with automated registry deployment
 - **Phase 6**: Enhanced CI/CD pipeline with comprehensive security scanning
 - **Phase 7**: Architecture refactoring for modularity and plugin system
@@ -317,8 +319,8 @@ The server supports multiple deployment modes:
 - **Container Mode** (Phase 5): Multi-architecture containerized deployment 🚧
 
 > [!NOTE]
-> Container deployment with multi-architecture support (amd64/arm64) and automated 
-> registry deployment is planned for Phase 5. This will enable enterprise deployment 
+> Container deployment with multi-architecture support (amd64/arm64) and automated
+> registry deployment is planned for Phase 5. This will enable enterprise deployment
 > scenarios including Kubernetes, cloud hosting, and CI/CD integration.
 
 ### Usage with AI Clients
@@ -555,12 +557,14 @@ This section provides information for developers contributing to the project.
 ### Code Quality & Standards
 
 **Current Implementation:**
+
 - TypeScript with strict type checking
 - ESLint + Prettier for code formatting
 - Pre-commit hooks with secret detection and vulnerability scanning
 - Comprehensive smoke tests with mocked responses
 
 **Enhanced Practices (Phase 6):** 🚧
+
 - Multi-tool security scanning (osv-scanner, SAST)
 - Code coverage requirements with trend analysis
 - Performance benchmarking and regression detection
@@ -569,7 +573,7 @@ This section provides information for developers contributing to the project.
 ### Commands
 
 - **Type checking and linting:** `npm run check`
-- **Formatting:** `npm run format`  
+- **Formatting:** `npm run format`
 - **Testing:** `npm test` (Vitest with coverage)
 - **Security scanning:** `npm run lint:secrets`
 - **Build:** `npm run build`
@@ -577,6 +581,7 @@ This section provides information for developers contributing to the project.
 ### Git Hooks
 
 Pre-commit hooks ensure code quality and security:
+
 - Secret detection (`secretlint`)
 - Dependency vulnerability scanning (`npm audit`)
 - Code formatting validation
