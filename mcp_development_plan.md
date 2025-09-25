@@ -55,51 +55,42 @@ The development will follow an iterative, phased approach with a read-first prio
 5.  **HTTP Security**: CORS configuration, Bearer token authentication, DNS rebinding protection.
 6.  **Deployment Options**: Enable containerized deployments and cloud hosting scenarios.
 
-**Phase 5: External MCP Integration & Containerization**
+**Phase 5: Containerization & Multi-Architecture Support**
+- Multi-architecture containerization (amd64, arm64) with Podman/multi-stage builds
+- Automated registry deployment (quay.io) with vulnerability scanning
+- Container deployment modes supporting stdio/HTTP with health checks
 
-To support connectivity with external MCP servers, this phase introduces stable,
-service-based HTTP endpoints. These endpoints are designed for
-machine-to-machine communication and will mirror the functionality of existing
-MCP tools but with a stable HTTP contract. This phase also includes the initial
-containerization of the server.
+**Phase 6: Enhanced CI/CD Pipeline**
+- Multi-stage testing pipeline with parallel execution and performance regression testing
+- Comprehensive security scanning (osv-scanner, SAST, license compliance)
+- Performance optimizations (caching, job interruption, conditional workflows)
+- Release automation (semantic versioning, NPM/container publishing)
 
-1.  **Independent MCPs Topology**: The server will support an "Independent MCPs"
-    topology where a client can fetch data from this Horreum MCP and pass it to
-    another Domain MCP. In this "raw mode," no new server-side changes are
-    required.
-2.  **Service-Based HTTP Endpoints**: For a more integrated approach, the
-    following stable HTTP endpoints will be implemented:
-    - `POST /tools/tests.list`
-    - `POST /tools/runs.list`
-    - `POST /tools/datasets.search`
-    - `POST /tools/datasets.get`
-    - `POST /tools/artifacts.get`
-3.  **Response Shapes**: The JSON response shapes for these endpoints will be
-    compatible with Pydantic models used by consuming services. Responses will
-    include pagination and cache hints where applicable.
-4.  **Containerization**: Create a `Containerfile` for Podman using a CentOS base
-    image. The container will run the server in HTTP mode. Add automation to
-    build and push the image to quay.io.
-5.  **Future Work (MCP-to-MCP Adapter)**: As an optional future enhancement, a
-    non-HTTP, MCP-accessible side channel or a minimal bridge could be exposed
-    for more direct MCP-to-MCP communication.
+**Phase 7: Architecture Refactoring & Modularity**
+- Extract shared logic into reusable modules with plugin architecture
+- Make observability features truly optional with dependency injection
+- Centralized error handling with circuit breaker patterns
+- Hierarchical configuration system with validation and hot-reload
 
-**Phase 6: Testing & Security Hardening**
+**Phase 8: Alternative HTTP API Mode & External MCP Integration**
+- REST API endpoints (`GET /api/v1/tests`, `POST /api/v1/tests/{id}/runs`, etc.)
+- OpenAPI 3.0 specification with Pydantic-compatible responses
+- API versioning strategy with rate limiting and backward compatibility
+- Service-based HTTP endpoints for external MCP consumption (`POST /tools/tests.list`, etc.)
+- Support for "Independent MCPs" topology for MCP-to-MCP communication
 
-1.  **Testing Framework**: Set up formal testing framework (Vitest) to complement existing smoke tests.
-2.  **Unit Tests**: Add unit tests for core utilities (rate-limited fetch, environment validation).
-3.  **Integration Tests**: Add integration tests for each MCP tool, building on current mocked API approach.
-4.  **Security Scanning**: Add CI security scanning (`npm audit`, dependency vulnerability checks).
-5.  **Health Monitoring**: Implement startup health check endpoint with Horreum connectivity validation.
-6.  **Security Hardening**: Add token redaction to startup error messages and logs.
-7.  **Resource Consistency**: Standardize resource error handling and improve URI validation.
-8.  **Documentation**: Document testing strategy and maintain `CHANGELOG.md` following SemVer practices.
+**Phase 9: Build System Enhancement**
+- Multi-architecture builds with cross-compilation and bundle optimization
+- Advanced dependency management with automated updates and vulnerability scanning
+- Build performance optimization (incremental builds, parallel processes)
 
-**Phase 7: Data Analysis**
+**Phase 10: Testing & Security Hardening**
+- Enhanced testing framework (unit, integration, contract, performance testing)
+- Runtime security monitoring with secrets management and audit logging
+- Operational readiness (health checks, metrics, graceful shutdown)
 
-1.  **Analysis Tool Design**: Design `analyze_run_data` tool for server-side statistical analysis.
-2.  **Statistics Integration**: Implement analysis tool leveraging suitable statistics library.
-3.  **Analysis Testing**: Add unit and integration tests for the new analysis capabilities.
+**Phase 11: Data Analysis**
+- `analyze_run_data` tool for server-side statistical analysis with testing
 
 ### 3. Testing Strategy
 
@@ -176,20 +167,38 @@ No database is required for the MCP server. Optional components:
 
 ### 9. CI/CD
 
-1. Build/format: Node 20, ESLint/Prettier, type-check with `tsc`.
-2. Tests: Unit/integration/E2E orchestrated via GitHub Actions.
-3. Security: **REQUIRED** - Dependency scan (`npm audit`, `osv-scanner`); fail on high/critical severity; run on every PR and main branch push.
-4. Releases: Tag-based npm package and/or Docker image.
-5. Live smoke (optional, gated): Provide an optional workflow that runs a minimal read-only smoke test against a sandbox Horreum instance using repository/environment secrets. Skip on forks and by default; keep main CI fully mocked.
-6. Versioning: Use SemVer for the npm package. Version MCP tool JSON Schemas; when making breaking changes, deprecate previous versions with warnings for at least one minor release before removal. **REQUIRED** - Maintain a human-readable `CHANGELOG.md` with all changes documented.
+**Current (Phase 1-4)**: Node 20, ESLint/Prettier, Vitest with coverage, smoke tests, basic security scanning (`npm audit`, secretlint), path-based change detection.
+
+**Enhanced (Phase 6)**: Multi-stage testing, comprehensive security scanning (osv-scanner, SAST, container scanning), performance optimizations (caching, job interruption), release automation (semantic versioning, NPM/container publishing), quality gates, deployment pipeline with rollback.
+
+**Requirements**: SemVer for packages/containers, automated CHANGELOG.md maintenance, API documentation generation.
 
 ### 10. Deployment and Configuration
 
-1. Runtime: Node 20 LTS.
-2. Packaging: NPM package and/or container image using non-root user and minimal base.
-3. Config: Required variables (`HORREUM_BASE_URL`) and optional (`HORREUM_TOKEN` for authenticated access, `HORREUM_RATE_LIMIT=10`, `HORREUM_TIMEOUT=30000`, `HORREUM_API_VERSION=latest`); document all variables with examples and auth modes.
-4. HTTP Mode Config: Optional HTTP server variables (`HTTP_MODE_ENABLED=false`, `HTTP_PORT=3000`) and LLM integration (`LLM_PROVIDER=openai`, `LLM_API_KEY`, `LLM_MODEL=gpt-4`).
-5. Kubernetes: Minimal manifests (optional initially).
+The deployment strategy supports multiple deployment modes and environments, from simple CLI usage to enterprise container orchestration.
+
+#### Runtime Requirements
+1. **Runtime**: Node 20 LTS with ES modules support
+2. **Architecture Support**: Multi-architecture builds (amd64, arm64)
+3. **Container Support**: Podman/Docker with multi-stage builds
+
+#### Packaging Options
+1. **NPM Package**: Traditional Node.js package for CLI and programmatic usage
+2. **Container Images**: 
+   - Multi-architecture container images (amd64/arm64)
+   - Minimal base images (Alpine/distroless) with non-root user
+   - Optimized layer caching and build context filtering
+   - Vulnerability scanning and security hardening
+3. **Standalone Binaries**: Optional single-file executables for specific platforms
+
+#### Deployment Modes
+- **CLI Mode**: Direct Node.js execution for development and scripting
+- **Container Mode**: Multi-architecture containerized deployment
+- **HTTP Server Mode**: Persistent HTTP server for web API access
+- **Kubernetes**: Helm charts and manifests for orchestrated deployment
+- **Serverless**: Optional serverless function deployment
+
+*Configuration details provided in Quickstart section below.*
 
 Note: A minimal Quickstart with an example `.env` is provided below.
 
@@ -226,8 +235,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
 
 4. Current execution directive
    - Phase 4 (HTTP Standalone Mode) completed (2025-09-24).
-   - Development is now authorized for Phase 5 (External MCP Integration &
-     Containerization). Proceed with the initial containerization task first.
+   - Development is now authorized for Phase 5 (Containerization & Multi-Architecture Support).
+   - Priority focus: Implement comprehensive containerization with multi-architecture builds and automated registry deployment as the foundation for enterprise deployment capabilities.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -280,31 +289,52 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Add HTTP security features (CORS, Bearer auth, DNS rebinding protection) (2025-09-24)
      - [x] Update documentation with HTTP standalone mode usage and deployment (2025-09-24)
      - [x] Add smoke tests for HTTP mode functionality (2025-09-24)
-   - Phase 5 — External MCP Integration & Containerization
-     - [ ] Design stable HTTP endpoints for external MCP consumption
-     - [ ] Implement `POST /tools/tests.list` and `POST /tools/runs.list`
-     - [ ] Implement `POST /tools/datasets.search`, `POST /tools/datasets.get`, and `POST /tools/artifacts.get`
-     - [ ] Ensure response shapes are compatible with Pydantic models
-     - [ ] Add documentation for external MCP integration topologies
-     - [ ] Create `Containerfile` for Podman with CentOS base to run server in HTTP
-           mode
-     - [ ] Add automation to build and push container image to quay.io
-   - Phase 6 — Testing & Security Hardening
-     - [ ] Set up a formal testing framework (e.g., Vitest) to complement existing smoke tests
-     - [ ] Add unit tests for core utilities (e.g., rate-limited fetch, environment validation)
-     - [ ] Add integration tests for each MCP tool, building on current mocked API approach
-     - [ ] Document the innovative smoke test strategy using in-memory MCP transport
-     - [ ] Add CI security scanning (`npm audit`, dependency vulnerability checks)
-     - [ ] Implement startup health check endpoint with Horreum connectivity validation
-     - [ ] Add token redaction to startup error messages and logs
-     - [ ] Standardize resource error handling (add structured logging/metrics to `test` resource)
-     - [ ] Improve resource URI validation with structured error responses
-     - [ ] Create and maintain `CHANGELOG.md` file following SemVer practices
-   - Phase 7 — Data Analysis
-     - [ ] Design `analyze_run_data` tool for server-side statistical analysis.
-     - [ ] Implement `analyze_run_data` tool, leveraging a suitable statistics
-           library.
-     - [ ] Add unit and integration tests for the new analysis tool.
+   - Phase 5 — Containerization & Multi-Architecture Support
+     - [ ] Create optimized `Containerfile` for Podman with multi-stage builds
+     - [ ] Implement multi-architecture support (amd64, arm64)
+     - [ ] Set up automated container builds and registry deployment (quay.io)
+     - [ ] Add container vulnerability scanning and security hardening
+     - [ ] Implement container deployment modes (stdio, HTTP) with health checks
+     - [ ] Add build context filtering and layer optimization
+   - Phase 6 — Enhanced CI/CD Pipeline
+     - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
+     - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
+     - [ ] Implement performance optimizations (caching, job interruption, parallel execution)
+     - [ ] Set up release automation (semantic versioning, release notes, publishing)
+     - [ ] Add quality gates and code coverage requirements
+     - [ ] Implement deployment pipeline with rollback capabilities
+   - Phase 7 — Architecture Refactoring & Modularity
+     - [ ] Extract shared logic into reusable modules
+     - [ ] Implement plugin architecture for optional features
+     - [ ] Add dependency injection for better testability
+     - [ ] Make observability features truly optional
+     - [ ] Implement centralized error handling with proper error types
+     - [ ] Add hierarchical configuration system with validation
+   - Phase 8 — Alternative HTTP API Mode & External MCP Integration
+     - [ ] Implement REST API endpoints (`GET /api/v1/tests`, etc.)
+     - [ ] Create OpenAPI 3.0 specification and documentation
+     - [ ] Ensure Pydantic-compatible response shapes
+     - [ ] Add API versioning strategy and backward compatibility
+     - [ ] Implement rate limiting and throttling for REST endpoints
+     - [ ] Implement service-based HTTP endpoints for external MCP consumption
+     - [ ] Add support for "Independent MCPs" topology and MCP-to-MCP communication
+   - Phase 9 — Build System Enhancement
+     - [ ] Add multi-architecture build support and cross-compilation
+     - [ ] Implement advanced dependency management with automated updates
+     - [ ] Add build performance optimization (incremental builds, caching)
+     - [ ] Create bundle size optimization and analysis tools
+     - [ ] Implement development vs production build profiles
+   - Phase 10 — Testing & Security Hardening
+     - [ ] Set up comprehensive testing framework with high coverage requirements
+     - [ ] Add integration testing with real external services
+     - [ ] Implement contract testing for API endpoints
+     - [ ] Add performance and load testing capabilities
+     - [ ] Implement runtime security monitoring and secrets management
+     - [ ] Add health check endpoints for all deployment modes
+   - Phase 11 — Data Analysis
+     - [ ] Design `analyze_run_data` tool for server-side statistical analysis
+     - [ ] Implement analysis tool with suitable statistics library
+     - [ ] Add unit and integration tests for analysis capabilities
 
 6. How to update this document
    1. Review open tasks and repository state (commits, CI, issues).
@@ -313,6 +343,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-25 — **Major Plan Enhancement**: Merged comprehensive enhancement
+     recommendations based on gap analysis. Restructured phases 5-11 to address
+     enterprise deployment requirements: (5) Containerization & Multi-Architecture
+     Support, (6) Enhanced CI/CD Pipeline, (7) Architecture Refactoring & Modularity,
+     (8) Alternative HTTP API Mode, (9) Build System Enhancement, (10) Testing &
+     Security Hardening, (11) Data Analysis. Updated CI/CD and deployment sections
+     with detailed enterprise-grade requirements. Current execution directive
+     remains Phase 5 containerization with expanded scope for multi-architecture
+     builds and automated registry deployment.
    - 2025-09-24 — Prioritized containerization into Phase 5. The next
      development task is to create a `Containerfile` for Podman.
    - 2025-09-24 — **Phase 4 (HTTP Standalone Mode) completed**. Implemented comprehensive HTTP transport with StreamableHTTPServerTransport, Express.js middleware, session management, Bearer token authentication, CORS support, and external LLM client integration (OpenAI, Anthropic, Azure). Added hybrid entrypoint supporting both stdio and HTTP modes. Updated documentation with Mermaid architecture diagrams and comprehensive usage examples. All HTTP smoke tests passing. Ready for production deployment.

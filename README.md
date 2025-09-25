@@ -7,21 +7,28 @@ schemas, runs, and more.
 
 ## Status
 
-This project is in Phase 4 (HTTP Standalone Mode) complete. Core functionality is
-implemented with comprehensive observability:
+**Phase 4 Complete** - Ready for enterprise deployment enhancements:
 
-- **Phase 1-4 Complete**: Read tools, write tools, observability, and HTTP mode.
-- **Current Focus**: Hardening and expanding test coverage.
-- Read tools stabilized with folder-aware `list_tests` and time-filtered
-  `list_runs` (test name to ID resolution supported)
-- `upload_run` implemented with full validation
-- Structured logging with correlation IDs (pino)
-- Rate-limited fetch with retries/backoff injected via `OpenAPI.FETCH`
-- Prometheus metrics and OpenTelemetry tracing support
-- CI runs typecheck, lint, build, and all smoke tests
+- **✅ Core Functionality**: Read tools, write tools, observability, and HTTP mode
+- **✅ Production Ready**: Structured logging, metrics, tracing, comprehensive testing
+- **🚀 Next Phase**: Containerization & multi-architecture support (Phase 5)
 
-For a detailed roadmap, see [mcp_development_plan.md](mcp_development_plan.md).
-Architecture diagrams below show both current stdio mode and planned HTTP mode.
+### Completed Features
+- MCP tools: `ping`, `list_tests`, `get_schema`, `list_runs`, `upload_run`
+- Dual transport modes: stdio (default) and HTTP server
+- External LLM integration (OpenAI, Anthropic, Azure)
+- Comprehensive observability (Pino logging, Prometheus metrics, OpenTelemetry)
+- Rate-limited fetch with retries/backoff
+- Session management and security (CORS, Bearer auth)
+
+### Upcoming Enhancements (Phases 5-11)
+- **Phase 5**: Multi-architecture containerization with automated registry deployment
+- **Phase 6**: Enhanced CI/CD pipeline with comprehensive security scanning
+- **Phase 7**: Architecture refactoring for modularity and plugin system
+- **Phase 8**: REST API endpoints alongside MCP protocol
+- **Phases 9-11**: Build system enhancement, security hardening, data analysis
+
+For detailed roadmap, see [mcp_development_plan.md](mcp_development_plan.md).
 
 ## Features
 
@@ -89,6 +96,20 @@ graph TB
     classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#000000
 
     class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS,HTTP,LLM implemented
+
+    %% Future Enhancements (Phase 5+)
+    subgraph "Enterprise Features 🚧"
+        direction TB
+        CONTAINER[Multi-Arch Containers<br/>🚧 PHASE 5]
+        REST[REST API Endpoints<br/>🚧 PHASE 8]
+        PLUGIN[Plugin Architecture<br/>🚧 PHASE 7]
+    end
+
+    MCP -.->|"Future"| CONTAINER
+    HTTP -.->|"Future"| REST
+    TOOLS -.->|"Future"| PLUGIN
+
+    class CONTAINER,REST,PLUGIN planned
 
     %% Legend
     subgraph Legend[" "]
@@ -289,9 +310,16 @@ HORREUM_API_VERSION=latest
 
 ## Usage
 
-The server can be run in two modes: **stdio** (default) for local integration with
-MCP-native AI clients, and **HTTP** for connecting to a running server instance
-over the network.
+The server supports multiple deployment modes:
+
+- **Stdio Mode** (default): Local integration with MCP-native AI clients
+- **HTTP Mode**: Persistent server for network access and web API integration
+- **Container Mode** (Phase 5): Multi-architecture containerized deployment 🚧
+
+> [!NOTE]
+> Container deployment with multi-architecture support (amd64/arm64) and automated 
+> registry deployment is planned for Phase 5. This will enable enterprise deployment 
+> scenarios including Kubernetes, cloud hosting, and CI/CD integration.
 
 ### Usage with AI Clients
 
@@ -524,27 +552,35 @@ client.
 
 This section provides information for developers contributing to the project.
 
-### Code Quality
+### Code Quality & Standards
 
-- **Type checking and linting:**
+**Current Implementation:**
+- TypeScript with strict type checking
+- ESLint + Prettier for code formatting
+- Pre-commit hooks with secret detection and vulnerability scanning
+- Comprehensive smoke tests with mocked responses
 
-  ```bash
-  npm run check
-  ```
+**Enhanced Practices (Phase 6):** 🚧
+- Multi-tool security scanning (osv-scanner, SAST)
+- Code coverage requirements with trend analysis
+- Performance benchmarking and regression detection
+- Automated dependency updates with testing
 
-- **Formatting:**
+### Commands
 
-  ```bash
-  npm run format
-  ```
+- **Type checking and linting:** `npm run check`
+- **Formatting:** `npm run format`  
+- **Testing:** `npm test` (Vitest with coverage)
+- **Security scanning:** `npm run lint:secrets`
+- **Build:** `npm run build`
 
 ### Git Hooks
 
-This repository includes a pre-commit hook to ensure code quality and security.
-The hook runs `secretlint` to prevent committing secrets and `eslint` for code
-style.
-
-To enable the hook, run the following command:
+Pre-commit hooks ensure code quality and security:
+- Secret detection (`secretlint`)
+- Dependency vulnerability scanning (`npm audit`)
+- Code formatting validation
+- TypeScript type checking
 
 ```bash
 git config core.hooksPath .githooks
