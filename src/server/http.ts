@@ -29,6 +29,26 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
   app.use(express.json());
 
+  // Liveness and readiness endpoints
+  app.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok' });
+  });
+
+  app.get('/ready', (req, res) => {
+    // When HTTP auth token is configured, enforce it for readiness, too
+    if (env.HTTP_AUTH_TOKEN) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const token = authHeader.substring(7);
+      if (token !== env.HTTP_AUTH_TOKEN) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+    }
+    res.status(200).json({ status: 'ready' });
+  });
+
   // Map to store transports by session ID
   const transports: Record<string, StreamableHTTPServerTransport> = {};
 

@@ -318,6 +318,34 @@ The server supports multiple deployment modes:
 - **HTTP Mode**: Persistent server for network access and web API integration
 - **Container Mode** (Phase 5): Multi-architecture containerized deployment 🚧
 
+### Container Usage (Phase 5)
+
+Build a multi-arch image using Buildah (inspired by rhivos-perfscale-mcp):
+
+```bash
+# Build amd64+arm64 and push to registry
+export IMAGE_REPO=quay.io/<org>/horreum-mcp
+export REGISTRY_USERNAME=... REGISTRY_PASSWORD=...
+bash scripts/build_multiarch.sh --tag main --push --push-main
+
+# Or build locally without pushing
+bash scripts/build_multiarch.sh --tag local
+```
+
+Run the container with HTTP mode enabled:
+
+```bash
+podman run --rm -p 3000:3000 \
+  -e HORREUM_BASE_URL=https://horreum.example.com \
+  -e HTTP_MODE_ENABLED=true \
+  -e HTTP_AUTH_TOKEN=changeme \
+  quay.io/<org>/horreum-mcp:main
+
+# Health endpoints
+curl http://localhost:3000/health
+curl -H 'Authorization: Bearer changeme' http://localhost:3000/ready
+```
+
 > [!NOTE]
 > Container deployment with multi-architecture support (amd64/arm64) and automated
 > registry deployment is planned for Phase 5. This will enable enterprise deployment

@@ -57,9 +57,22 @@ The development will follow an iterative, phased approach with a read-first prio
 
 **Phase 5: Containerization & Multi-Architecture Support**
 
-- Multi-architecture containerization (amd64, arm64) with Podman/multi-stage builds
-- Automated registry deployment (quay.io) with vulnerability scanning
-- Container deployment modes supporting stdio/HTTP with health checks
+- Container image: UBI9 Node.js 20 multi-stage build, non-root user (uid 10001),
+  minimal runtime with production deps only; default HTTP mode on port 3000.
+- Health endpoints exposed by HTTP server: `/health` (liveness, no auth) and
+  `/ready` (readiness, enforces bearer auth when configured).
+- Multi-architecture builds (amd64, arm64) using Buildah/Podman with a manifest
+  list and optional push to registry; expiration label supported.
+- Reusable build script: `scripts/build_multiarch.sh`
+  - Inputs: `IMAGE_REPO`, `REGISTRY_USERNAME`/`REGISTRY_PASSWORD` (or
+    `QUAY_USERNAME`/`QUAY_PASSWORD`), optional `OCI_REVISION`.
+  - Options: `--tag`, `--push`, `--push-main`, `--expires`, `--file`.
+  - Applies label `${EXPIRES_LABEL}` (default `quay.expires-after`) and
+    `org.opencontainers.image.revision`.
+- Automated registry deployment (quay.io) via CI runner using Buildah, gated on
+  changes to `Containerfile`, sources, and CI config.
+- Security: add container vulnerability scanning (e.g., Trivy or osv-scanner),
+  and image hardening tasks (rootless, minimal packages, labels).
 
 **Phase 6: Enhanced CI/CD Pipeline**
 
@@ -174,9 +187,29 @@ No database is required for the MCP server. Optional components:
 
 ### 9. CI/CD
 
-**Current (Phase 1-4)**: Node 20, ESLint/Prettier, Vitest with coverage, smoke tests, basic security scanning (`npm audit`, secretlint), path-based change detection.
+**Current (Phase 1-4)**: Node 20, ESLint/Prettier, Vitest with coverage, smoke
+tests, basic security scanning (`npm audit`, secretlint), path-based change
+detection.
 
-**Enhanced (Phase 6)**: Multi-stage testing, comprehensive security scanning (osv-scanner, SAST, container scanning), performance optimizations (caching, job interruption), release automation (semantic versioning, NPM/container publishing), quality gates, deployment pipeline with rollback.
+Container build (Phase 5 specifics):
+
+- Use a Buildah container job to invoke `scripts/build_multiarch.sh` with
+  `IMAGE_REPO` and registry credentials from secrets, tagging `:main` on
+  successful builds.
+- Trigger on `main` branch when these paths change: `Containerfile`,
+  `package.json`, `package-lock.json`, `src/**/*`, `.github/workflows/*`.
+- Example invocation (CI job script):
+  ```bash
+  export IMAGE_REPO=quay.io/<org>/horreum-mcp
+  export QUAY_USERNAME="${{ secrets.QUAY_USERNAME }}"
+  export QUAY_PASSWORD="${{ secrets.QUAY_PASSWORD }}"
+  bash scripts/build_multiarch.sh --tag "${GIT_SHORT_SHA}" --push --push-main
+  ```
+
+**Enhanced (Phase 6)**: Multi-stage testing, comprehensive security scanning
+(osv-scanner, SAST, container scanning via Trivy job), performance optimizations
+(caching, job interruption), release automation (semantic versioning, NPM/
+container publishing), quality gates, deployment pipeline with rollback.
 
 **Requirements**: SemVer for packages/containers, automated CHANGELOG.md maintenance, API documentation generation.
 
@@ -300,12 +333,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Update documentation with HTTP standalone mode usage and deployment (2025-09-24)
      - [x] Add smoke tests for HTTP mode functionality (2025-09-24)
    - Phase 5 — Containerization & Multi-Architecture Support
-     - [ ] Create optimized `Containerfile` for Podman with multi-stage builds
-     - [ ] Implement multi-architecture support (amd64, arm64)
-     - [ ] Set up automated container builds and registry deployment (quay.io)
-     - [ ] Add container vulnerability scanning and security hardening
-     - [ ] Implement container deployment modes (stdio, HTTP) with health checks
-     - [ ] Add build context filtering and layer optimization
+   - [x] Create optimized `Containerfile` (UBI9 Node 20, multi-stage, non-root)
+         (2025-09-25)
+   - [x] Implement multi-architecture support via Buildah script
+         (`scripts/build_multiarch.sh`) (2025-09-25)
+   - [x] Set up automated container builds and registry deployment (quay.io)
+         via GitHub Actions using Buildah + manifest push + Trivy scan
+         (2025-09-25)
+   - [ ] Add container vulnerability scanning and security hardening
+   - [x] Implement HTTP health endpoints (`/health`, `/ready`) (2025-09-25)
+   - [ ] Add build context filtering and layer optimization
    - Phase 6 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -353,6 +390,10 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-25 — **CI Container Build added**: Introduced GitHub Actions
+     workflow to build and push multi-arch images to Quay using Buildah,
+     tagging with short SHA and aliasing to :main. Added Trivy image scan job
+     post-push. Documented IMAGE*REPO required variable and QUAY*\* secrets.
    - 2025-09-25 — **Major Plan Enhancement**: Merged comprehensive enhancement
      recommendations based on gap analysis. Restructured phases 5-11 to address
      enterprise deployment requirements: (5) Containerization & Multi-Architecture
