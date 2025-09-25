@@ -7,14 +7,13 @@ import type { Instant } from './Instant.js';
  * Dataset Log
  */
 export type DatasetLog = {
-    id: number;
-    level: number;
-    timestamp: Instant;
-    message: string;
-    source: string;
-    testId: number;
-    runId: number;
-    datasetId: number;
-    datasetOrdinal: number;
+  id: number;
+  level: number;
+  timestamp: Instant;
+  message: string;
+  source: string;
+  testId: number;
+  runId: number;
+  datasetId: number;
+  datasetOrdinal: number;
 };
-

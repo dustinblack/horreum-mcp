@@ -3,17 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 export type SchemaDescriptor = {
-    /**
-     * Schema unique ID
-     */
-    id: number;
-    /**
-     * Schema name
-     */
-    name: string;
-    /**
-     * Schema name
-     */
-    uri: string;
+  /**
+   * Schema unique ID
+   */
+  id: number;
+  /**
+   * Schema name
+   */
+  name: string;
+  /**
+   * Schema name
+   */
+  uri: string;
 };
-

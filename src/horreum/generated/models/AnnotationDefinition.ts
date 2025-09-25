@@ -3,15 +3,14 @@
 /* tslint:disable */
 /* eslint-disable */
 export type AnnotationDefinition = {
-    title?: string;
-    text?: string;
-    isRegion?: boolean;
-    time?: number;
-    timeEnd?: number;
-    tags?: Array<string>;
-    changeId?: number;
-    variableId?: number;
-    runId?: number;
-    datasetOrdinal?: number;
+  title?: string;
+  text?: string;
+  isRegion?: boolean;
+  time?: number;
+  timeEnd?: number;
+  tags?: Array<string>;
+  changeId?: number;
+  variableId?: number;
+  runId?: number;
+  datasetOrdinal?: number;
 };
-

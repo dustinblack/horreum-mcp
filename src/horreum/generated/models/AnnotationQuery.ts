@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type AnnotationQuery = {
-    name?: string;
-    datasource?: string;
-    iconColor?: string;
-    enable?: boolean;
-    query?: string;
+  name?: string;
+  datasource?: string;
+  iconColor?: string;
+  enable?: boolean;
+  query?: string;
 };
-

@@ -3,11 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type JsonpathValidation = {
-    valid: boolean;
-    jsonpath?: string;
-    errorCode?: number;
-    sqlState?: string;
-    reason?: string;
-    sql?: string;
+  valid: boolean;
+  jsonpath?: string;
+  errorCode?: number;
+  sqlState?: string;
+  reason?: string;
+  sql?: string;
 };
-

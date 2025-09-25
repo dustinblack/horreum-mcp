@@ -6,11 +6,10 @@ import type { DatasetInfo } from './DatasetInfo.js';
 import type { Instant } from './Instant.js';
 import type { Variable } from './Variable.js';
 export type Change = {
-    id: number;
-    variable: Variable;
-    timestamp: Instant;
-    confirmed: boolean;
-    description?: string;
-    dataset?: DatasetInfo;
+  id: number;
+  variable: Variable;
+  timestamp: Instant;
+  confirmed: boolean;
+  description?: string;
+  dataset?: DatasetInfo;
 };
-

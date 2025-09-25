@@ -4,21 +4,20 @@
 /* eslint-disable */
 import type { SchemaDescriptor } from './SchemaDescriptor.js';
 export type LabelInfo = {
-    /**
-     * Label name
-     */
-    name: string;
-    /**
-     * Is label a metrics label?
-     */
-    metrics: boolean;
-    /**
-     * Is label a filtering label?
-     */
-    filtering: boolean;
-    /**
-     * List of schemas where label is referenced
-     */
-    schemas: Array<SchemaDescriptor>;
+  /**
+   * Label name
+   */
+  name: string;
+  /**
+   * Is label a metrics label?
+   */
+  metrics: boolean;
+  /**
+   * Is label a filtering label?
+   */
+  filtering: boolean;
+  /**
+   * List of schemas where label is referenced
+   */
+  schemas: Array<SchemaDescriptor>;
 };
-

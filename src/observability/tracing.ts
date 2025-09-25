@@ -12,16 +12,17 @@ export async function initTracing(cfg: TracingConfig): Promise<void> {
     return;
   }
   try {
-    const [sdkNode, resources, semconv, sdkBase, otlpHttp, instrCore, instrUndici] = await Promise.all([
-      import('@opentelemetry/api'),
-      import('@opentelemetry/sdk-trace-node'),
-      import('@opentelemetry/resources'),
-      import('@opentelemetry/semantic-conventions'),
-      import('@opentelemetry/sdk-trace-base'),
-      import('@opentelemetry/exporter-trace-otlp-http'),
-      import('@opentelemetry/instrumentation'),
-      import('@opentelemetry/instrumentation-undici'),
-    ]);
+    const [sdkNode, resources, semconv, sdkBase, otlpHttp, instrCore, instrUndici] =
+      await Promise.all([
+        import('@opentelemetry/api'),
+        import('@opentelemetry/sdk-trace-node'),
+        import('@opentelemetry/resources'),
+        import('@opentelemetry/semantic-conventions'),
+        import('@opentelemetry/sdk-trace-base'),
+        import('@opentelemetry/exporter-trace-otlp-http'),
+        import('@opentelemetry/instrumentation'),
+        import('@opentelemetry/instrumentation-undici'),
+      ]);
 
     const resource = new resources.Resource({
       [semconv.SemanticResourceAttributes.SERVICE_NAME]: cfg.serviceName,
@@ -64,5 +65,3 @@ export async function startSpan<T>(name: string, fn: () => Promise<T>): Promise<
     return fn();
   }
 }
-
-

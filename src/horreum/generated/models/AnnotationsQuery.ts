@@ -5,7 +5,6 @@
 import type { AnnotationQuery } from './AnnotationQuery.js';
 import type { Range } from './Range.js';
 export type AnnotationsQuery = {
-    range?: Range;
-    annotation?: AnnotationQuery;
+  range?: Range;
+  annotation?: AnnotationQuery;
 };
-

@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { Instant } from './Instant.js';
 export type Range = {
-    from: Instant;
-    to: Instant;
-    oneBeforeAndAfter?: boolean;
+  from: Instant;
+  to: Instant;
+  oneBeforeAndAfter?: boolean;
 };
-

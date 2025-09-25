@@ -2,4 +2,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type JsonNodeType = 'ARRAY' | 'BINARY' | 'BOOLEAN' | 'MISSING' | 'NULL' | 'NUMBER' | 'OBJECT' | 'POJO' | 'STRING';
+export type JsonNodeType =
+  | 'ARRAY'
+  | 'BINARY'
+  | 'BOOLEAN'
+  | 'MISSING'
+  | 'NULL'
+  | 'NUMBER'
+  | 'OBJECT'
+  | 'POJO'
+  | 'STRING';

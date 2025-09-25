@@ -4,7 +4,6 @@
 /* eslint-disable */
 import type { TableReportSummary } from './TableReportSummary.js';
 export type AllTableReports = {
-    reports: Array<TableReportSummary>;
-    count: number;
+  reports: Array<TableReportSummary>;
+  count: number;
 };
-

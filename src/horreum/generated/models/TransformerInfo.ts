@@ -3,25 +3,24 @@
 /* tslint:disable */
 /* eslint-disable */
 export type TransformerInfo = {
-    /**
-     * Schema ID
-     */
-    schemaId: number;
-    /**
-     * Schema uri
-     */
-    schemaUri: string;
-    /**
-     * Schema name
-     */
-    schemaName: string;
-    /**
-     * Transformer ID
-     */
-    transformerId: number;
-    /**
-     * Transformer name
-     */
-    transformerName: string;
+  /**
+   * Schema ID
+   */
+  schemaId: number;
+  /**
+   * Schema uri
+   */
+  schemaUri: string;
+  /**
+   * Schema name
+   */
+  schemaName: string;
+  /**
+   * Transformer ID
+   */
+  transformerId: number;
+  /**
+   * Transformer name
+   */
+  transformerName: string;
 };
-

@@ -3,17 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 export type UsernamePassAuth = {
-    /**
-     * type
-     */
-    type?: string;
-    /**
-     * Username
-     */
-    username?: string;
-    /**
-     * Password
-     */
-    password?: string;
+  /**
+   * type
+   */
+  type?: string;
+  /**
+   * Username
+   */
+  username?: string;
+  /**
+   * Password
+   */
+  password?: string;
 };
-

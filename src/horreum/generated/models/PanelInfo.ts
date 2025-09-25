@@ -4,7 +4,6 @@
 /* eslint-disable */
 import type { Variable } from './Variable.js';
 export type PanelInfo = {
-    name: string;
-    variables: Array<Variable>;
+  name: string;
+  variables: Array<Variable>;
 };
-

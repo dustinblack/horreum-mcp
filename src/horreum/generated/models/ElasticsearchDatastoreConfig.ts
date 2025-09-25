@@ -9,14 +9,13 @@ import type { UsernamePassAuth } from './UsernamePassAuth.js';
  * Type of backend datastore
  */
 export type ElasticsearchDatastoreConfig = {
-    authentication: (NoAuth | APIKeyAuth | UsernamePassAuth);
-    /**
-     * Built In
-     */
-    builtIn: boolean;
-    /**
-     * Elasticsearch url
-     */
-    url: string;
+  authentication: NoAuth | APIKeyAuth | UsernamePassAuth;
+  /**
+   * Built In
+   */
+  builtIn: boolean;
+  /**
+   * Elasticsearch url
+   */
+  url: string;
 };
-

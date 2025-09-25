@@ -32,9 +32,7 @@ function shouldRetryResponse(res: Response): boolean {
   return [429, 502, 503, 504].includes(res.status);
 }
 
-export function createRateLimitedFetch(
-  options: RateLimitedFetchOptions
-): BaseFetch {
+export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFetch {
   const {
     baseFetch,
     requestsPerSecond,
@@ -86,7 +84,8 @@ export function createRateLimitedFetch(
         } else {
           const onAbort = () => controller.abort();
           originalSignal.addEventListener('abort', onAbort, { once: true });
-          removeOriginalAbort = () => originalSignal.removeEventListener('abort', onAbort);
+          removeOriginalAbort = () =>
+            originalSignal.removeEventListener('abort', onAbort);
         }
       }
 
@@ -138,5 +137,3 @@ export function createRateLimitedFetch(
     throw new Error('RateLimitedFetch: exhausted retries unexpectedly');
   };
 }
-
-

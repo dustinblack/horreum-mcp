@@ -4,12 +4,11 @@
 /* eslint-disable */
 import type { Instant } from './Instant.js';
 export type MissingDataRule = {
-    id: number;
-    name?: string;
-    labels?: Array<string>;
-    condition?: string;
-    maxStaleness: number;
-    lastNotification?: Instant;
-    testId: number;
+  id: number;
+  name?: string;
+  labels?: Array<string>;
+  condition?: string;
+  maxStaleness: number;
+  lastNotification?: Instant;
+  testId: number;
 };
-

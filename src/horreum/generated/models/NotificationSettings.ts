@@ -3,11 +3,10 @@
 /* tslint:disable */
 /* eslint-disable */
 export type NotificationSettings = {
-    id?: number;
-    name: string;
-    isTeam: boolean;
-    method: string;
-    data?: string;
-    disabled: boolean;
+  id?: number;
+  name: string;
+  isTeam: boolean;
+  method: string;
+  data?: string;
+  disabled: boolean;
 };
-

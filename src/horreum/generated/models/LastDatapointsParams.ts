@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type LastDatapointsParams = {
-    variables: Array<number>;
-    fingerprint: string;
+  variables: Array<number>;
+  fingerprint: string;
 };
-

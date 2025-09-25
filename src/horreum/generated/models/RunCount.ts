@@ -3,17 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 export type RunCount = {
-    /**
-     * Total count of Runs visible
-     */
-    total: number;
-    /**
-     * Total count of active Runs visible
-     */
-    active: number;
-    /**
-     * Total count of trashed Runs
-     */
-    trashed: number;
+  /**
+   * Total count of Runs visible
+   */
+  total: number;
+  /**
+   * Total count of active Runs visible
+   */
+  active: number;
+  /**
+   * Total count of trashed Runs
+   */
+  trashed: number;
 };
-

@@ -4,18 +4,17 @@
 /* eslint-disable */
 import type { FixThresholdConfig } from './FixThresholdConfig.js';
 export type FixedThresholdDetectionConfig = {
-    /**
-     * Built In
-     */
-    builtIn: boolean;
-    model: 'fixedThreshold';
-    /**
-     * Lower bound for acceptable datapoint values
-     */
-    min: FixThresholdConfig;
-    /**
-     * Upper bound for acceptable datapoint values
-     */
-    max: FixThresholdConfig;
+  /**
+   * Built In
+   */
+  builtIn: boolean;
+  model: 'fixedThreshold';
+  /**
+   * Lower bound for acceptable datapoint values
+   */
+  min: FixThresholdConfig;
+  /**
+   * Upper bound for acceptable datapoint values
+   */
+  max: FixThresholdConfig;
 };
-

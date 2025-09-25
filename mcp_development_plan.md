@@ -69,11 +69,11 @@ containerization of the server.
     required.
 2.  **Service-Based HTTP Endpoints**: For a more integrated approach, the
     following stable HTTP endpoints will be implemented:
-    *   `POST /tools/tests.list`
-    *   `POST /tools/runs.list`
-    *   `POST /tools/datasets.search`
-    *   `POST /tools/datasets.get`
-    *   `POST /tools/artifacts.get`
+    - `POST /tools/tests.list`
+    - `POST /tools/runs.list`
+    - `POST /tools/datasets.search`
+    - `POST /tools/datasets.get`
+    - `POST /tools/artifacts.get`
 3.  **Response Shapes**: The JSON response shapes for these endpoints will be
     compatible with Pydantic models used by consuming services. Responses will
     include pagination and cache hints where applicable.
@@ -257,20 +257,20 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Add structured logging with correlation IDs and durations for all tools (2025-09-22)
      - [x] Remove redundant custom HTTP client; use generated OpenAPI client only
            (2025-09-22)
-    - [x] Fix package.json metadata (description, author) and type issues
-          (private field) (2025-09-22)
-    - [x] Implement uniform error handling in all tools to return consistent error
-          objects `{ code, message, details, correlationId }` per the plan specification (2025-09-22)
-    - [x] Refactor to inject rate-limited fetch into OpenAPI client instead of
-          patching global fetch (2025-09-22)
-    - [x] Refactor tool implementations to reduce boilerplate (logging, CID) using a
-          wrapper or utility function (2025-09-22)
-    - [x] Replace console.log with a dedicated structured logging library (pino) (2025-09-22)
-    - [x] Extend structured error handling and logging to resources
-          (tests/schemas/runs) (2025-09-22)
-    - [x] Optional: Prometheus metrics endpoint (counters/histograms) (2025-09-22)
-    - [x] Optional: tracing (OpenTelemetry) with undici auto-instrumentation and
-          tool/resource spans (2025-09-22)
+   - [x] Fix package.json metadata (description, author) and type issues
+         (private field) (2025-09-22)
+   - [x] Implement uniform error handling in all tools to return consistent error
+         objects `{ code, message, details, correlationId }` per the plan specification (2025-09-22)
+   - [x] Refactor to inject rate-limited fetch into OpenAPI client instead of
+         patching global fetch (2025-09-22)
+   - [x] Refactor tool implementations to reduce boilerplate (logging, CID) using a
+         wrapper or utility function (2025-09-22)
+   - [x] Replace console.log with a dedicated structured logging library (pino) (2025-09-22)
+   - [x] Extend structured error handling and logging to resources
+         (tests/schemas/runs) (2025-09-22)
+   - [x] Optional: Prometheus metrics endpoint (counters/histograms) (2025-09-22)
+   - [x] Optional: tracing (OpenTelemetry) with undici auto-instrumentation and
+         tool/resource spans (2025-09-22)
    - Phase 4 — HTTP Standalone Mode
      - [x] Extend environment configuration for HTTP mode and LLM settings (2025-09-24)
      - [x] Implement HTTP transport using StreamableHTTPServerTransport with Express.js (2025-09-24)

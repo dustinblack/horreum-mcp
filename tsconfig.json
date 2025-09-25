@@ -44,9 +44,5 @@
     "resolveJsonModule": true,
     "moduleResolution": "nodenext"
   },
-  "exclude": [
-    "build",
-    "node_modules",
-    "**/*.config.*"
-  ]
+  "exclude": ["build", "node_modules", "**/*.config.*"]
 }

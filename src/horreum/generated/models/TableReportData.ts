@@ -6,15 +6,14 @@
  * Table Report Data
  */
 export type TableReportData = {
-    datasetId: number;
-    runId: number;
-    ordinal: number;
-    category: string;
-    series: string;
-    scale: string;
-    /**
-     * Array of values
-     */
-    values: Array<number>;
+  datasetId: number;
+  runId: number;
+  ordinal: number;
+  category: string;
+  series: string;
+  scale: string;
+  /**
+   * Array of values
+   */
+  values: Array<number>;
 };
-

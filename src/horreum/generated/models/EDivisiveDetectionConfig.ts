@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type EDivisiveDetectionConfig = {
-    /**
-     * Built In
-     */
-    builtIn: boolean;
-    model: 'eDivisive';
+  /**
+   * Built In
+   */
+  builtIn: boolean;
+  model: 'eDivisive';
 };
-

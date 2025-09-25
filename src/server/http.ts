@@ -20,10 +20,12 @@ export async function startHttpServer(server: McpServer, env: Env) {
   const app = express();
 
   // Enable CORS for all routes
-  app.use(cors({
-    origin: '*',
-    exposedHeaders: ['Mcp-Session-Id']
-  }));
+  app.use(
+    cors({
+      origin: '*',
+      exposedHeaders: ['Mcp-Session-Id'],
+    })
+  );
 
   app.use(express.json());
 
@@ -31,13 +33,15 @@ export async function startHttpServer(server: McpServer, env: Env) {
   const transports: Record<string, StreamableHTTPServerTransport> = {};
 
   // Bearer token authentication middleware
-  const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authMiddleware = (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
     if (env.HTTP_AUTH_TOKEN) {
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res
-          .status(401)
-          .json({ error: 'Unauthorized: Missing bearer token' });
+        return res.status(401).json({ error: 'Unauthorized: Missing bearer token' });
       }
       const token = authHeader.substring(7);
       if (token !== env.HTTP_AUTH_TOKEN) {
@@ -50,10 +54,10 @@ export async function startHttpServer(server: McpServer, env: Env) {
   // MCP POST endpoint
   app.post('/mcp', authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string;
-    
+
     try {
       let transport: StreamableHTTPServerTransport;
-      
+
       if (sessionId && transports[sessionId]) {
         // Reuse existing transport
         transport = transports[sessionId];
@@ -65,9 +69,9 @@ export async function startHttpServer(server: McpServer, env: Env) {
           onsessioninitialized: (sessionId) => {
             logger.info(`Session initialized with ID: ${sessionId}`);
             transports[sessionId] = transport;
-          }
+          },
         });
-        
+
         // Connect the transport to the server
         await server.connect(transport);
         await transport.handleRequest(req, res, req.body);
@@ -84,7 +88,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
         });
         return;
       }
-      
+
       // Handle the request with existing transport
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
@@ -109,14 +113,14 @@ export async function startHttpServer(server: McpServer, env: Env) {
       res.status(400).send('Invalid or missing session ID');
       return;
     }
-    
+
     const transport = transports[sessionId];
     await transport.handleRequest(req, res);
   });
 
   app.listen(env.HTTP_PORT, () => {
     logger.info(
-      `MCP server running in HTTP mode at http://localhost:${env.HTTP_PORT}/mcp`,
+      `MCP server running in HTTP mode at http://localhost:${env.HTTP_PORT}/mcp`
     );
   });
 }

@@ -27,20 +27,20 @@ type InferenceCompleter = (request: InferenceRequest) => Promise<InferenceRespon
  * @param env - The environment configuration containing LLM settings.
  * @returns An object with an `complete` method for the McpServer, or undefined.
  */
-export function createLlmClient(env: Env): { complete: InferenceCompleter } | undefined {
+export function createLlmClient(
+  env: Env
+): { complete: InferenceCompleter } | undefined {
   if (!env.LLM_PROVIDER || !env.LLM_API_KEY || !env.LLM_MODEL) {
-    logger.info(
-      'LLM client not configured. Skipping external inference engine.',
-    );
+    logger.info('LLM client not configured. Skipping external inference engine.');
     return undefined;
   }
 
   logger.info(
-    `Initializing LLM client for provider: ${env.LLM_PROVIDER} with model: ${env.LLM_MODEL}`,
+    `Initializing LLM client for provider: ${env.LLM_PROVIDER} with model: ${env.LLM_MODEL}`
   );
 
   const complete: InferenceCompleter = async (
-    request: InferenceRequest,
+    request: InferenceRequest
   ): Promise<InferenceResponse> => {
     // This is a simplified example targeting an OpenAI-compatible API.
     // A real implementation would need to handle different provider formats.
@@ -65,7 +65,7 @@ export function createLlmClient(env: Env): { complete: InferenceCompleter } | un
       if (!response.ok) {
         const errorBody = await response.text();
         throw new Error(
-          `LLM API request failed with status ${response.status}: ${errorBody}`,
+          `LLM API request failed with status ${response.status}: ${errorBody}`
         );
       }
 

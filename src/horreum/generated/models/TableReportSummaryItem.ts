@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { Instant } from './Instant.js';
 export type TableReportSummaryItem = {
-    id: number;
-    configId: number;
-    created: Instant;
+  id: number;
+  configId: number;
+  created: Instant;
 };
-

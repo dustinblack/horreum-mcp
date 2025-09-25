@@ -6,5 +6,3 @@ declare module '@opentelemetry/sdk-trace-base';
 declare module '@opentelemetry/exporter-trace-otlp-http';
 declare module '@opentelemetry/instrumentation';
 declare module '@opentelemetry/instrumentation-undici';
-
-

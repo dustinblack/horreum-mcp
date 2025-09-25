@@ -3,9 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ChangeDetectionUpdate = {
-    timelineLabels?: Array<string>;
-    timelineFunction?: string;
-    fingerprintLabels?: Array<string>;
-    fingerprintFilter?: string;
+  timelineLabels?: Array<string>;
+  timelineFunction?: string;
+  fingerprintLabels?: Array<string>;
+  fingerprintFilter?: string;
 };
-

@@ -6,7 +6,27 @@ on:
   pull_request:
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # The 'build' output will be 'true' if any of the specified paths have changed.
+      build: ${{ steps.filter.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            build:
+              - 'src/**/*.ts'
+              - '**/*.json'
+              - '**/*.js'
+              - '**/*.mjs'
+              - '.github/workflows/ci.yml'
+
   build:
+    needs: changes
+    if: needs.changes.outputs.build == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,3 +42,14 @@ jobs:
       - run: npm run smoke:tests
       - run: npm run smoke:schema
       - run: npm run smoke
+
+  # This job runs on every push/PR to provide a clear status check,
+  # even when the main build job is skipped.
+  ci-gate:
+    needs:
+      - changes
+      - build
+    if: always() && (needs.changes.outputs.build == 'false')
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "No changes detected in source files. Skipping main build."

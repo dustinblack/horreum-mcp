@@ -38,5 +38,3 @@ const byId = await client.callTool({ name: 'get_schema', arguments: { id: 1 } })
 console.log('byId', JSON.stringify(byId));
 const byName = await client.callTool({ name: 'get_schema', arguments: { name: 'n' } });
 console.log('byName', JSON.stringify(byName));
-
-

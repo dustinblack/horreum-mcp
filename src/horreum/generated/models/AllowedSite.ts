@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type AllowedSite = {
-    id?: number;
-    prefix: string;
+  id?: number;
+  prefix: string;
 };
-

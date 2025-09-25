@@ -7,12 +7,11 @@ import type { Instant } from './Instant.js';
  * Action Log
  */
 export type ActionLog = {
-    id: number;
-    level: number;
-    timestamp: Instant;
-    message: string;
-    testId: number;
-    event: string;
-    type?: string;
+  id: number;
+  level: number;
+  timestamp: Instant;
+  message: string;
+  testId: number;
+  event: string;
+  type?: string;
 };
-

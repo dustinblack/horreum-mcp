@@ -70,8 +70,8 @@ async function run() {
         params: {
           protocolVersion: '2024-11-05',
           capabilities: {},
-          clientInfo: { name: 'smoke-test', version: '1.0.0' }
-        }
+          clientInfo: { name: 'smoke-test', version: '1.0.0' },
+        },
       }),
     ]);
 
@@ -80,16 +80,18 @@ async function run() {
     // Extract session ID from headers
     const sessionIdMatch = initProcess.stdout.match(/mcp-session-id:\s*([^\r\n]+)/i);
     const sessionId = sessionIdMatch ? sessionIdMatch[1].trim() : null;
-    
+
     // Extract JSON response body
     const jsonMatch = initProcess.stdout.match(/\r?\n\r?\n(.*)$/s);
     const initResponse = jsonMatch ? JSON.parse(jsonMatch[1]) : {};
-    
+
     console.log('Init response:', JSON.stringify(initResponse, null, 2));
     console.log('Session ID:', sessionId);
 
     if (!sessionId && !initResponse.result) {
-      throw new Error('Failed to initialize session - no session ID or result received');
+      throw new Error(
+        'Failed to initialize session - no session ID or result received'
+      );
     }
 
     console.log('Session initialized. Sending ping request...');
@@ -114,8 +116,8 @@ async function run() {
         method: 'tools/call',
         params: {
           name: 'ping',
-          arguments: { message: 'smoke-test' }
-        }
+          arguments: { message: 'smoke-test' },
+        },
       }),
     ]);
 
@@ -124,9 +126,7 @@ async function run() {
 
     const pongMessage = response.result?.content?.[0]?.text;
     if (pongMessage !== 'smoke-test') {
-      throw new Error(
-        `Ping failed. Expected "smoke-test", got: ${pongMessage}`,
-      );
+      throw new Error(`Ping failed. Expected "smoke-test", got: ${pongMessage}`);
     }
 
     console.log('✅ HTTP smoke test passed!');

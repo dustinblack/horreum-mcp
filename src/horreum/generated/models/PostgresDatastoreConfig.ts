@@ -9,10 +9,9 @@ import type { UsernamePassAuth } from './UsernamePassAuth.js';
  * Built in backend datastore
  */
 export type PostgresDatastoreConfig = {
-    authentication: (NoAuth | APIKeyAuth | UsernamePassAuth);
-    /**
-     * Built In
-     */
-    builtIn: boolean;
+  authentication: NoAuth | APIKeyAuth | UsernamePassAuth;
+  /**
+   * Built In
+   */
+  builtIn: boolean;
 };
-

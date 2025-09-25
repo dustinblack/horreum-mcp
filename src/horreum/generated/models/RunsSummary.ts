@@ -4,13 +4,12 @@
 /* eslint-disable */
 import type { RunSummary } from './RunSummary.js';
 export type RunsSummary = {
-    /**
-     * Total count of Runs visible
-     */
-    total: number;
-    /**
-     * List of Run Summaries
-     */
-    runs: Array<RunSummary>;
+  /**
+   * Total count of Runs visible
+   */
+  total: number;
+  /**
+   * List of Run Summaries
+   */
+  runs: Array<RunSummary>;
 };
-

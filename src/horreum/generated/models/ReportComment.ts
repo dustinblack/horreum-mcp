@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type ReportComment = {
-    id?: number;
-    level: number;
-    category?: string;
-    componentId?: number;
-    comment: string;
+  id?: number;
+  level: number;
+  category?: string;
+  componentId?: number;
+  comment: string;
 };
-

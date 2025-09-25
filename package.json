@@ -11,7 +11,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node --enable-source-maps ./build/index.js",
     "prepare": "npm run build",
-    "lint": "eslint 'src/**/*.ts'",
+    "lint": "eslint --cache 'src/**/*.ts'",
     "lint:secrets": "secretlint '**/*'",
     "format": "prettier --write .",
     "check": "npm run typecheck && npm run lint",

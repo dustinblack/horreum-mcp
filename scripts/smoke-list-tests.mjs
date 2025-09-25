@@ -42,16 +42,16 @@ await registerTools(server, {
           makeTest(100 + folder.length, `test-${folder}-1`, folder),
           makeTest(200 + folder.length, `test-${folder}-2`, folder),
         ];
-        return new Response(
-          JSON.stringify({ tests, count: tests.length }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ tests, count: tests.length }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
       const tests = [makeTest(1, 'top-level-1'), makeTest(2, 'top-level-2')];
-      return new Response(
-        JSON.stringify({ tests, count: tests.length }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ tests, count: tests.length }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
     return new Response('Not Found', { status: 404 });
   },
@@ -61,4 +61,3 @@ const client = new Client({ name: 'smoke-client', version: '0.0.0' });
 await client.connect(clientT);
 const res = await client.callTool({ name: 'list_tests', arguments: {} });
 console.log(JSON.stringify(res));
-

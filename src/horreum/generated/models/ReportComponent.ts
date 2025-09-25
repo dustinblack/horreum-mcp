@@ -6,15 +6,14 @@
  * Report Component
  */
 export type ReportComponent = {
-    id?: number;
-    name: string;
-    order: number;
-    /**
-     * Array of labels
-     */
-    labels: Array<string>;
-    function?: string;
-    unit?: string;
-    reportId?: number;
+  id?: number;
+  name: string;
+  order: number;
+  /**
+   * Array of labels
+   */
+  labels: Array<string>;
+  function?: string;
+  unit?: string;
+  reportId?: number;
 };
-

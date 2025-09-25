@@ -3,17 +3,16 @@
 /* tslint:disable */
 /* eslint-disable */
 export type VersionInfo = {
-    /**
-     * Version of Horreum
-     */
-    version: string;
-    /**
-     * Timestamp of server startup
-     */
-    startTimestamp: number;
-    /**
-     * Privacy statement
-     */
-    privacyStatement?: string;
+  /**
+   * Version of Horreum
+   */
+  version: string;
+  /**
+   * Timestamp of server startup
+   */
+  startTimestamp: number;
+  /**
+   * Privacy statement
+   */
+  privacyStatement?: string;
 };
-

@@ -4,8 +4,7 @@
 /* eslint-disable */
 import type { ObjectNode } from './ObjectNode.js';
 export type ChangeDetection = {
-    id: number;
-    model: string;
-    config: ObjectNode;
+  id: number;
+  model: string;
+  config: ObjectNode;
 };
-

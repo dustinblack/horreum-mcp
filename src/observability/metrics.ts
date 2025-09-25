@@ -23,7 +23,10 @@ export class Metrics {
 
   constructor(private readonly cfg: MetricsConfig) {
     this.registry = new Registry();
-    this.registry.setDefaultLabels({ service_name: cfg.serviceName, service_version: cfg.serviceVersion });
+    this.registry.setDefaultLabels({
+      service_name: cfg.serviceName,
+      service_version: cfg.serviceVersion,
+    });
     collectDefaultMetrics({ register: this.registry });
 
     const durationBuckets = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
@@ -64,7 +67,11 @@ export class Metrics {
   startServer(): void {
     if (!this.cfg.enabled || this.server) return;
     this.server = http.createServer(async (req, res) => {
-      if (req.method === 'GET' && req.url && new URL(req.url, 'http://localhost').pathname === this.cfg.path) {
+      if (
+        req.method === 'GET' &&
+        req.url &&
+        new URL(req.url, 'http://localhost').pathname === this.cfg.path
+      ) {
         const body = await this.registry.metrics();
         res.setHeader('Content-Type', this.registry.contentType);
         res.writeHead(200);
@@ -79,7 +86,9 @@ export class Metrics {
 
   recordTool(tool: string, durationMs: number, ok: boolean): void {
     try {
-      this.counters.toolInvocations.labels({ tool, outcome: ok ? 'ok' : 'error' }).inc();
+      this.counters.toolInvocations
+        .labels({ tool, outcome: ok ? 'ok' : 'error' })
+        .inc();
       this.histograms.toolDurationMs.labels({ tool }).observe(durationMs);
     } catch {
       // ignore metric errors
@@ -88,7 +97,9 @@ export class Metrics {
 
   recordResource(resource: string, durationMs: number, ok: boolean): void {
     try {
-      this.counters.resourceInvocations.labels({ resource, outcome: ok ? 'ok' : 'error' }).inc();
+      this.counters.resourceInvocations
+        .labels({ resource, outcome: ok ? 'ok' : 'error' })
+        .inc();
       this.histograms.resourceDurationMs.labels({ resource }).observe(durationMs);
     } catch {
       // ignore metric errors
@@ -97,5 +108,3 @@ export class Metrics {
 }
 
 export const createMetrics = (cfg: MetricsConfig): Metrics => new Metrics(cfg);
-
-

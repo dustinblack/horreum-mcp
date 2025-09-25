@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 export type APIKeyAuth = {
-    /**
-     * type
-     */
-    type?: string;
-    /**
-     * Api key
-     */
-    apiKey?: string;
+  /**
+   * type
+   */
+  type?: string;
+  /**
+   * Api key
+   */
+  apiKey?: string;
 };
-

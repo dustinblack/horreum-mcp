@@ -5,12 +5,11 @@
 import type { Instant } from './Instant.js';
 import type { KeyType } from './KeyType.js';
 export type ApiKeyResponse = {
-    id?: number;
-    name?: string;
-    type?: KeyType;
-    creation?: Instant;
-    access?: Instant;
-    isRevoked?: boolean;
-    toExpiration?: number;
+  id?: number;
+  name?: string;
+  type?: KeyType;
+  creation?: Instant;
+  access?: Instant;
+  isRevoked?: boolean;
+  toExpiration?: number;
 };
-

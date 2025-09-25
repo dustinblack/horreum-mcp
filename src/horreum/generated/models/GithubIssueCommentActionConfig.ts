@@ -3,29 +3,28 @@
 /* tslint:disable */
 /* eslint-disable */
 export type GithubIssueCommentActionConfig = {
-    /**
-     * Action type
-     */
-    type: string;
-    /**
-     * GitHub issue URL
-     */
-    issueUrl: string;
-    /**
-     * GitHub repo owner
-     */
-    owner: string;
-    /**
-     * GitHub repo name
-     */
-    repo: string;
-    /**
-     * GitHub issue number
-     */
-    issue: string;
-    /**
-     * Object markdown formatter
-     */
-    formatter: string;
+  /**
+   * Action type
+   */
+  type: string;
+  /**
+   * GitHub issue URL
+   */
+  issueUrl: string;
+  /**
+   * GitHub repo owner
+   */
+  owner: string;
+  /**
+   * GitHub repo name
+   */
+  repo: string;
+  /**
+   * GitHub issue number
+   */
+  issue: string;
+  /**
+   * Object markdown formatter
+   */
+  formatter: string;
 };
-

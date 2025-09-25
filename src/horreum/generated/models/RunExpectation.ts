@@ -4,10 +4,9 @@
 /* eslint-disable */
 import type { Instant } from './Instant.js';
 export type RunExpectation = {
-    id?: number;
-    testId: number;
-    expectedBefore: Instant;
-    expectedBy?: string;
-    backlink?: string;
+  id?: number;
+  testId: number;
+  expectedBefore: Instant;
+  expectedBy?: string;
+  backlink?: string;
 };
-

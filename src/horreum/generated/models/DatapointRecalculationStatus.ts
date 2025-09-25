@@ -4,10 +4,9 @@
 /* eslint-disable */
 import type { DatasetInfo } from './DatasetInfo.js';
 export type DatapointRecalculationStatus = {
-    percentage: number;
-    done: boolean;
-    totalDatasets?: number;
-    errors?: number;
-    datasetsWithoutValue: Array<DatasetInfo>;
+  percentage: number;
+  done: boolean;
+  totalDatasets?: number;
+  errors?: number;
+  datasetsWithoutValue: Array<DatasetInfo>;
 };
-

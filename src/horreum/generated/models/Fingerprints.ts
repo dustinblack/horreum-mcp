@@ -7,6 +7,5 @@ import type { FingerprintValue } from './FingerprintValue.js';
  * A list of Fingerprints representing one dataset
  */
 export type Fingerprints = {
-    values?: Array<FingerprintValue>;
+  values?: Array<FingerprintValue>;
 };
-

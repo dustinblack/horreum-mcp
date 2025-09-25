@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type UserData = {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 };
-

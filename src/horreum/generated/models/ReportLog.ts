@@ -7,10 +7,9 @@ import type { Instant } from './Instant.js';
  * Report Log
  */
 export type ReportLog = {
-    id: number;
-    level: number;
-    timestamp: Instant;
-    message: string;
-    reportId: number;
+  id: number;
+  level: number;
+  timestamp: Instant;
+  message: string;
+  reportId: number;
 };
-

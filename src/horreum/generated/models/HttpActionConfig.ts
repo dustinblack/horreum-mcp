@@ -3,13 +3,12 @@
 /* tslint:disable */
 /* eslint-disable */
 export type HttpActionConfig = {
-    /**
-     * Action type
-     */
-    type: string;
-    /**
-     * HTTP address
-     */
-    url: string;
+  /**
+   * Action type
+   */
+  type: string;
+  /**
+   * HTTP address
+   */
+  url: string;
 };
-

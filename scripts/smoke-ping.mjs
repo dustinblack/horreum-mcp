@@ -16,5 +16,3 @@ await client.connect(clientT);
 
 const res = await client.callTool({ name: 'ping', arguments: {} });
 console.log(JSON.stringify(res));
-
-

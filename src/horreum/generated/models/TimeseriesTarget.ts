@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type TimeseriesTarget = {
-    target: string;
-    datapoints: Array<Array<number>>;
-    variableId: number;
+  target: string;
+  datapoints: Array<Array<number>>;
+  variableId: number;
 };
-

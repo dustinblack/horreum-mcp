@@ -6,17 +6,16 @@
  * Representation of Fingerprint. If the Fingerprint has children the value will be null.
  */
 export type FingerprintValue = {
-    /**
-     * Fingerprint name
-     */
-    name?: string;
-    /**
-     * Fingerprint name
-     */
-    value?: any;
-    /**
-     * List of Fingerprint children
-     */
-    children?: Array<any>;
+  /**
+   * Fingerprint name
+   */
+  name?: string;
+  /**
+   * Fingerprint name
+   */
+  value?: any;
+  /**
+   * List of Fingerprint children
+   */
+  children?: Array<any>;
 };
-

@@ -4,11 +4,10 @@
 /* eslint-disable */
 import type { Instant } from './Instant.js';
 export type Banner = {
-    id?: number;
-    created?: Instant;
-    active: boolean;
-    severity: string;
-    title: string;
-    message?: string;
+  id?: number;
+  created?: Instant;
+  active: boolean;
+  severity: string;
+  title: string;
+  message?: string;
 };
-

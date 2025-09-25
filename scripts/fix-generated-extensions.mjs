@@ -23,7 +23,10 @@ function fixFile(filePath) {
     // Remove any FETCH: undefined initializer to satisfy exactOptionalPropertyTypes
     src = src.replace(/\n\s*FETCH:\s*undefined,\n/g, '\n');
     // Normalize FETCH type to Promise<Response> (no undefined)
-    src = src.replace(/\)\s*=>\s*Promise<Response>\s*\|\s*undefined;/g, ') => Promise<Response>;');
+    src = src.replace(
+      /\)\s*=>\s*Promise<Response>\s*\|\s*undefined;/g,
+      ') => Promise<Response>;'
+    );
   }
 
   // Ensure request.ts uses OpenAPI.FETCH when available
@@ -48,5 +51,3 @@ function walk(dir) {
 
 if (fs.existsSync(root)) walk(root);
 console.log('Fixed import extensions in generated client.');
-
-

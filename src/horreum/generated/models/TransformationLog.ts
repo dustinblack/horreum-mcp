@@ -7,11 +7,10 @@ import type { Instant } from './Instant.js';
  * Transformation Log
  */
 export type TransformationLog = {
-    id: number;
-    level: number;
-    timestamp: Instant;
-    message: string;
-    testId?: number;
-    runId?: number;
+  id: number;
+  level: number;
+  timestamp: Instant;
+  message: string;
+  testId?: number;
+  runId?: number;
 };
-

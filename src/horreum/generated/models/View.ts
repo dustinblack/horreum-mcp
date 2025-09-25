@@ -4,12 +4,11 @@
 /* eslint-disable */
 import type { ViewComponent } from './ViewComponent.js';
 export type View = {
-    id: number;
-    name: string;
-    testId?: number;
-    /**
-     * List of components for this view
-     */
-    components: Array<ViewComponent>;
+  id: number;
+  name: string;
+  testId?: number;
+  /**
+   * List of components for this view
+   */
+  components: Array<ViewComponent>;
 };
-

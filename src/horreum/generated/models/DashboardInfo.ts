@@ -4,9 +4,8 @@
 /* eslint-disable */
 import type { PanelInfo } from './PanelInfo.js';
 export type DashboardInfo = {
-    testId: number;
-    uid: string;
-    url: string;
-    panels: Array<PanelInfo>;
+  testId: number;
+  uid: string;
+  url: string;
+  panels: Array<PanelInfo>;
 };
-

@@ -3,9 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type NoAuth = {
-    /**
-     * type
-     */
-    type?: string;
+  /**
+   * type
+   */
+  type?: string;
 };
-

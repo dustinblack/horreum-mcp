@@ -3,10 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type TypeConfig = {
-    enumName?: string;
-    name?: string;
-    label?: string;
-    supportedAuths?: Array<string>;
-    builtIn?: boolean;
+  enumName?: string;
+  name?: string;
+  label?: string;
+  supportedAuths?: Array<string>;
+  builtIn?: boolean;
 };
-

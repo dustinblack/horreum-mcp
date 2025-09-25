@@ -5,7 +5,6 @@
 import type { Range } from './Range.js';
 import type { Target } from './Target.js';
 export type Query = {
-    range: Range;
-    targets: Array<Target>;
+  range: Range;
+  targets: Array<Target>;
 };
-

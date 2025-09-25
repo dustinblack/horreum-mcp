@@ -7,13 +7,12 @@ import type { ObjectNode } from './ObjectNode.js';
  * Change's target
  */
 export type Target = {
-    /**
-     * concatenated simicolons varibleID;{fingeprintJson}
-     */
-    target?: string;
-    type?: string;
-    refId?: string;
-    data?: string;
-    payload?: ObjectNode;
+  /**
+   * concatenated simicolons varibleID;{fingeprintJson}
+   */
+  target?: string;
+  type?: string;
+  refId?: string;
+  data?: string;
+  payload?: ObjectNode;
 };
-

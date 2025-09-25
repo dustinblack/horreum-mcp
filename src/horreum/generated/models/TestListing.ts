@@ -4,13 +4,12 @@
 /* eslint-disable */
 import type { TestSummary } from './TestSummary.js';
 export type TestListing = {
-    /**
-     * Array of Test Summaries
-     */
-    tests: Array<TestSummary>;
-    /**
-     * Number of tests when pagination is ignored
-     */
-    count: number;
+  /**
+   * Array of Test Summaries
+   */
+  tests: Array<TestSummary>;
+  /**
+   * Number of tests when pagination is ignored
+   */
+  count: number;
 };
-

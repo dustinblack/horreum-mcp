@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type DatapointLastTimestamp = {
-    variable: number;
-    timestamp: number;
+  variable: number;
+  timestamp: number;
 };
-

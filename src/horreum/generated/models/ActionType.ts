@@ -5,4 +5,8 @@
 /**
  * Type of Action
  */
-export type ActionType = 'HTTP' | 'GITHUB_ISSUE_COMMENT' | 'GITHUB_ISSUE_CREATE' | 'SLACK_MESSAGE';
+export type ActionType =
+  | 'HTTP'
+  | 'GITHUB_ISSUE_COMMENT'
+  | 'GITHUB_ISSUE_CREATE'
+  | 'SLACK_MESSAGE';

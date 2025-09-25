@@ -6,10 +6,9 @@
  * Single view component
  */
 export type ViewComponent = {
-    id: number;
-    headerOrder: number;
-    headerName: string;
-    labels: Array<string>;
-    render?: string;
+  id: number;
+  headerOrder: number;
+  headerName: string;
+  labels: Array<string>;
+  render?: string;
 };
-

@@ -14,7 +14,10 @@ import { fetch as undiciFetch } from 'undici';
 import type { Env } from '../config/env.js';
 import { Metrics } from '../observability/metrics.js';
 
-type FetchLike = (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => ReturnType<typeof fetch>;
+type FetchLike = (
+  input: Parameters<typeof fetch>[0],
+  init?: Parameters<typeof fetch>[1]
+) => ReturnType<typeof fetch>;
 type RegisterOptions = {
   getEnv: () => Promise<Env>;
   // Minimal fetch-like signature for tests; real runtime uses global fetch
@@ -34,9 +37,18 @@ export async function registerTools(
     else logger.info(data);
   };
   const text = (s: string) => ({ type: 'text' as const, text: s });
-  const errorToObject = (err: unknown, cid: string): { code: string; message: string; details?: unknown; correlationId: string } => {
+  const errorToObject = (
+    err: unknown,
+    cid: string
+  ): { code: string; message: string; details?: unknown; correlationId: string } => {
     // ApiError from generated client has shape with status/statusText/body
-    const anyErr = err as { name?: string; message?: string; status?: number; statusText?: string; body?: unknown };
+    const anyErr = err as {
+      name?: string;
+      message?: string;
+      status?: number;
+      statusText?: string;
+      body?: unknown;
+    };
     if (typeof anyErr?.status === 'number') {
       return {
         code: `HTTP_${anyErr.status}`,
@@ -59,9 +71,10 @@ export async function registerTools(
   }
   // Configure rate-limited fetch and inject into OpenAPI instead of patching global fetch.
   // Prefer injected fetch for tests; else use global or undici's fetch.
-  const baseFetch: FetchLike = (fetchImpl as FetchLike | undefined)
-    ?? ((globalThis as { fetch?: FetchLike }).fetch as FetchLike | undefined)
-    ?? (undiciFetch as unknown as FetchLike);
+  const baseFetch: FetchLike =
+    (fetchImpl as FetchLike | undefined) ??
+    ((globalThis as { fetch?: FetchLike }).fetch as FetchLike | undefined) ??
+    (undiciFetch as unknown as FetchLike);
   const rlFetch = createRateLimitedFetch({
     baseFetch,
     requestsPerSecond: env.HORREUM_RATE_LIMIT,
@@ -72,7 +85,8 @@ export async function registerTools(
     jitterRatio: 0.25,
   });
   // Inject custom fetch into generated client config
-  (OpenAPI as unknown as { FETCH?: typeof fetch }).FETCH = rlFetch as unknown as typeof fetch;
+  (OpenAPI as unknown as { FETCH?: typeof fetch }).FETCH =
+    rlFetch as unknown as typeof fetch;
 
   // Resources
   // Test resource: horreum://tests/{id}
@@ -89,7 +103,11 @@ export async function registerTools(
       const data = await TestService.testServiceGetTest({ id });
       return {
         contents: [
-          { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+          {
+            uri: uriStr,
+            mimeType: 'application/json',
+            text: JSON.stringify(data, null, 2),
+          },
         ],
       };
     }
@@ -109,25 +127,46 @@ export async function registerTools(
         const res = await startSpan('resource.schema', async () => {
           const id = Number(uri.pathname.replace(/^\//, ''));
           if (!Number.isFinite(id)) {
-            return { contents: [{ uri: uriStr, text: 'Invalid schema id' }], isError: true };
+            return {
+              contents: [{ uri: uriStr, text: 'Invalid schema id' }],
+              isError: true,
+            };
           }
           const data = await SchemaService.schemaServiceGetSchema({ id });
           return {
             contents: [
-              { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+              {
+                uri: uriStr,
+                mimeType: 'application/json',
+                text: JSON.stringify(data, null, 2),
+              },
             ],
           };
         });
         const duration = Date.now() - started;
-        log('info', { event: 'resource.end', resource: 'schema', cid, durationMs: duration });
+        log('info', {
+          event: 'resource.end',
+          resource: 'schema',
+          cid,
+          durationMs: duration,
+        });
         metrics?.recordResource('schema', duration, true);
         return res;
       } catch (err) {
         const errObj = errorToObject(err, cid);
         const duration = Date.now() - started;
-        log('error', { event: 'resource.error', resource: 'schema', cid, durationMs: duration, error: errObj });
+        log('error', {
+          event: 'resource.error',
+          resource: 'schema',
+          cid,
+          durationMs: duration,
+          error: errObj,
+        });
         metrics?.recordResource('schema', duration, false);
-        return { contents: [{ uri: uriStr, text: JSON.stringify(errObj) }], isError: true };
+        return {
+          contents: [{ uri: uriStr, text: JSON.stringify(errObj) }],
+          isError: true,
+        };
       }
     }
   );
@@ -147,35 +186,62 @@ export async function registerTools(
           const parts = uri.pathname.replace(/^\//, '').split('/');
           // expected structure: tests/{testId}/runs/{runId}
           if (parts.length !== 4 || parts[0] !== 'tests' || parts[2] !== 'runs') {
-            return { contents: [{ uri: uriStr, text: 'Invalid run URI' }], isError: true };
+            return {
+              contents: [{ uri: uriStr, text: 'Invalid run URI' }],
+              isError: true,
+            };
           }
           const runId = Number(parts[3]);
           if (!Number.isFinite(runId)) {
-            return { contents: [{ uri: uriStr, text: 'Invalid run id' }], isError: true };
+            return {
+              contents: [{ uri: uriStr, text: 'Invalid run id' }],
+              isError: true,
+            };
           }
           const data = await RunService.runServiceGetRun({ id: runId });
           return {
             contents: [
-              { uri: uriStr, mimeType: 'application/json', text: JSON.stringify(data, null, 2) },
+              {
+                uri: uriStr,
+                mimeType: 'application/json',
+                text: JSON.stringify(data, null, 2),
+              },
             ],
           };
         });
         const duration = Date.now() - started;
-        log('info', { event: 'resource.end', resource: 'run', cid, durationMs: duration });
+        log('info', {
+          event: 'resource.end',
+          resource: 'run',
+          cid,
+          durationMs: duration,
+        });
         metrics?.recordResource('run', duration, true);
         return res;
       } catch (err) {
         const errObj = errorToObject(err, cid);
         const duration = Date.now() - started;
-        log('error', { event: 'resource.error', resource: 'run', cid, durationMs: duration, error: errObj });
+        log('error', {
+          event: 'resource.error',
+          resource: 'run',
+          cid,
+          durationMs: duration,
+          error: errObj,
+        });
         metrics?.recordResource('run', duration, false);
-        return { contents: [{ uri: uriStr, text: JSON.stringify(errObj) }], isError: true };
+        return {
+          contents: [{ uri: uriStr, text: JSON.stringify(errObj) }],
+          isError: true,
+        };
       }
     }
   );
 
   // ping
-  type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean };
+  type ToolResult = {
+    content: Array<{ type: 'text'; text: string }>;
+    isError?: boolean;
+  };
   type ToolArgs = Record<string, unknown>;
   const withTool = (
     toolName: string,
@@ -195,14 +261,27 @@ export async function registerTools(
           const res = await startSpan(`tool.${toolName}`, async () => handler(args));
           const duration = Date.now() - started;
           log('info', { event: 'tool.end', tool: toolName, cid, durationMs: duration });
-          metrics?.recordTool(toolName, duration, !(res as { isError?: boolean }).isError);
+          metrics?.recordTool(
+            toolName,
+            duration,
+            !(res as { isError?: boolean }).isError
+          );
           return res;
         } catch (err) {
           const errObj = errorToObject(err, cid);
           const duration = Date.now() - started;
-          log('error', { event: 'tool.error', tool: toolName, cid, durationMs: duration, error: errObj });
+          log('error', {
+            event: 'tool.error',
+            tool: toolName,
+            cid,
+            durationMs: duration,
+            error: errObj,
+          });
           metrics?.recordTool(toolName, duration, false);
-          return { content: [{ type: 'text', text: JSON.stringify(errObj) }], isError: true };
+          return {
+            content: [{ type: 'text', text: JSON.stringify(errObj) }],
+            isError: true,
+          };
         }
       }
     );
@@ -212,7 +291,9 @@ export async function registerTools(
     'ping',
     'Ping the server to verify connectivity.',
     { message: z.string().optional() },
-    async (args: ToolArgs) => ({ content: [text(typeof args.message === 'string' ? args.message : 'pong')] })
+    async (args: ToolArgs) => ({
+      content: [text(typeof args.message === 'string' ? args.message : 'pong')],
+    })
   );
 
   // list_tests
@@ -257,11 +338,13 @@ export async function registerTools(
             page: 0,
             ...(args.direction ? { direction: args.direction as SortDirection } : {}),
             ...(args.name ? { name: args.name as string } : {}),
-          }).catch(() => ({ tests: [], count: 0 } as unknown as TestListing))
+          }).catch(() => ({ tests: [], count: 0 }) as unknown as TestListing)
         )
       );
 
-      const aggregated: TestSummary[] = listings.flatMap((l) => Array.isArray(l?.tests) ? l.tests : []);
+      const aggregated: TestSummary[] = listings.flatMap((l) =>
+        Array.isArray(l?.tests) ? l.tests : []
+      );
       const total = aggregated.length;
 
       // Optional client-side pagination after aggregation
@@ -274,7 +357,10 @@ export async function registerTools(
         paged = aggregated.slice(start, start + (args.limit as number));
       }
 
-      const result: { tests: TestSummary[]; count: number } = { tests: paged as TestSummary[], count: total };
+      const result: { tests: TestSummary[]; count: number } = {
+        tests: paged as TestSummary[],
+        count: total,
+      };
       return { content: [text(JSON.stringify(result, null, 2))] };
     }
   );
@@ -323,12 +409,17 @@ export async function registerTools(
         if (Number.isFinite(maybeId)) {
           resolvedTestId = maybeId;
         } else {
-          const t = await TestService.testServiceGetByNameOrId({ name: args.test as string });
+          const t = await TestService.testServiceGetByNameOrId({
+            name: args.test as string,
+          });
           resolvedTestId = t.id;
         }
       }
       if (!resolvedTestId) {
-        return { content: [text('Provide testId or test (name or ID).')], isError: true };
+        return {
+          content: [text('Provide testId or test (name or ID).')],
+          isError: true,
+        };
       }
 
       const parseTime = (s?: string): number | undefined => {
@@ -359,7 +450,8 @@ export async function registerTools(
       const sortDir = (args.direction as SortDirection | undefined) ?? 'Descending';
 
       let page = 1;
-      const aggregated: import('../horreum/generated/models/RunSummary.js').RunSummary[] = [];
+      const aggregated: import('../horreum/generated/models/RunSummary.js').RunSummary[] =
+        [];
       // Fetch until no more results or we can short-circuit by time bound when sorted by start desc
       // Note: API pages start at 1; if server supports page=0 semantics, it's ignored here intentionally
       // to keep pagination predictable across deployments.
@@ -376,11 +468,11 @@ export async function registerTools(
         aggregated.push(...runs);
 
         // Short-circuit when sorted by start desc and oldest fetched run is older than from
-        if (
-          sortField === 'start' && sortDir === 'Descending' && fromMs !== undefined
-        ) {
+        if (sortField === 'start' && sortDir === 'Descending' && fromMs !== undefined) {
           const oldest = runs[runs.length - 1];
-          const oldestStart = oldest ? Number(oldest.start) || Date.parse(String(oldest.start)) : NaN;
+          const oldestStart = oldest
+            ? Number(oldest.start) || Date.parse(String(oldest.start))
+            : NaN;
           if (Number.isFinite(oldestStart) && oldestStart < fromMs) {
             break;
           }
@@ -429,7 +521,8 @@ export async function registerTools(
       description: z.string().optional(),
     },
     async (args) => {
-      const payload = typeof args.data === 'string' ? args.data : JSON.stringify(args.data);
+      const payload =
+        typeof args.data === 'string' ? args.data : JSON.stringify(args.data);
       const res = await RunService.runServiceAddRunFromData({
         start: args.start as string,
         stop: args.stop as string,
@@ -438,7 +531,10 @@ export async function registerTools(
         ...(args.owner ? { owner: args.owner as string } : {}),
         // Access is an enum type; string is accepted by client
         ...(args.access
-          ? { access: args.access as unknown as import('../horreum/generated/models/Access.js').Access }
+          ? {
+              access:
+                args.access as unknown as import('../horreum/generated/models/Access.js').Access,
+            }
           : {}),
         ...(args.schema ? { schema: args.schema as string } : {}),
         ...(args.description ? { description: args.description as string } : {}),
@@ -447,5 +543,3 @@ export async function registerTools(
     }
   );
 }
-
-

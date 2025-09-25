@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type DatastoreTestResponse = {
-    msg?: string;
-    success?: boolean;
+  msg?: string;
+  success?: boolean;
 };
-

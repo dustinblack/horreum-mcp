@@ -38,5 +38,3 @@ const res = await client.callTool({
   },
 });
 console.log(JSON.stringify(res));
-
-

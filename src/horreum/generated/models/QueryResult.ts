@@ -3,12 +3,11 @@
 /* tslint:disable */
 /* eslint-disable */
 export type QueryResult = {
-    valid: boolean;
-    jsonpath?: string;
-    errorCode?: number;
-    sqlState?: string;
-    reason?: string;
-    sql?: string;
-    value?: string;
+  valid: boolean;
+  jsonpath?: string;
+  errorCode?: number;
+  sqlState?: string;
+  reason?: string;
+  sql?: string;
+  value?: string;
 };
-
