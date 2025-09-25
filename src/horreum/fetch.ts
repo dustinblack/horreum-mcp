@@ -1,3 +1,4 @@
+import { logger } from '../observability/logging.js';
 import { setTimeout as delayMs } from 'node:timers/promises';
 
 export type BaseFetch = (
@@ -64,6 +65,15 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
       }
       const head = recentRequestTimestamps[0];
       const waitFor = head != null ? windowMs - (now - head) : 1;
+      logger.debug(
+        {
+          windowMs,
+          currentWindowCount: recentRequestTimestamps.length,
+          requestsPerSecond,
+          waitFor,
+        },
+        'Rate limiter waiting for token'
+      );
       await delayMs(Math.max(1, waitFor));
     }
   }
@@ -90,6 +100,9 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
       }
 
       try {
+        if (attempt > 1) {
+          logger.debug({ attempt }, 'Retrying fetch attempt');
+        }
         const response = await baseFetch(input, {
           ...(init ?? {}),
           signal: controller.signal,
@@ -106,6 +119,10 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
           backoffInitialMs,
           backoffMaxMs,
           jitterRatio
+        );
+        logger.debug(
+          { status: response.status, attempt, delay },
+          'Retrying on retryable status'
         );
         await delayMs(delay);
         continue;
@@ -128,6 +145,7 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
           backoffMaxMs,
           jitterRatio
         );
+        logger.debug({ attempt, delay }, 'Retrying after network error');
         await delayMs(delay);
         continue;
       }

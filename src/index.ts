@@ -14,10 +14,39 @@ export { registerTools };
 import { createMetrics } from './observability/metrics.js';
 import { initTracing } from './observability/tracing.js';
 import { startHttpServer } from './server/http.js';
-import { logger } from './observability/logging.js';
+import { logger, setLogLevel, isValidLogLevel } from './observability/logging.js';
 import { createLlmClient } from './llm/client.js';
 
+function parseCliLogLevel(argv: string[]): string | undefined {
+  // Accept: --log-level <level>, --log-level=<level>, --debug, -d, --trace
+  // Return a level string if present.
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i] as string;
+    if (arg === '--debug' || arg === '-d') return 'debug';
+    if (arg === '--trace') return 'trace';
+    if (arg === '--silent') return 'silent';
+    if (arg.startsWith('--log-level=')) {
+      const lvl = arg.split('=')[1] as string | undefined;
+      if (lvl && isValidLogLevel(lvl)) return lvl;
+      return undefined;
+    }
+    if (arg === '--log-level') {
+      const lvl = argv[i + 1] as string | undefined;
+      if (lvl && isValidLogLevel(lvl)) return lvl;
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
 async function main() {
+  // Apply CLI log level as early as possible
+  const cliLevel = parseCliLogLevel(process.argv.slice(2));
+  if (cliLevel) {
+    setLogLevel(cliLevel);
+    logger.info({ level: cliLevel }, 'Log level set via CLI');
+  }
+
   const env = await loadEnv();
 
   const server = new McpServer({

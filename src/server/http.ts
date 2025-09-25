@@ -74,6 +74,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
   // MCP POST endpoint
   app.post('/mcp', authMiddleware, async (req, res) => {
     const sessionId = req.headers['mcp-session-id'] as string;
+    logger.debug({ hasSessionId: Boolean(sessionId) }, 'Incoming /mcp request');
 
     try {
       let transport: StreamableHTTPServerTransport;
@@ -81,6 +82,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       if (sessionId && transports[sessionId]) {
         // Reuse existing transport
         transport = transports[sessionId];
+        logger.debug({ sessionId }, 'Reusing existing session transport');
       } else if (!sessionId && isInitializeRequest(req.body)) {
         // New initialization request
         transport = new StreamableHTTPServerTransport({
@@ -98,6 +100,10 @@ export async function startHttpServer(server: McpServer, env: Env) {
         return;
       } else {
         // Invalid request
+        logger.debug(
+          { bodyShape: typeof req.body, hasSessionId: Boolean(sessionId) },
+          'Rejecting /mcp request without session or initialize payload'
+        );
         res.status(400).json({
           jsonrpc: '2.0',
           error: {

@@ -293,18 +293,17 @@ HORREUM_TIMEOUT=30000
 HORREUM_API_VERSION=latest
 ```
 
-| Variable              | Description                                                         |
-| --------------------- | ------------------------------------------------------------------- |
-| `HORREUM_BASE_URL`    | The base URL of your Horreum instance.                              |
-| `HORREUM_TOKEN`       | Your Horreum API token. Required for writes and private resource    |
-|                       | access.                                                             |
-| `HORREUM_RATE_LIMIT`  | Client-side rate limit in requests per second.                      |
-| `HORREUM_TIMEOUT`     | Per-request timeout in milliseconds.                                |
-| `HORREUM_API_VERSION` | The version of the Horreum API to use.                              |
-| `LOG_LEVEL`           | Logging level for pino (`info`, `debug`, `error`). Default: `info`. |
-| `METRICS_ENABLED`     | Enable Prometheus metrics endpoint. Default: `false`.               |
-| `METRICS_PORT`        | Port for metrics endpoint. Default: `9464`.                         |
-| `METRICS_PATH`        | Path for metrics endpoint. Default: `/metrics`.                     |
+| Variable              | Description                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------- |
+| `HORREUM_BASE_URL`    | The base URL of your Horreum instance.                                                            |
+| `HORREUM_TOKEN`       | Your Horreum API token. Required for writes and private resource access.                          |
+| `HORREUM_RATE_LIMIT`  | Client-side rate limit in requests per second.                                                    |
+| `HORREUM_TIMEOUT`     | Per-request timeout in milliseconds.                                                              |
+| `HORREUM_API_VERSION` | The version of the Horreum API to use.                                                            |
+| `LOG_LEVEL`           | Logging level for pino (`trace`,`debug`,`info`,`warn`,`error`,`fatal`,`silent`). Default: `info`. |
+| `METRICS_ENABLED`     | Enable Prometheus metrics endpoint. Default: `false`.                                             |
+| `METRICS_PORT`        | Port for metrics endpoint. Default: `9464`.                                                       |
+| `METRICS_PATH`        | Path for metrics endpoint. Default: `/metrics`.                                                   |
 
 > [!NOTE]
 > When using an AI client, these environment variables are typically set in the
@@ -367,7 +366,7 @@ communicates with it over standard input/output.
 The core configuration is the same for all clients:
 
 - **Command:** `node`
-- **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
+- **Args:** `/absolute/path/to/horreum-mcp/build/index.js [--debug|--trace|--log-level <level>]`
 - **Environment:**
   - `HORREUM_BASE_URL=https://horreum.example.com`
   - `HORREUM_TOKEN=${HORREUM_TOKEN}` (if required)
@@ -394,7 +393,7 @@ connects to it via an HTTP endpoint.
 2.  **Start the server:**
 
     ```bash
-    npm start
+    npm start -- --debug
     ```
 
 - **Pros:** The server can run continuously, be shared by multiple clients, and
@@ -418,7 +417,7 @@ Add the server configuration to your Gemini settings file (typically
   "mcpServers": {
     "horreum-local": {
       "command": "node",
-      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
+      "args": ["/absolute/path/to/horreum-mcp/build/index.js", "--log-level", "debug"],
       "env": {
         "HORREUM_BASE_URL": "https://horreum.example.com",
         "HORREUM_TOKEN": "${HORREUM_TOKEN}"
@@ -460,7 +459,7 @@ Add the server configuration to your Gemini settings file (typically
   "mcpServers": {
     "horreum-local": {
       "command": "node",
-      "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
+      "args": ["/absolute/path/to/horreum-mcp/build/index.js", "--debug"],
       "env": {
         "HORREUM_BASE_URL": "https://horreum.example.com",
         "HORREUM_TOKEN": "${HORREUM_TOKEN}"
@@ -511,7 +510,7 @@ validate its functionality.
 1.  **Start the server:**
 
     ```bash
-    npm start
+    npm start -- --log-level trace
     ```
 
     This will run the compiled server from `./build/index.js`.
@@ -525,6 +524,8 @@ validate its functionality.
     export METRICS_PORT=9464
     export METRICS_PATH=/metrics
     npm start
+    # or with debug logs:
+    npm start -- --debug
     # Scrape http://localhost:9464/metrics
     ```
 
