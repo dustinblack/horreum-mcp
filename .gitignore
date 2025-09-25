@@ -73,5 +73,6 @@ local_*
 node_modules/
 .env
 coverage/
+.eslintcache
 
 # End of file
