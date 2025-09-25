@@ -60,8 +60,19 @@ if (
   process.argv[1] &&
   import.meta.url.endsWith(process.argv[1].split('/').pop() as string)
 ) {
-  main().catch((err) => {
-    logger.error('Failed to start server', err);
+  main().catch((err: unknown) => {
+    const error = err as Error & { code?: string };
+    const message = error?.message || String(error);
+    if (message.includes('Invalid environment')) {
+      logger.error(
+        { err: error },
+        'Invalid environment configuration. Required: HORREUM_BASE_URL. ' +
+          'Example: HORREUM_BASE_URL=https://horreum.example.com HTTP_MODE_ENABLED=true ' +
+          'HTTP_PORT=3000. See README Container Usage for details.'
+      );
+    } else {
+      logger.error({ err: error }, 'Failed to start server');
+    }
     process.exit(1);
   });
 }
