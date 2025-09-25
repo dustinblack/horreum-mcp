@@ -72,5 +72,6 @@ local_*
 # Node/TypeScript project ignores
 node_modules/
 .env
+coverage/
 
 # End of file
