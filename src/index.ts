@@ -8,6 +8,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadEnv } from './config/env.js';
 import { registerTools } from './server/tools.js';
+
+export { registerTools };
+
 import { createMetrics } from './observability/metrics.js';
 import { initTracing } from './observability/tracing.js';
 import { startHttpServer } from './server/http.js';
