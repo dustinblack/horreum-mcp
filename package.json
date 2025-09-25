@@ -4,7 +4,7 @@
   "description": "Model Context Protocol (MCP) server for Horreum, exposing Horreum APIs as MCP tools and resources.",
   "main": "index.js",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
     "coverage": "vitest run --coverage",
     "build": "tsup",
     "postbuild": "cp -r node_modules/@modelcontextprotocol/sdk/dist build/dist",

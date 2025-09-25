@@ -30,6 +30,13 @@ async function run() {
       stdio: 'inherit',
     });
 
+    // Prevent unhandled promise rejection when the process is killed
+    serverProcess.catch((error) => {
+      if (!error.isTerminated) {
+        console.error('Server process error:', error);
+      }
+    });
+
     // Give the server a moment to start up by retrying the connection
     let connected = false;
     for (let i = 0; i < 10; i++) {
@@ -136,9 +143,7 @@ async function run() {
   } finally {
     if (serverProcess) {
       console.log('Stopping server...');
-      serverProcess.kill('SIGTERM', {
-        forceKillAfterTimeout: 2000,
-      });
+      serverProcess.kill('SIGTERM');
     }
   }
 }

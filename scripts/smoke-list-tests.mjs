@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { registerTools } from '../build/server/tools.js';
+import { registerTools } from '../build/index.js';
 
 const [clientT, serverT] = InMemoryTransport.createLinkedPair();
 const server = new McpServer({ name: 'smoke', version: '0.0.0' });
