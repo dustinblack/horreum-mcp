@@ -17,37 +17,51 @@ import { startHttpServer } from './server/http.js';
 import { logger } from './observability/logging.js';
 import { createLlmClient } from './llm/client.js';
 
-const env = await loadEnv();
+async function main() {
+  const env = await loadEnv();
 
-const server = new McpServer({
-  name: 'horreum-mcp',
-  version: '0.1.0',
-  inference: createLlmClient(env),
-});
+  const server = new McpServer({
+    name: 'horreum-mcp',
+    version: '0.1.0',
+    inference: createLlmClient(env),
+  });
 
-// Optional Prometheus metrics
-const metrics = createMetrics({
-  enabled: env.METRICS_ENABLED,
-  port: env.METRICS_PORT,
-  path: env.METRICS_PATH,
-  serviceName: 'horreum-mcp',
-  serviceVersion: '0.1.0',
-});
-metrics.startServer();
+  // Optional Prometheus metrics
+  const metrics = createMetrics({
+    enabled: env.METRICS_ENABLED,
+    port: env.METRICS_PORT,
+    path: env.METRICS_PATH,
+    serviceName: 'horreum-mcp',
+    serviceVersion: '0.1.0',
+  });
+  metrics.startServer();
 
-// Optional OpenTelemetry tracing
-await initTracing({
-  enabled: env.TRACING_ENABLED,
-  serviceName: 'horreum-mcp',
-  serviceVersion: '0.1.0',
-});
+  // Optional OpenTelemetry tracing
+  await initTracing({
+    enabled: env.TRACING_ENABLED,
+    serviceName: 'horreum-mcp',
+    serviceVersion: '0.1.0',
+  });
 
-await registerTools(server, { getEnv: loadEnv, metrics });
+  await registerTools(server, { getEnv: loadEnv, metrics });
 
-if (env.HTTP_MODE_ENABLED) {
-  await startHttpServer(server, env);
-} else {
-  logger.info('MCP server running in stdio mode');
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  if (env.HTTP_MODE_ENABLED) {
+    await startHttpServer(server, env);
+  } else {
+    logger.info('MCP server running in stdio mode');
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  }
+}
+
+// This check is to prevent the main function from running when this module is imported by other scripts,
+// such as smoke tests.
+if (
+  process.argv[1] &&
+  import.meta.url.endsWith(process.argv[1].split('/').pop() as string)
+) {
+  main().catch((err) => {
+    logger.error('Failed to start server', err);
+    process.exit(1);
+  });
 }
