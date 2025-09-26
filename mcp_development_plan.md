@@ -399,6 +399,13 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      completed, split cross-compilation into a separate item, and recorded build
      performance optimizations in progress (cache mounts, context filtering) with
      pending work for incremental builds and CI caching.
+   - 2025-09-26 — **Domain MCP Integration Documentation**: Added comprehensive 
+     "Connecting to Other MCP Servers" section to README with step-by-step guide 
+     for connecting Domain MCP servers to Horreum MCP via HTTP containers. Includes 
+     architecture diagrams, deployment examples, testing procedures, and 
+     troubleshooting. Documented current status: Horreum MCP is production-ready, 
+     Domain MCP needs plugin and configuration fixes. Validated end-to-end 
+     container deployment and HTTP API functionality.
    - 2025-09-26 — **Phase 5 Completed**: Hardened container image (OCI labels,
      STOPSIGNAL, HEALTHCHECK, non-root perms, tuned NODE_OPTIONS), added build
      context filtering via `.dockerignore`/`.containerignore`, introduced

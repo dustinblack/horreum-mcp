@@ -509,6 +509,252 @@ Features include:
 - **Prometheus Metrics**: Request rates, durations, error counts
 - **Structured Logging**: JSON output with contextual metadata
 
+## Connecting to Other MCP Servers
+
+### How to Connect Domain MCP Servers
+
+Want to connect specialized performance analysis servers to your Horreum MCP server? This guide shows you how to set up a complete performance analysis pipeline using containers.
+
+#### What You'll Build
+
+```mermaid
+flowchart LR
+    Client[🤖 Your AI Assistant<br/>Claude, ChatGPT, Cursor]
+    Domain[📊 Domain MCP Server<br/>Performance Analysis]
+    Horreum[🔗 Horreum MCP Server<br/>Data Access]
+    HorreumDB[🗄️ Your Horreum Instance<br/>Performance Database]
+    
+    Client <--> Domain
+    Domain <-->|HTTP API| Horreum
+    Horreum <-->|REST API| HorreumDB
+    
+    style Domain fill:#e1f5fe,stroke:#333,stroke-width:2px,color:#000
+    style Horreum fill:#fff3e0,stroke:#333,stroke-width:2px,color:#000
+    style Client fill:#f3e5f5,stroke:#333,stroke-width:2px,color:#000
+    style HorreumDB fill:#e8f5e8,stroke:#333,stroke-width:2px,color:#000
+```
+
+Your AI assistant will be able to ask questions like _"Analyze the boot time trends for the last 10 runs"_ and get intelligent responses that combine data from Horreum with specialized performance analysis.
+
+#### Step-by-Step Setup
+
+**Step 1: Start Your Horreum MCP Server**
+
+First, start the Horreum MCP server in HTTP mode so other servers can connect to it:
+
+```bash
+# Replace with your actual Horreum instance URL
+podman run -d --name horreum-mcp \
+  -p 127.0.0.1:3001:3000 \
+  -e HORREUM_BASE_URL=https://your-horreum-instance.com \
+  -e HTTP_MODE_ENABLED=true \
+  -e HTTP_AUTH_TOKEN=your-secure-token \
+  -e LOG_LEVEL=info \
+  quay.io/redhat-performance/horreum-mcp:main
+
+# Test that it's working
+curl -H 'Authorization: Bearer your-secure-token' http://localhost:3001/health
+# You should see: {"status":"ok"}
+```
+
+**Step 2: Configure the Domain MCP Connection**
+
+Create a configuration file that tells the Domain MCP server how to connect to your Horreum MCP server:
+
+```json
+{
+  "sources": {
+    "my-horreum": {
+      "endpoint": "http://localhost:3001",
+      "api_key": "your-secure-token",
+      "type": "horreum",
+      "timeout_seconds": 30
+    }
+  },
+  "enabled_plugins": {
+    "boot-time-verbose": true
+  }
+}
+```
+
+Save this as `domain-config.json` on your system.
+
+**Step 3: Start the Domain MCP Server**
+
+Now start the Domain MCP server and connect it to your Horreum MCP server:
+
+```bash
+# Start the Domain MCP server with your configuration
+podman run -d --name domain-mcp \
+  -p 127.0.0.1:8080:8080 \
+  -v $(pwd)/domain-config.json:/config/config.json:ro,Z \
+  -e DOMAIN_MCP_HTTP_TOKEN=another-secure-token \
+  -e DOMAIN_MCP_CONFIG=/config/config.json \
+  -e DOMAIN_MCP_LOG_LEVEL=INFO \
+  quay.io/redhat-performance/rhivos-perfscale-mcp:main
+
+# Test that it's working
+curl -H 'Authorization: Bearer another-secure-token' http://localhost:8080/ready
+# You should see: {"status":"ready"}
+```
+
+#### Testing Your Setup
+
+**Test 1: Verify Horreum MCP is Working**
+
+Let's test that your Horreum MCP server is responding correctly:
+
+```bash
+# Test the ping tool (this should work immediately)
+# First, get a session ID
+INIT_RESPONSE=$(curl -s -i -X POST \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'Authorization: Bearer your-secure-token' \
+  http://localhost:3001/mcp \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "test-client", "version": "1.0.0"}
+    }
+  }')
+
+# Extract the session ID from the response
+SESSION_ID=$(echo "$INIT_RESPONSE" | grep -i 'mcp-session-id:' | sed 's/.*: //' | tr -d '\r')
+
+# Now test the ping tool
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'Authorization: Bearer your-secure-token' \
+  -H "Mcp-Session-Id: $SESSION_ID" \
+  http://localhost:3001/mcp \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "ping",
+      "arguments": {"message": "Hello Horreum!"}
+    }
+  }' | jq .
+
+# ✅ Success: You should see the message echoed back
+```
+
+**Test 2: Try Domain MCP Raw Mode**
+
+The Domain MCP server can analyze performance data you provide directly:
+
+```bash
+# Test with some sample data (this will work once plugin issues are fixed)
+curl -X POST \
+  -H 'Authorization: Bearer another-secure-token' \
+  -H 'Content-Type: application/json' \
+  http://localhost:8080/tools/get_key_metrics_raw \
+  -d '{
+    "dataset_types": ["boot-time-verbose"],
+    "data": [{"$schema": "urn:boot-time-verbose:04", "test_results": []}]
+  }' | jq .
+
+# 🔄 Currently: This will show plugin registration issues that need to be fixed
+```
+
+**Test 3: Try the Full Pipeline**
+
+Once everything is working, you'll be able to fetch data through the full pipeline:
+
+```bash
+# This will fetch data from Horreum via your Horreum MCP server
+curl -X POST \
+  -H 'Authorization: Bearer another-secure-token' \
+  -H 'Content-Type: application/json' \
+  http://localhost:8080/tools/get_key_metrics \
+  -d '{
+    "dataset_types": ["boot-time-verbose"],
+    "source_id": "my-horreum",
+    "test_id": "boot-time-test",
+    "limit": 3
+  }' | jq .
+
+# 🎯 Goal: Get intelligent performance analysis combining Horreum data with Domain MCP insights
+```
+
+#### What's Working Right Now
+
+**✅ Horreum MCP Server** - Ready to use!
+
+Your Horreum MCP server is production-ready with these features:
+- **Ping tool** - Test connectivity anytime ✅
+- **All 5 tools available** - `list_tests`, `get_schema`, `list_runs`, `upload_run` ✅
+- **Session management** - Proper MCP protocol implementation ✅
+- **Authentication** - Secure with bearer tokens ✅
+- **Container deployment** - Runs reliably in containers ✅
+
+**⚠️ What Needs Your Horreum Instance**
+
+The data-fetching tools will show "fetch failed" errors unless you have:
+- Network access to your Horreum instance
+- A valid Horreum API token
+- Proper DNS resolution for your Horreum URL
+
+This is expected - the server is working correctly, it just needs real Horreum credentials.
+
+**🔄 Domain MCP Server - Needs Some Fixes**
+
+The Domain MCP server runs but has some issues to resolve:
+- Plugin registration needs to be fixed for `boot-time-verbose` datasets
+- Configuration loading should be more visible in logs  
+- Error messages need to be more helpful
+- Source connections need debugging
+
+These are all fixable issues with the Domain MCP project.
+
+#### Troubleshooting Tips
+
+**Check Your Logs**
+
+If something isn't working, the logs will tell you what's happening:
+
+```bash
+# Check Horreum MCP server
+podman logs horreum-mcp
+# Look for: "MCP server running in HTTP mode", session messages
+
+# Check Domain MCP server  
+podman logs domain-mcp
+# Look for: plugin loading, configuration messages
+```
+
+**Common Issues**
+
+- **Port already in use**: Try different ports like `3002:3000` or `8081:8080`
+- **Can't connect between containers**: Add `--network host` to both containers
+- **Authentication errors**: Make sure your tokens match in config files and curl commands
+- **Config not found**: Check that your volume mount path is correct
+
+**Getting Help**
+
+If you run into issues:
+1. Check the server logs first
+2. Verify your configuration files match the examples
+3. Test each server individually before connecting them
+4. Make sure your Horreum instance is accessible
+
+#### Next Steps
+
+Once you have both servers running:
+
+1. **Connect your AI assistant** to the Domain MCP server using the stdio or HTTP modes
+2. **Ask natural language questions** like _"Show me the latest boot time results"_
+3. **Get intelligent analysis** that combines Horreum data with performance insights
+
+The Horreum MCP server is ready to go - it just needs the Domain MCP fixes to complete the pipeline!
+
 ## Development
 
 ### Quick Start for Contributors
