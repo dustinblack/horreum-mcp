@@ -24,11 +24,17 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+      - name: Compute base (parent) commit
+        id: compute_base
+        run: |
+          BASE_SHA=$(git rev-parse "${{ github.event.workflow_run.head_sha }}^")
+          echo "base=${BASE_SHA}" >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: 'HEAD^'
-          ref: 'HEAD'
+          base: ${{ steps.compute_base.outputs.base }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          initial-fetch-depth: 0
           filters: |
             build:
               - 'Containerfile'
