@@ -336,11 +336,12 @@ podman run --rm -p 3000:3000 \
   -e HORREUM_BASE_URL=https://horreum.example.com \
   -e HTTP_MODE_ENABLED=true \
   -e HTTP_AUTH_TOKEN=changeme \
+  -e LOG_PRETTY=true \
   quay.io/<org>/horreum-mcp:main
 
 # Health endpoints
 curl http://localhost:3000/health
-curl -H 'Authorization: Bearer changeme' http://localhost:3000/ready
+curl http://localhost:3000/ready
 ```
 
 > [!NOTE]

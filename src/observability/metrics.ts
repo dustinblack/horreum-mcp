@@ -84,6 +84,17 @@ export class Metrics {
     this.server.listen(this.cfg.port);
   }
 
+  stopServer(): void {
+    if (!this.server) return;
+    try {
+      const srv = this.server;
+      this.server = null;
+      srv.close();
+    } catch {
+      // ignore shutdown errors
+    }
+  }
+
   recordTool(tool: string, durationMs: number, ok: boolean): void {
     try {
       this.counters.toolInvocations

@@ -5,7 +5,37 @@ import pino from 'pino';
 
 const DEFAULT_LEVEL = process.env.LOG_LEVEL ?? 'info';
 
-export const logger = pino({ level: DEFAULT_LEVEL });
+function createLogger() {
+  const logFormat = String(process.env.LOG_FORMAT || '').toLowerCase();
+  const logPrettyEnv = String(process.env.LOG_PRETTY || '').toLowerCase();
+  // Default to pretty unless explicitly forced to JSON
+  const wantPretty =
+    (logFormat !== 'json' && logPrettyEnv !== 'false') ||
+    logPrettyEnv === 'true' ||
+    logFormat === 'pretty';
+
+  if (wantPretty) {
+    try {
+      // pino-pretty is a dev-only dependency; optional at runtime
+      const transport = pino.transport({
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          singleLine: false,
+          translateTime: 'SYS:standard',
+          ignore: 'pid,hostname',
+        },
+      });
+      return pino({ level: DEFAULT_LEVEL }, transport);
+    } catch {
+      // Fallback to JSON when pino-pretty is not available
+      return pino({ level: DEFAULT_LEVEL });
+    }
+  }
+  return pino({ level: DEFAULT_LEVEL });
+}
+
+export const logger = createLogger();
 
 const VALID_LEVELS = [
   'fatal',

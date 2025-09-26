@@ -34,18 +34,8 @@ export async function startHttpServer(server: McpServer, env: Env) {
     res.status(200).json({ status: 'ok' });
   });
 
-  app.get('/ready', (req, res) => {
-    // When HTTP auth token is configured, enforce it for readiness, too
-    if (env.HTTP_AUTH_TOKEN) {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-      const token = authHeader.substring(7);
-      if (token !== env.HTTP_AUTH_TOKEN) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
-    }
+  app.get('/ready', (_req, res) => {
+    // Readiness should be accessible without authentication for Kubernetes probes
     res.status(200).json({ status: 'ready' });
   });
 
@@ -144,9 +134,10 @@ export async function startHttpServer(server: McpServer, env: Env) {
     await transport.handleRequest(req, res);
   });
 
-  app.listen(env.HTTP_PORT, () => {
+  const httpServer = app.listen(env.HTTP_PORT, () => {
     logger.info(
       `MCP server running in HTTP mode at http://localhost:${env.HTTP_PORT}/mcp`
     );
   });
+  return httpServer;
 }

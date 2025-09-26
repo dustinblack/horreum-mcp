@@ -75,7 +75,21 @@ async function main() {
   await registerTools(server, { getEnv: loadEnv, metrics });
 
   if (env.HTTP_MODE_ENABLED) {
-    await startHttpServer(server, env);
+    const httpServer = await startHttpServer(server, env);
+
+    const shutdown = async (signal: NodeJS.Signals) => {
+      try {
+        logger.info({ signal }, 'Shutting down...');
+        metrics.stopServer();
+        await new Promise<void>((resolve) => {
+          httpServer.close(() => resolve());
+        });
+      } finally {
+        process.exit(0);
+      }
+    };
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
   } else {
     logger.info('MCP server running in stdio mode');
     const transport = new StdioServerTransport();

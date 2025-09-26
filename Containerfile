@@ -12,29 +12,19 @@ LABEL org.opencontainers.image.title="horreum-mcp" \
 
 ENV NODE_ENV=development \
     NPM_CONFIG_LOGLEVEL=warn \
-    NODE_OPTIONS=--jitless \
-    ROLLUP_SKIP_NODEJS_NATIVE=1
+    ROLLUP_SKIP_NODEJS_NATIVE=1 \
+    NODE_OPTIONS=--jitless
 
 WORKDIR /app
 
-# Install deps (skip lifecycle scripts to avoid prepare running under QEMU)
+# Install only production deps (avoid running dev tooling under QEMU)
 COPY package.json package-lock.json ./
-# Use cache mounts for faster installs in local/CI builds
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --ignore-scripts --no-optional
-
-# Copy sources and build
-COPY tsconfig.json tsconfig.vitest.json tsup.config.ts vitest.config.ts ./
-COPY src ./src
-COPY openapi ./openapi
-# Use TypeScript compiler to avoid Rollup native binary under QEMU
-RUN --mount=type=cache,target=/root/.npm \
-    npx tsc -p tsconfig.json
-
-# Reinstall production-only dependencies to stage clean runtime deps
-RUN rm -rf node_modules
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev --ignore-scripts --no-optional
+
+# Copy prebuilt artifacts from build context
+# Ensure you run `npm run build` before building the container
+COPY build ./build
 
 # --- Runtime image ---
 FROM registry.access.redhat.com/ubi9/nodejs-20:latest
@@ -48,15 +38,13 @@ LABEL org.opencontainers.image.title="horreum-mcp" \
 ENV NODE_ENV=production \
     HTTP_MODE_ENABLED=true \
     LOG_LEVEL=info \
-    NODE_OPTIONS="--enable-source-maps --max-old-space-size=256 --jitless"
+    NODE_OPTIONS="--enable-source-maps --max-old-space-size=256"
 
 WORKDIR /app
 
 # Copy production dependencies prepared in builder to avoid running npm under QEMU
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
-
-# Copy compiled artifacts only
 COPY --from=builder /app/build ./build
 
 # Create a non-root user and fix permissions (uid 10001 to match OpenShift constraints)
