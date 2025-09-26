@@ -23,11 +23,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         with:
           base: 'HEAD^'
+          ref: 'HEAD'
           filters: |
             build:
               - 'Containerfile'
