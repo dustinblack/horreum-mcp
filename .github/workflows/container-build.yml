@@ -1,15 +1,9 @@
 name: container-build
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'Containerfile'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'src/**/*'
-      - 'scripts/build_multiarch.sh'
-      - '.github/workflows/container-build.yml'
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
   workflow_dispatch: {}
 
 concurrency:
@@ -21,9 +15,30 @@ env:
   OCI_REVISION: ${{ github.sha }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.filter.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            build:
+              - 'Containerfile'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'src/**/*'
+              - 'scripts/build_multiarch.sh'
+              - '.github/workflows/container-build.yml'
+
   build_and_push:
     name: Build and push multi-arch image
-    if: github.ref == 'refs/heads/main'
+    needs: changes
+    if: needs.changes.outputs.build == 'true' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,10 +57,14 @@ jobs:
           fi
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Compute tag
         id: compute_tag
-        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "tag=${HEAD_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Install buildah/podman/qemu
         run: |

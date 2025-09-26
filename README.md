@@ -7,11 +7,11 @@ schemas, runs, and more.
 
 ## Status
 
-**Phase 4 Complete** - Ready for enterprise deployment enhancements:
+**Phase 5 Complete** - Ready for enhanced CI/CD and security:
 
 - **✅ Core Functionality**: Read tools, write tools, observability, and HTTP mode
 - **✅ Production Ready**: Structured logging, metrics, tracing, comprehensive testing
-- **🚀 Next Phase**: Containerization & multi-architecture support (Phase 5)
+- **🚀 Next Phase**: Enhanced CI/CD pipeline and security scanning (Phase 6)
 
 ### Completed Features
 
@@ -22,9 +22,8 @@ schemas, runs, and more.
 - Rate-limited fetch with retries/backoff
 - Session management and security (CORS, Bearer auth)
 
-### Upcoming Enhancements (Phases 5-11)
+### Upcoming Enhancements (Phases 6-11)
 
-- **Phase 5**: Multi-architecture containerization with automated registry deployment
 - **Phase 6**: Enhanced CI/CD pipeline with comprehensive security scanning
 - **Phase 7**: Architecture refactoring for modularity and plugin system
 - **Phase 8**: REST API endpoints alongside MCP protocol
@@ -99,24 +98,23 @@ graph TB
 
     class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS,HTTP,LLM implemented
 
-    %% Future Enhancements (Phase 5+)
+    %% Future Enhancements (Phase 6+)
     subgraph "Enterprise Features 🚧"
         direction TB
-        CONTAINER[Multi-Arch Containers<br/>🚧 PHASE 5]
         REST[REST API Endpoints<br/>🚧 PHASE 8]
         PLUGIN[Plugin Architecture<br/>🚧 PHASE 7]
     end
 
-    MCP -.->|"Future"| CONTAINER
     HTTP -.->|"Future"| REST
     TOOLS -.->|"Future"| PLUGIN
 
-    class CONTAINER,REST,PLUGIN planned
+    class REST,PLUGIN planned
+    class CONTAINER implemented
 
     %% Legend
     subgraph Legend[" "]
         L1[✅ Implemented - Phase 1-4 Complete]
-        L2[🚧 Planned - Phase 5+ Roadmap]
+        L2[🚧 Planned - Phase 6+ Roadmap]
         L3[🔗 External - Third-party Services]
     end
 
@@ -246,7 +244,7 @@ graph TB
     %% Implementation Status
     subgraph Status[" "]
         S1[✅ Implemented & Tested]
-        S2[🚧 Phase 5+ Development]
+        S2[🚧 Phase 6+ Development]
     end
 
     class S1 implemented
@@ -315,9 +313,9 @@ The server supports multiple deployment modes:
 
 - **Stdio Mode** (default): Local integration with MCP-native AI clients
 - **HTTP Mode**: Persistent server for network access and web API integration
-- **Container Mode** (Phase 5): Multi-architecture containerized deployment 🚧
+- **Container Mode**: Multi-architecture containerized deployment ✅
 
-### Container Usage (Phase 5)
+### Container Usage
 
 Build a multi-arch image using Buildah (inspired by rhivos-perfscale-mcp):
 
@@ -346,9 +344,18 @@ curl -H 'Authorization: Bearer changeme' http://localhost:3000/ready
 ```
 
 > [!NOTE]
-> Container deployment with multi-architecture support (amd64/arm64) and automated
-> registry deployment is planned for Phase 5. This will enable enterprise deployment
-> scenarios including Kubernetes, cloud hosting, and CI/CD integration.
+> Multi-architecture container images (amd64/arm64) with automated manifest push are
+> available. Images include non-root user, OCI labels, healthcheck, and optimized
+> build layers. Build context filtering is configured via `.dockerignore`.
+
+### Container Security Scanning
+
+Scan built images with Trivy and fail on HIGH/CRITICAL findings:
+
+```bash
+# Example: scan the :main image
+./scripts/trivy_scan.sh quay.io/<org>/horreum-mcp:main
+```
 
 ### Usage with AI Clients
 

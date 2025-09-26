@@ -187,9 +187,9 @@ No database is required for the MCP server. Optional components:
 
 ### 9. CI/CD
 
-**Current (Phase 1-4)**: Node 20, ESLint/Prettier, Vitest with coverage, smoke
+**Current (Phase 1-5)**: Node 20, ESLint/Prettier, Vitest with coverage, smoke
 tests, basic security scanning (`npm audit`, secretlint), path-based change
-detection.
+detection, containerized builds with multi-arch manifests and Trivy scanning.
 
 Container build (Phase 5 specifics):
 
@@ -277,9 +277,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - `[c]` cancelled
 
 4. Current execution directive
-   - Phase 4 (HTTP Standalone Mode) completed (2025-09-24).
-   - Development is now authorized for Phase 5 (Containerization & Multi-Architecture Support).
-   - Priority focus: Implement comprehensive containerization with multi-architecture builds and automated registry deployment as the foundation for enterprise deployment capabilities.
+   - Phase 5 (Containerization & Multi-Architecture Support) completed (2025-09-26).
+   - Development is now authorized for Phase 6 (Enhanced CI/CD Pipeline).
+   - Priority focus: Implement multi-stage testing, comprehensive security scanning, performance optimizations, release automation, and rollback.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -340,9 +340,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - [x] Set up automated container builds and registry deployment (quay.io)
          via GitHub Actions using Buildah + manifest push + Trivy scan
          (2025-09-25)
-   - [ ] Add container vulnerability scanning and security hardening
+   - [x] Add container vulnerability scanning and security hardening (Trivy helper,
+         OCI labels, STOPSIGNAL, HEALTHCHECK, non-root perms) (2025-09-26)
    - [x] Implement HTTP health endpoints (`/health`, `/ready`) (2025-09-25)
-   - [ ] Add build context filtering and layer optimization
+   - [x] Add build context filtering and layer optimization (.dockerignore, cache mounts)
+         (2025-09-26)
    - Phase 6 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -366,9 +368,12 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [ ] Implement service-based HTTP endpoints for external MCP consumption
      - [ ] Add support for "Independent MCPs" topology and MCP-to-MCP communication
    - Phase 9 — Build System Enhancement
-     - [ ] Add multi-architecture build support and cross-compilation
+     - [x] Add multi-architecture build support (2025-09-26)
+     - [ ] Add cross-compilation support
      - [ ] Implement advanced dependency management with automated updates
-     - [ ] Add build performance optimization (incremental builds, caching)
+     - [ip] Add build performance optimization: caching & context filtering in place
+       (.dockerignore/.containerignore, cache mounts in Containerfile) (2025-09-26)
+     - [ ] Implement incremental builds and CI caching
      - [ ] Create bundle size optimization and analysis tools
      - [ ] Implement development vs production build profiles
    - Phase 10 — Testing & Security Hardening
@@ -390,6 +395,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-26 — **Phase 9 status refined**: Marked multi-arch support as
+     completed, split cross-compilation into a separate item, and recorded build
+     performance optimizations in progress (cache mounts, context filtering) with
+     pending work for incremental builds and CI caching.
+   - 2025-09-26 — **Phase 5 Completed**: Hardened container image (OCI labels,
+     STOPSIGNAL, HEALTHCHECK, non-root perms, tuned NODE_OPTIONS), added build
+     context filtering via `.dockerignore`/`.containerignore`, introduced
+     `scripts/trivy_scan.sh` and documented scanning in README. Authorized Phase 6
+     to begin (enhanced CI/CD and security scanning).
    - 2025-09-25 — **CI Container Build added**: Introduced GitHub Actions
      workflow to build and push multi-arch images to Quay using Buildah,
      tagging with short SHA and aliasing to :main. Added Trivy image scan job
