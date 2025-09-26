@@ -523,11 +523,11 @@ flowchart LR
     Domain[📊 Domain MCP Server<br/>Performance Analysis]
     Horreum[🔗 Horreum MCP Server<br/>Data Access]
     HorreumDB[🗄️ Your Horreum Instance<br/>Performance Database]
-    
+
     Client <--> Domain
     Domain <-->|HTTP API| Horreum
     Horreum <-->|REST API| HorreumDB
-    
+
     style Domain fill:#e1f5fe,stroke:#333,stroke-width:2px,color:#000
     style Horreum fill:#fff3e0,stroke:#333,stroke-width:2px,color:#000
     style Client fill:#f3e5f5,stroke:#333,stroke-width:2px,color:#000
@@ -689,6 +689,7 @@ curl -X POST \
 **✅ Horreum MCP Server** - Ready to use!
 
 Your Horreum MCP server is production-ready with these features:
+
 - **Ping tool** - Test connectivity anytime ✅
 - **All 5 tools available** - `list_tests`, `get_schema`, `list_runs`, `upload_run` ✅
 - **Session management** - Proper MCP protocol implementation ✅
@@ -698,6 +699,7 @@ Your Horreum MCP server is production-ready with these features:
 **⚠️ What Needs Your Horreum Instance**
 
 The data-fetching tools will show "fetch failed" errors unless you have:
+
 - Network access to your Horreum instance
 - A valid Horreum API token
 - Proper DNS resolution for your Horreum URL
@@ -707,8 +709,9 @@ This is expected - the server is working correctly, it just needs real Horreum c
 **🔄 Domain MCP Server - Needs Some Fixes**
 
 The Domain MCP server runs but has some issues to resolve:
+
 - Plugin registration needs to be fixed for `boot-time-verbose` datasets
-- Configuration loading should be more visible in logs  
+- Configuration loading should be more visible in logs
 - Error messages need to be more helpful
 - Source connections need debugging
 
@@ -725,7 +728,7 @@ If something isn't working, the logs will tell you what's happening:
 podman logs horreum-mcp
 # Look for: "MCP server running in HTTP mode", session messages
 
-# Check Domain MCP server  
+# Check Domain MCP server
 podman logs domain-mcp
 # Look for: plugin loading, configuration messages
 ```
@@ -740,6 +743,7 @@ podman logs domain-mcp
 **Getting Help**
 
 If you run into issues:
+
 1. Check the server logs first
 2. Verify your configuration files match the examples
 3. Test each server individually before connecting them
