@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Multi-arch build helper using Buildah/Podman. Inspired by rhivos-perfscale-mcp.
+# Multi-arch build helper using Buildah/Podman and Quay.io.
 #
 # Requirements on the host/runner:
-# - buildah, podman
-# - qemu-user-static with binfmt registrations for cross-arch (recommended)
+# - buildah, podman, skopeo
+# - qemu-user-static and binfmt registrations for cross-arch (recommended)
 #
 # Env vars:
-#   IMAGE_REPO                      Target repo (e.g., quay.io/org/repo) [required]
-#   REGISTRY_USERNAME / REGISTRY_PASSWORD  Credentials (optional)
+#   IMAGE_REPO      Target repo (e.g., quay.io/org/repo) [required]
+#   REGISTRY_USERNAME / REGISTRY_PASSWORD  Credentials for registry (optional)
 #   QUAY_USERNAME / QUAY_PASSWORD          Back-compat for Quay (optional)
-#   OCI_REVISION                   OCI revision label (defaults to tag)
 #
 # Options:
 #   -t, --tag <tag>             Image tag (default: git short SHA or timestamp)
-#   -e, --expires <period>      Expiration label (default: 90d)
-#       --expires-label <key>   Expiration label key (default: quay.expires-after)
-#       --push                  Push manifest to <repo>:<tag>
-#       --push-main             Also push/alias the manifest to :main
+#   -e, --expires <period>      Expiration label value (default: 90d)
+#   --expires-label <key>       Expiration label key (default: quay.expires-after)
+#   --push                      Push manifest to <repo>:<tag>
+#   --push-main                 Also push/alias the manifest to :main
 #   -f, --file <path>           Containerfile path (default: Containerfile)
-#   -h, --help                  Show help
+#   -h, --help               Show help
 
 show_help() {
   cat <<EOF
-Usage: IMAGE_REPO=quay.io/org/repo $(basename "$0") [options]
+Usage: QUAY_USERNAME=... QUAY_PASSWORD=... IMAGE_REPO=quay.io/org/repo \
+       $(basename "$0") [options]
 
 Options:
   -t, --tag <tag>             Image tag (default: git short SHA or timestamp)
@@ -33,10 +33,10 @@ Options:
       --push                  Push manifest to <repo>:<tag>
       --push-main             Also push manifest to :main
   -f, --file <path>           Containerfile path (default: Containerfile)
-  -h, --help                  Show this help
+  -h, --help               Show this help
 
 Environment:
-  IMAGE_REPO, and optionally REGISTRY_USERNAME/REGISTRY_PASSWORD or QUAY_USERNAME/QUAY_PASSWORD.
+  QUAY_USERNAME, QUAY_PASSWORD, IMAGE_REPO are required.
 EOF
 }
 
@@ -75,9 +75,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Default IMAGE_REPO only if not provided at all
 if [[ -z "${IMAGE_REPO:-}" ]]; then
-  echo "ERROR: IMAGE_REPO is required (e.g., quay.io/org/repo)" >&2
-  exit 1
+  IMAGE_REPO="localhost/horreum-mcp"
+  echo "INFO: Using default IMAGE_REPO: $IMAGE_REPO" >&2
 fi
 REGISTRY_HOST="${IMAGE_REPO%%/*}"
 
@@ -88,16 +89,19 @@ if [[ -z "$TAG" ]]; then
   TAG=${TAG:-"local-$(date +%Y%m%d%H%M%S)"}
 fi
 
-MANIFEST_REF="${IMAGE_REPO}:${TAG}"
+# Use a local manifest name to avoid collisions with existing image tags
+REPO_NAME="${IMAGE_REPO##*/}"
+LOCAL_MANIFEST_REF="localhost/${REPO_NAME}:manifest-${TAG}"
+REMOTE_MANIFEST_REF="${IMAGE_REPO}:${TAG}"
 
-# Best-effort binfmt enablement
+# Best-effort binfmt enablement (requires privileges; safe to skip if preconfigured)
 if command -v podman >/dev/null 2>&1; then
   if podman info >/dev/null 2>&1; then
     podman run --privileged --rm tonistiigi/binfmt --install all >/dev/null 2>&1 || true
   fi
 fi
 
-# Registry login
+# Quay/registry login
 if [[ "$PUSH" -eq 1 ]]; then
   USERNAME="${REGISTRY_USERNAME:-${QUAY_USERNAME:-}}"
   PASSWORD="${REGISTRY_PASSWORD:-${QUAY_PASSWORD:-}}"
@@ -113,9 +117,9 @@ if [[ "$PUSH" -eq 1 ]]; then
   fi
 fi
 
-# Create a fresh manifest (avoid name-in-use from previous runs)
-buildah manifest rm "$MANIFEST_REF" >/dev/null 2>&1 || true
-buildah manifest create "$MANIFEST_REF"
+# Create manifest (local ref) and build per-arch images
+buildah manifest rm "$LOCAL_MANIFEST_REF" >/dev/null 2>&1 || true
+buildah manifest create "$LOCAL_MANIFEST_REF"
 
 echo "Building amd64 image..."
 buildah bud --override-arch amd64 --override-os linux \
@@ -132,20 +136,34 @@ buildah bud --override-arch arm64 --override-os linux \
   -t "${IMAGE_REPO}:${TAG}-arm64" .
 
 echo "Assembling manifest list..."
-# On some environments, containers-storage references can be flaky; use docker://
-buildah manifest add "$MANIFEST_REF" "containers-storage:${IMAGE_REPO}:${TAG}-amd64"
-buildah manifest add "$MANIFEST_REF" "containers-storage:${IMAGE_REPO}:${TAG}-arm64"
-buildah manifest annotate --annotation ${EXPIRES_LABEL}=${EXPIRES} "$MANIFEST_REF" || true
+buildah manifest add "$LOCAL_MANIFEST_REF" "containers-storage:${IMAGE_REPO}:${TAG}-amd64"
+buildah manifest add "$LOCAL_MANIFEST_REF" "containers-storage:${IMAGE_REPO}:${TAG}-arm64"
+# Note: buildah manifest annotate doesn't work reliably for local manifests, skipping
+
+# For local use, tag the current architecture image as the main tag
+CURRENT_ARCH=$(uname -m)
+case "$CURRENT_ARCH" in
+  x86_64) LOCAL_ARCH_TAG="${IMAGE_REPO}:${TAG}-amd64" ;;
+  aarch64|arm64) LOCAL_ARCH_TAG="${IMAGE_REPO}:${TAG}-arm64" ;;
+  *) 
+    echo "WARNING: Unknown architecture $CURRENT_ARCH, defaulting to amd64" >&2
+    LOCAL_ARCH_TAG="${IMAGE_REPO}:${TAG}-amd64"
+    ;;
+esac
+
+echo "Creating local runnable tag: ${IMAGE_REPO}:${TAG} -> ${LOCAL_ARCH_TAG}"
+podman tag "$LOCAL_ARCH_TAG" "${IMAGE_REPO}:${TAG}"
 
 if [[ "$PUSH" -eq 1 ]]; then
-  echo "Pushing multi-arch manifest to ${MANIFEST_REF}..."
-  buildah manifest push --all "$MANIFEST_REF" "docker://${IMAGE_REPO}:${TAG}"
+  echo "Pushing multi-arch manifest to ${REMOTE_MANIFEST_REF}..."
+  buildah manifest push --all "$LOCAL_MANIFEST_REF" "docker://${IMAGE_REPO}:${TAG}"
   if [[ "$PUSH_MAIN" -eq 1 ]]; then
     echo "Also pushing manifest to :main..."
-    buildah manifest push --all "$MANIFEST_REF" "docker://${IMAGE_REPO}:main"
+    buildah manifest push --all "$LOCAL_MANIFEST_REF" "docker://${IMAGE_REPO}:main"
   fi
 else
-  echo "Built multi-arch manifest locally: ${MANIFEST_REF} (not pushed)" >&2
+  echo "Built multi-arch manifest locally: ${LOCAL_MANIFEST_REF} (not pushed)" >&2
+  echo "Local runnable image available: ${IMAGE_REPO}:${TAG}" >&2
 fi
 
 echo "Done: ${IMAGE_REPO}:${TAG}" >&2
