@@ -56,6 +56,7 @@ npm start -- --log-level info
 
 - ✅ **Core Tools**: `ping`, `list_tests`, `get_schema`, `list_runs`, `upload_run`
 - ✅ **Dual Transport**: stdio (default) and HTTP server modes
+- ✅ **Multi-Architecture**: AMD64 and ARM64 container support with QEMU compatibility
 - ✅ **Production Ready**: Structured logging, metrics, tracing, security
 - 🚀 **Next Phase**: Enhanced CI/CD and security scanning
 
@@ -382,6 +383,11 @@ podman run --rm -p 127.0.0.1:3000:3000 \
 curl -H 'Authorization: Bearer changeme' \
      http://localhost:3000/health
 ```
+
+**Multi-Architecture Support**: The container images support both AMD64 and ARM64
+architectures with automatic QEMU emulation detection. When running under emulation,
+the container automatically applies compatibility flags to prevent WebAssembly-related
+crashes while preserving performance on native architectures.
 
 ### Local Development
 

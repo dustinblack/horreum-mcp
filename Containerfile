@@ -12,15 +12,22 @@ LABEL org.opencontainers.image.title="horreum-mcp" \
 
 ENV NODE_ENV=development \
     NPM_CONFIG_LOGLEVEL=warn \
-    ROLLUP_SKIP_NODEJS_NATIVE=1 \
-    NODE_OPTIONS=--jitless
+    ROLLUP_SKIP_NODEJS_NATIVE=1
+    # Note: --jitless applied only during npm install to prevent QEMU crashes
+    # Runtime stage preserves WebAssembly support (required by undici)
 
 WORKDIR /app
 
 # Install only production deps (avoid running dev tooling under QEMU)
 COPY package.json package-lock.json ./
+# Ensure proper permissions for npm install
+USER 0
+# Use --jitless for cross-arch builds under QEMU to prevent V8 crashes
+# while preserving WebAssembly support in the runtime stage
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev --ignore-scripts --no-optional
+    NODE_OPTIONS="--jitless" npm ci --omit=dev --ignore-scripts --no-optional \
+    && chown -R 1001:0 /app/node_modules
+USER 1001
 
 # Copy prebuilt artifacts from build context
 # Ensure you run `npm run build` before building the container
@@ -46,12 +53,14 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY --from=builder /app/build ./build
+COPY docker-entrypoint.sh ./
 
 # Create a non-root user and fix permissions (uid 10001 to match OpenShift constraints)
 USER 0
 RUN useradd -r -u 10001 appuser \ 
     && chown -R appuser:0 /app \ 
-    && chmod -R g=u /app
+    && chmod -R g=u /app \
+    && chmod +x /app/docker-entrypoint.sh
 USER appuser
 
 # Expose HTTP transport port
@@ -65,6 +74,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 STOPSIGNAL SIGTERM
 
 # Default command runs HTTP transport; override via env if needed
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "./build/index.js"]
 
 

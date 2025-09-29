@@ -345,6 +345,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - [x] Implement HTTP health endpoints (`/health`, `/ready`) (2025-09-25)
    - [x] Add build context filtering and layer optimization (.dockerignore, cache mounts)
          (2025-09-26)
+   - [x] Fix WebAssembly and QEMU emulation issues for multi-architecture builds
+         (2025-09-29)
    - Phase 6 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -395,6 +397,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-29 — **Container Multi-Architecture Fixes**: Resolved critical WebAssembly
+     and QEMU emulation issues preventing multi-architecture container builds. Fixed
+     `ReferenceError: WebAssembly is not defined` by removing global `--jitless` flag
+     while preserving WebAssembly support in runtime. Added intelligent QEMU detection
+     via `docker-entrypoint.sh` that dynamically applies `--jitless` only during
+     emulated execution. Updated Containerfile to use `--jitless` only during npm
+     install in builder stage to prevent V8 crashes under QEMU. Validated successful
+     builds and execution on both AMD64 and ARM64 architectures with automatic
+     environment adaptation. Multi-architecture build script now fully functional.
    - 2025-09-26 — **Phase 9 status refined**: Marked multi-arch support as
      completed, split cross-compilation into a separate item, and recorded build
      performance optimizations in progress (cache mounts, context filtering) with
