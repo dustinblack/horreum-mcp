@@ -86,6 +86,17 @@ jobs:
           echo "$QUAY_PASSWORD" | podman login -u "$QUAY_USERNAME" --password-stdin quay.io
           echo "$QUAY_PASSWORD" | buildah login -u "$QUAY_USERNAME" --password-stdin quay.io
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies and build
+        run: |
+          npm ci
+          npm run build
+
       - name: Enable binfmt (best-effort)
         run: |
           podman run --privileged --rm tonistiigi/binfmt --install all || true
