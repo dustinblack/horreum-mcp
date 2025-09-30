@@ -18,6 +18,15 @@ const EnvSchema = z.object({
   LLM_PROVIDER: z.enum(['openai', 'anthropic', 'azure']).optional(),
   LLM_API_KEY: z.string().min(1).optional(),
   LLM_MODEL: z.string().min(1).optional(),
+
+  // Phase 6: SSL/TLS Configuration
+  HORREUM_TLS_VERIFY: z.coerce
+    .boolean()
+    .optional()
+    .default(true)
+    .describe(
+      'Enable SSL certificate verification (set to false for testing with self-signed certs)'
+    ),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

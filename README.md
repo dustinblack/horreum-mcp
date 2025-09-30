@@ -31,6 +31,44 @@ podman run --rm -p 127.0.0.1:3000:3000 \
 curl -H 'Authorization: Bearer changeme' http://localhost:3000/health
 ```
 
+#### SSL/TLS Configuration
+
+For **corporate** or **self-signed SSL certificates**, choose one option:
+
+**Option 1: Mount CA Certificate (Recommended for Production)**
+
+```bash
+# Find your corporate CA bundle (common locations):
+# - /etc/pki/ca-trust/source/anchors/
+# - /etc/ssl/certs/ca-bundle.crt
+# - /usr/local/share/ca-certificates/
+
+podman run --rm -p 127.0.0.1:3000:3000 \
+  --user=0 \
+  -v /path/to/your/ca-bundle.crt:/etc/pki/ca-trust/source/anchors/corporate-ca.crt:ro \
+  -e HORREUM_BASE_URL=https://horreum.corp.example.com \
+  -e HTTP_MODE_ENABLED=true \
+  -e HTTP_AUTH_TOKEN=changeme \
+  quay.io/redhat-performance/horreum-mcp:main
+```
+
+The entrypoint will automatically run `update-ca-trust` when CA
+certificates are detected.
+
+**Option 2: Disable SSL Verification (Testing Only)**
+
+```bash
+podman run --rm -p 127.0.0.1:3000:3000 \
+  -e HORREUM_TLS_VERIFY=false \
+  -e HORREUM_BASE_URL=https://horreum.corp.example.com \
+  -e HTTP_MODE_ENABLED=true \
+  -e HTTP_AUTH_TOKEN=changeme \
+  quay.io/redhat-performance/horreum-mcp:main
+```
+
+⚠️ **WARNING:** `HORREUM_TLS_VERIFY=false` disables all SSL verification
+and should **NEVER** be used in production.
+
 ### 🔧 **Development Setup**
 
 **Prerequisites:** Node.js v20+, npm

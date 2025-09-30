@@ -115,6 +115,14 @@ This phase addresses integration requirements from RHIVOS PerfScale MCP end-to-e
    - Document timestamp field used, inclusivity, timezone handling
    - Add examples and error handling for edge cases
 
+7. **SSL/TLS Certificate Configuration**:
+   - Support for corporate/self-signed SSL certificates via mounted CA bundles
+   - User-friendly `HORREUM_TLS_VERIFY` environment variable (defaults to `true`)
+   - Automatic CA trust update in container entrypoint when certificates are mounted
+   - Container requires `--user=0` to run `update-ca-trust` for CA certificate support
+   - Comprehensive documentation in `SSL_CONFIGURATION.md` with production and testing examples
+   - Testing-only option to disable SSL verification via `HORREUM_TLS_VERIFY=false`
+
 **Phase 7: Enhanced CI/CD Pipeline**
 
 - Multi-stage testing pipeline with parallel execution and performance regression testing
@@ -455,6 +463,20 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase 6 SSL/TLS Configuration Added**: Implemented SSL/TLS certificate
+     support for corporate and self-signed certificates. Added user-friendly
+     `HORREUM_TLS_VERIFY` environment variable (defaults to `true`) in `src/config/env.ts`
+     with validation. Application code in `src/index.ts` applies the setting by setting
+     Node.js `NODE_TLS_REJECT_UNAUTHORIZED` when verification is disabled (logs warning).
+     Updated `docker-entrypoint.sh` to automatically run `update-ca-trust` when CA
+     certificates are detected in `/etc/pki/ca-trust/source/anchors/` (requires `--user=0`).
+     Updated `Containerfile` to run `update-ca-trust extract` in build stage. Created
+     comprehensive `SSL_CONFIGURATION.md` documentation with examples for production (mount
+     CA cert) and testing (disable verification). Updated `README.md` with SSL/TLS
+     Configuration section showing both options. Updated `INTEGRATION_STATUS.md` with
+     detailed SSL error troubleshooting. All code built, formatted, and type-checked
+     successfully. This addresses the SSL certificate errors encountered during end-to-end
+     integration testing with corporate Horreum instances.
    - 2025-09-30 — **Phase 6 Complete - Documentation**: Created comprehensive time range
      filtering documentation (CR-20250930-5). Added `docs/TIME_RANGE_FILTERING.md` with
      detailed explanation of from/to parameter behavior, timestamp formats (ISO 8601

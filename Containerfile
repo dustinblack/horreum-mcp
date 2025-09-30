@@ -61,6 +61,13 @@ RUN useradd -r -u 10001 appuser \
     && chown -R appuser:0 /app \ 
     && chmod -R g=u /app \
     && chmod +x /app/docker-entrypoint.sh
+
+# Update CA certificates to trust custom/corporate CAs
+# This allows mounting custom CA certs at runtime via:
+#   -v /path/to/ca-bundle.crt:/etc/pki/ca-trust/source/anchors/custom-ca.crt:ro
+# Then run: update-ca-trust
+RUN update-ca-trust extract
+
 USER appuser
 
 # Expose HTTP transport port

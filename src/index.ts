@@ -49,6 +49,14 @@ async function main() {
 
   const env = await loadEnv();
 
+  // Apply SSL/TLS configuration from environment
+  if (!env.HORREUM_TLS_VERIFY) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    logger.warn(
+      'SSL certificate verification is DISABLED. This should only be used for testing.'
+    );
+  }
+
   const server = new McpServer({
     name: 'horreum-mcp',
     version: '0.1.0',
