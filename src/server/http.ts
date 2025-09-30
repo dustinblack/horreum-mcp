@@ -9,6 +9,9 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import type { Env } from '../config/env.js';
 import { logger } from '../observability/logging.js';
+import { TestService } from '../horreum/generated/services/TestService.js';
+import { RunService } from '../horreum/generated/services/RunService.js';
+import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 
 /**
  * Starts the MCP server in HTTP mode.
@@ -132,6 +135,225 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
     const transport = transports[sessionId];
     await transport.handleRequest(req, res);
+  });
+
+  // ----------------------------------------------
+  // Direct HTTP API endpoints for server-to-server
+  // ----------------------------------------------
+
+  type ErrorCode =
+    | 'INVALID_REQUEST'
+    | 'NOT_FOUND'
+    | 'RATE_LIMITED'
+    | 'INTERNAL_ERROR'
+    | 'SERVICE_UNAVAILABLE'
+    | 'TIMEOUT';
+
+  const sendContractError = (
+    res: express.Response,
+    httpStatus: number,
+    code: ErrorCode,
+    message: string,
+    details?: unknown,
+    retryable = false,
+    retryAfterSeconds?: number
+  ) => {
+    const payload: Record<string, unknown> = {
+      error: {
+        code,
+        message,
+        details,
+        retryable,
+      },
+    };
+    if (typeof retryAfterSeconds === 'number') {
+      (payload.error as { retryAfter?: number }).retryAfter = retryAfterSeconds;
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+    }
+    return res.status(httpStatus).json(payload);
+  };
+
+  const parseTime = (s?: unknown): number | undefined => {
+    if (typeof s !== 'string') return undefined;
+    if (!s) return undefined;
+    if (/^\d+$/.test(s)) return Number(s);
+    const t = Date.parse(s);
+    return Number.isFinite(t) ? t : undefined;
+  };
+
+  // POST /api/tools/horreum_list_runs
+  app.post('/api/tools/horreum_list_runs', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      // Accept testId or test (name or ID string)
+      const testIdRaw = body.testId;
+      const testRaw = body.test;
+      const trashed = body.trashed as boolean | undefined;
+      const limit = body.limit as number | undefined;
+      const page = body.page as number | undefined;
+      const sort = body.sort as string | undefined;
+      const direction = body.direction as SortDirection | undefined;
+      const fromMs = parseTime(body.from);
+      const toMs = parseTime(body.to);
+
+      let resolvedTestId: number | undefined = undefined;
+      if (typeof testIdRaw === 'number' && Number.isFinite(testIdRaw)) {
+        resolvedTestId = testIdRaw;
+      } else if (typeof testRaw === 'string' && testRaw.length > 0) {
+        const maybeId = Number(testRaw);
+        if (Number.isFinite(maybeId)) {
+          resolvedTestId = maybeId;
+        } else {
+          const t = await TestService.testServiceGetByNameOrId({ name: testRaw });
+          resolvedTestId = (t as { id?: number }).id;
+        }
+      }
+
+      if (!resolvedTestId) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide 'testId' or 'test' (name or ID)."
+        );
+      }
+
+      // If no time filters, defer to single API call (server-side pagination)
+      if (fromMs === undefined && toMs === undefined) {
+        const result = await RunService.runServiceListTestRuns({
+          testId: resolvedTestId,
+          ...(trashed !== undefined ? { trashed } : {}),
+          ...(limit !== undefined ? { limit } : {}),
+          ...(page !== undefined ? { page } : {}),
+          ...(sort ? { sort } : {}),
+          ...(direction ? { direction } : {}),
+        });
+        return res.status(200).json(result);
+      }
+
+      // Time-filtered: fetch pages and filter client-side by start timestamp
+      const pageSize = Math.min(limit ?? 500, 1000);
+      const sortField = sort ?? 'start';
+      const sortDir: SortDirection = direction ?? 'Descending';
+      let pageIndex = 1; // API pages start at 1
+      const aggregated: Array<{
+        start?: number | string;
+      }> = [] as unknown as Array<{ start?: number | string }>;
+
+      for (;;) {
+        const chunk = await RunService.runServiceListTestRuns({
+          testId: resolvedTestId,
+          ...(trashed !== undefined ? { trashed } : {}),
+          limit: pageSize,
+          page: pageIndex,
+          sort: sortField,
+          direction: sortDir,
+        });
+        const runs = Array.isArray((chunk as { runs?: unknown }).runs)
+          ? ((chunk as { runs: unknown[] }).runs as unknown[])
+          : [];
+        aggregated.push(...(runs as Array<{ start?: number | string }>));
+
+        if (sortField === 'start' && sortDir === 'Descending' && fromMs !== undefined) {
+          const oldest = runs[runs.length - 1] as { start?: number | string };
+          const oldestStart = oldest
+            ? Number((oldest as { start?: unknown }).start) ||
+              Date.parse(String((oldest as { start?: unknown }).start))
+            : NaN;
+          if (Number.isFinite(oldestStart) && oldestStart < fromMs) {
+            break;
+          }
+        }
+        if (runs.length < pageSize) break;
+        pageIndex += 1;
+      }
+
+      const withinRange = aggregated.filter((r) => {
+        const start = Number(r.start) || Date.parse(String(r.start));
+        if (!Number.isFinite(start)) return false;
+        if (fromMs !== undefined && start < fromMs) return false;
+        if (toMs !== undefined && start > toMs) return false;
+        return true;
+      });
+
+      // Optional client-side pagination if requested
+      let finalRuns = withinRange as unknown[];
+      if (limit !== undefined && page !== undefined && page > 0) {
+        const startIdx = Math.max(0, (page - 1) * limit);
+        finalRuns = withinRange.slice(startIdx, startIdx + limit);
+      }
+
+      return res.status(200).json({ total: withinRange.length, runs: finalRuns });
+    } catch (err) {
+      // Map common error cases
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Test or runs not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_list_runs');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
   });
 
   const httpServer = app.listen(env.HTTP_PORT, () => {

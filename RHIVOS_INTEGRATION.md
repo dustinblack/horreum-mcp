@@ -25,33 +25,43 @@ following Phase 5 (Containerization).
 
 #### 1. Direct HTTP Tool Endpoints (Critical Priority)
 
-**Status**: Pending
+**Status**: In Progress (1 of 5 endpoints complete)
 
 Add POST endpoints that mirror MCP tools for server-to-server communication:
 
-- `POST /api/tools/horreum_list_runs` - List runs with time filtering
-- `POST /api/tools/horreum_get_run` - Get specific run by ID
-- `POST /api/tools/horreum_list_tests` - List tests with optional name filter
-- `POST /api/tools/horreum_list_schemas` - List available schemas
-- `POST /api/tools/horreum_get_schema` - Get schema by ID or name
+- ✅ `POST /api/tools/horreum_list_runs` - List runs with time filtering **(COMPLETED)**
+- ⏳ `POST /api/tools/horreum_get_run` - Get specific run by ID
+- ⏳ `POST /api/tools/horreum_list_tests` - List tests with optional name filter
+- ⏳ `POST /api/tools/horreum_list_schemas` - List available schemas
+- ⏳ `POST /api/tools/horreum_get_schema` - Get schema by ID or name
 
 **Requirements**:
 
-- Accept Bearer token authentication (same as MCP endpoint)
-- Return JSON responses
-- Use same underlying Horreum API calls as MCP tools
-- Keep existing MCP endpoint for AI clients
+- ✅ Accept Bearer token authentication (same as MCP endpoint)
+- ✅ Return JSON responses
+- ✅ Use same underlying Horreum API calls as MCP tools
+- ✅ Keep existing MCP endpoint for AI clients
+
+**Implementation Details** (`horreum_list_runs`):
+
+- Accepts `testId` (number) or `test` (name/ID string)
+- Supports optional parameters: `trashed`, `limit`, `page`, `sort`, `direction`
+- Supports time filtering with `from`/`to` (ISO timestamps or epoch millis)
+- Client-side aggregation when time filters are used
+- Returns `{total: number, runs: RunSummary[]}`
+- Error handling via `sendContractError` helper with Source MCP Contract format
 
 **Testing**:
 
-- Verify all endpoints accept Bearer token auth
-- Test JSON request/response format
-- Ensure same behavior as MCP tool equivalents
-- Integration test with Domain MCP adapter
+- ✅ Added `scripts/smoke-http-list-runs.mjs` with mock Horreum API
+- ✅ Verify endpoint accepts Bearer token auth
+- ✅ Test JSON request/response format
+- ✅ Validated response shape (runs array, total count)
+- ⏳ Integration test with Domain MCP adapter (pending)
 
 #### 2. Standardized Error Handling (Medium Priority)
 
-**Status**: Pending  
+**Status**: In Progress (applied to horreum_list_runs endpoint)  
 **Change Request**: CR-20250930-1
 
 Implement Source MCP Contract error format for all tools and endpoints:
@@ -251,13 +261,13 @@ Clarify and document time range filtering behavior:
 
 ## Change Request Status
 
-| CR ID         | Title                       | Priority | Type          | Status  |
-| ------------- | --------------------------- | -------- | ------------- | ------- |
-| CR-20250930-1 | Enhanced Error Messages     | Medium   | Enhancement   | Pending |
-| CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Pending |
-| CR-20250930-3 | Pagination Support          | High     | Enhancement   | Pending |
-| CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending |
-| CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending |
+| CR ID         | Title                       | Priority | Type          | Status      |
+| ------------- | --------------------------- | -------- | ------------- | ----------- |
+| CR-20250930-1 | Enhanced Error Messages     | Medium   | Enhancement   | In Progress |
+| CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Pending     |
+| CR-20250930-3 | Pagination Support          | High     | Enhancement   | Pending     |
+| CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending     |
+| CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending     |
 
 ## Implementation Order
 
@@ -313,6 +323,9 @@ Based on priority and dependencies:
 
 ## Changelog
 
+- 2025-09-30: Implemented first HTTP endpoint `POST /api/tools/horreum_list_runs`
+  with Source MCP Contract error handling. Added `sendContractError` helper and
+  smoke test. Updated status tracking for endpoints and error handling.
 - 2025-09-30: Phase renumbered from Phase 8 to Phase 6 to prioritize as immediate
   next actionable work following Phase 5 (Containerization)
 - 2025-09-30: Initial integration tracking document created based on RHIVOS
