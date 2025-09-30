@@ -24,11 +24,43 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 100 # Fetch enough history for multi-commit pushes
+      - name: Get base commit for comparison
+        id: base
+        run: |
+          # For workflow_run, we need to find the commit BEFORE this push started
+          # Strategy: Find the first commit that was already on origin/main before this push
+
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+
+          # Walk back from HEAD to find the last commit that was on main before this push
+          # We do this by checking each parent until we find one that's an ancestor of origin/main~1
+          BASE_SHA="${HEAD_SHA}"
+          for i in {1..20}; do
+            CANDIDATE="${HEAD_SHA}~${i}"
+            if ! git rev-parse "${CANDIDATE}" >/dev/null 2>&1; then
+              # Reached the beginning of history
+              BASE_SHA="${HEAD_SHA}~$((i-1))"
+              break
+            fi
+            # Check if this commit exists in the reflog of origin/main (was previously on main)
+            if git merge-base --is-ancestor "${CANDIDATE}" "origin/main~1" 2>/dev/null; then
+              # This commit was on main before, so the push starts at the next commit
+              BASE_SHA="${CANDIDATE}"
+              break
+            fi
+          done
+
+          echo "base=${BASE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "Detected push range: ${BASE_SHA}..${HEAD_SHA}"
+          echo "Changed files in this range:"
+          git diff --name-only "${BASE_SHA}..${HEAD_SHA}" | head -20
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          # Let paths-filter use list-files=shell mode which properly detects
-          # all changes in the push by comparing against the default branch
+          # Explicitly provide base and ref for workflow_run events
+          # This ensures we check ALL commits in the push, not just the last one
+          base: ${{ steps.base.outputs.base }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           list-files: shell
           filters: |
             build:
