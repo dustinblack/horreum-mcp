@@ -947,22 +947,44 @@ export async function startHttpServer(server: McpServer, env: Env) {
       let datasetList;
       if (schemaUri) {
         // Use schema-based listing
-        datasetList = await DatasetService.datasetServiceListDatasetsBySchema({
+        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
+        // Only send page parameter if it's > 0
+        const params: {
+          uri: string;
+          limit: number;
+          page?: number;
+          sort?: string;
+          direction?: SortDirection;
+        } = {
           uri: schemaUri,
           limit: pageSize ?? 100,
-          page: page ?? 0,
           ...(sort ? { sort } : {}),
           ...(direction ? { direction } : {}),
-        });
+        };
+        if (page && page > 0) {
+          params.page = page;
+        }
+        datasetList = await DatasetService.datasetServiceListDatasetsBySchema(params);
       } else if (resolvedTestId) {
         // Use test-based listing
-        datasetList = await DatasetService.datasetServiceListByTest({
+        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
+        // Only send page parameter if it's > 0
+        const params: {
+          testId: number;
+          limit: number;
+          page?: number;
+          sort?: string;
+          direction?: SortDirection;
+        } = {
           testId: resolvedTestId,
           limit: pageSize ?? 100,
-          page: page ?? 0,
           ...(sort ? { sort } : {}),
           ...(direction ? { direction } : {}),
-        });
+        };
+        if (page && page > 0) {
+          params.page = page;
+        }
+        datasetList = await DatasetService.datasetServiceListByTest(params);
       } else {
         return sendContractError(
           res,

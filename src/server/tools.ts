@@ -588,22 +588,46 @@ export async function registerTools(
       let datasetList;
       if (args.schema_uri) {
         // Use schema-based listing
-        datasetList = await DatasetService.datasetServiceListDatasetsBySchema({
+        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
+        // Only send page parameter if it's > 0
+        const pageNum = (args.page as number | undefined) ?? 0;
+        const params: {
+          uri: string;
+          limit: number;
+          page?: number;
+          sort?: string;
+          direction?: SortDirection;
+        } = {
           uri: args.schema_uri as string,
           limit: (args.page_size as number | undefined) ?? 100,
-          page: (args.page as number | undefined) ?? 0,
           ...(args.sort ? { sort: args.sort as string } : {}),
           ...(args.direction ? { direction: args.direction as SortDirection } : {}),
-        });
+        };
+        if (pageNum > 0) {
+          params.page = pageNum;
+        }
+        datasetList = await DatasetService.datasetServiceListDatasetsBySchema(params);
       } else if (resolvedTestId) {
         // Use test-based listing
-        datasetList = await DatasetService.datasetServiceListByTest({
+        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
+        // Only send page parameter if it's > 0
+        const pageNum = (args.page as number | undefined) ?? 0;
+        const params: {
+          testId: number;
+          limit: number;
+          page?: number;
+          sort?: string;
+          direction?: SortDirection;
+        } = {
           testId: resolvedTestId,
           limit: (args.page_size as number | undefined) ?? 100,
-          page: (args.page as number | undefined) ?? 0,
           ...(args.sort ? { sort: args.sort as string } : {}),
           ...(args.direction ? { direction: args.direction as SortDirection } : {}),
-        });
+        };
+        if (pageNum > 0) {
+          params.page = pageNum;
+        }
+        datasetList = await DatasetService.datasetServiceListByTest(params);
       } else {
         return {
           content: [

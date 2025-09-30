@@ -84,10 +84,15 @@ This phase addresses integration requirements from RHIVOS PerfScale MCP end-to-e
    - `POST /api/tools/horreum_list_tests` - List tests with optional name filter ✅
    - `POST /api/tools/horreum_list_schemas` - List available schemas ✅
    - `POST /api/tools/horreum_get_schema` - Get schema by ID or name ✅
-   - `POST /api/tools/horreum_list_datasets` - Search/list datasets by test, schema, or time ✅
+   - `POST /api/tools/horreum_list_datasets` - Search/list datasets by test, schema, or time ✅ **WITH WORKAROUND**
    - `POST /api/tools/horreum_get_dataset` - Get raw dataset content by ID ✅
    - All endpoints accept Bearer token auth and return JSON responses ✅
    - Use same underlying Horreum API calls as MCP tools ✅
+
+   **WORKAROUND NOTE**: The `horreum_list_datasets` endpoint contains a workaround for a Horreum server bug where using `limit` + `page` parameters together causes HTTP 500 errors. The workaround omits the `page` parameter when `page=0`. This should be reverted once Horreum fixes the bug in their `/api/dataset/list/{testId}` endpoint.
+   - **Location**: `src/server/http.ts` (lines ~948-980) and `src/server/tools.ts` (lines ~588-620)
+   - **Issue reported**: 2025-09-30
+   - **Revert when**: Horreum server bug is fixed (monitor Horreum releases)
 
 2. **Standardized Error Handling (CR-20250930-1)**: Implement Source MCP Contract error format:
    - Structured error codes: INVALID_REQUEST, NOT_FOUND, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE, TIMEOUT
