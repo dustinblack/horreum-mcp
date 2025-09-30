@@ -101,7 +101,7 @@ Implement Source MCP Contract error format for all tools and endpoints:
 
 #### 3. Pagination Support (High Priority)
 
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Change Request**: CR-20250930-3
 
 Implement consistent pagination for all list tools (`list_tests`, `list_runs`,
@@ -266,7 +266,7 @@ Clarify and document time range filtering behavior:
 | ------------- | --------------------------- | -------- | ------------- | --------- |
 | CR-20250930-1 | Enhanced Error Messages     | Medium   | Enhancement   | Completed |
 | CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Pending   |
-| CR-20250930-3 | Pagination Support          | High     | Enhancement   | Pending   |
+| CR-20250930-3 | Pagination Support          | High     | Enhancement   | Completed |
 | CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending   |
 | CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending   |
 
@@ -324,6 +324,14 @@ Based on priority and dependencies:
 
 ## Changelog
 
+- 2025-09-30: **Pagination Implementation Complete**: Implemented Source MCP Contract
+  pagination (CR-20250930-3) for `list_runs` and `list_tests` HTTP endpoints. Added
+  pageToken/pageSize support with backward compatibility for page/limit. Page tokens are
+  opaque base64-encoded cursors. Response format includes `pagination: {nextPageToken?, 
+hasMore, totalCount?}`. Validation ensures pageSize is 1-1000 with default 100. Added
+  comprehensive smoke test `scripts/smoke-http-pagination.mjs` validating first/
+  subsequent/last pages, invalid tokens, and both endpoints. CR-20250930-3 marked as
+  completed.
 - 2025-09-30: **Major Milestone - All HTTP Endpoints Complete**: Implemented all five
   HTTP endpoints (`list_runs`, `get_run`, `list_tests`, `list_schemas`, `get_schema`)
   with consistent Source MCP Contract error handling across all endpoints. Added

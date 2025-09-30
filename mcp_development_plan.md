@@ -395,11 +395,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Implement `POST /api/tools/horreum_list_schemas` endpoint (2025-09-30)
      - [x] Implement `POST /api/tools/horreum_get_schema` endpoint (2025-09-30)
      - [x] Standardize error handling with Source MCP Contract format (CR-20250930-1) (2025-09-30) - Added `sendContractError` helper with error codes, retryable flag, retryAfter - Applied to all five HTTP endpoints with mapping for 404/401/403/429/503/504
-     - [ ] Implement consistent pagination across all list tools (CR-20250930-3)
+     - [x] Implement consistent pagination across all list tools (CR-20250930-3) (2025-09-30) - Added pageToken/pageSize with backward compat for page/limit - Opaque base64 tokens - Response: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}` - Applied to list_runs and list_tests - Added smoke test `scripts/smoke-http-pagination.mjs`
      - [ ] Add schema URI filtering to datasets.search (CR-20250930-4)
      - [ ] Implement source.describe capability discovery tool (CR-20250930-2)
      - [ ] Document time range filtering behavior (CR-20250930-5)
-     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints
+     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation
    - Phase 7 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -448,6 +448,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase 6 Pagination Implementation**: Implemented Source MCP Contract
+     pagination (CR-20250930-3) across list_runs and list_tests HTTP endpoints. Added
+     pageToken/pageSize parameters with backward compatibility for legacy page/limit.
+     Page tokens are opaque base64-encoded cursors containing page and limit state.
+     Response format: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}`.
+     Added helper functions `encodePageToken` and `decodePageToken` for token
+     management. Implemented consistent ordering, validation (1-1000), and hasMore flag
+     logic. Created comprehensive smoke test `scripts/smoke-http-pagination.mjs` that
+     validates first/subsequent/last pages, invalid tokens, and both endpoints. All
+     tests passing. This completes high-priority CR-20250930-3.
    - 2025-09-30 — **Phase 6 Major Milestone - All HTTP Endpoints Complete**: Implemented
      all five direct HTTP API endpoints for server-to-server integration. Added `POST 
 /api/tools/horreum_get_run`, `/horreum_list_tests`, `/horreum_list_schemas`, and

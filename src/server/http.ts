@@ -184,6 +184,34 @@ export async function startHttpServer(server: McpServer, env: Env) {
     return Number.isFinite(t) ? t : undefined;
   };
 
+  // Pagination helpers for pageToken/pageSize support
+  type PageCursor = {
+    page: number;
+    limit: number;
+  };
+
+  const encodePageToken = (cursor: PageCursor): string => {
+    return Buffer.from(JSON.stringify(cursor)).toString('base64');
+  };
+
+  const decodePageToken = (token: string): PageCursor | null => {
+    try {
+      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      const cursor = JSON.parse(decoded) as PageCursor;
+      if (
+        typeof cursor.page === 'number' &&
+        typeof cursor.limit === 'number' &&
+        cursor.page > 0 &&
+        cursor.limit > 0
+      ) {
+        return cursor;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
   // POST /api/tools/horreum_list_runs
   app.post('/api/tools/horreum_list_runs', authMiddleware, async (req, res) => {
     try {
@@ -201,12 +229,37 @@ export async function startHttpServer(server: McpServer, env: Env) {
       const testIdRaw = body.testId;
       const testRaw = body.test;
       const trashed = body.trashed as boolean | undefined;
-      const limit = body.limit as number | undefined;
-      const page = body.page as number | undefined;
       const sort = body.sort as string | undefined;
       const direction = body.direction as SortDirection | undefined;
       const fromMs = parseTime(body.from);
       const toMs = parseTime(body.to);
+
+      // Support both pageToken/pageSize (new) and page/limit (legacy)
+      const pageToken = body.pageToken as string | undefined;
+      const pageSize = body.pageSize as number | undefined;
+      const legacyLimit = body.limit as number | undefined;
+      const legacyPage = body.page as number | undefined;
+
+      let limit: number;
+      let page: number;
+
+      if (pageToken) {
+        const cursor = decodePageToken(pageToken);
+        if (!cursor) {
+          return sendContractError(
+            res,
+            400,
+            'INVALID_REQUEST',
+            'Invalid pageToken provided.'
+          );
+        }
+        page = cursor.page;
+        limit = cursor.limit;
+      } else {
+        // Use pageSize or fallback to legacyLimit, default 100, max 1000
+        limit = Math.min(Math.max(1, pageSize ?? legacyLimit ?? 100), 1000);
+        page = legacyPage ?? 1;
+      }
 
       let resolvedTestId: number | undefined = undefined;
       if (typeof testIdRaw === 'number' && Number.isFinite(testIdRaw)) {
@@ -235,16 +288,35 @@ export async function startHttpServer(server: McpServer, env: Env) {
         const result = await RunService.runServiceListTestRuns({
           testId: resolvedTestId,
           ...(trashed !== undefined ? { trashed } : {}),
-          ...(limit !== undefined ? { limit } : {}),
-          ...(page !== undefined ? { page } : {}),
+          limit,
+          page,
           ...(sort ? { sort } : {}),
           ...(direction ? { direction } : {}),
         });
-        return res.status(200).json(result);
+
+        const runs = Array.isArray((result as { runs?: unknown }).runs)
+          ? (result as { runs: unknown[] }).runs
+          : [];
+        const total = (result as { total?: number }).total ?? runs.length;
+
+        // Build pagination response
+        const hasMore = runs.length >= limit;
+        const nextPageToken = hasMore
+          ? encodePageToken({ page: page + 1, limit })
+          : undefined;
+
+        return res.status(200).json({
+          runs,
+          pagination: {
+            ...(nextPageToken ? { nextPageToken } : {}),
+            hasMore,
+            totalCount: total,
+          },
+        });
       }
 
       // Time-filtered: fetch pages and filter client-side by start timestamp
-      const pageSize = Math.min(limit ?? 500, 1000);
+      const fetchPageSize = Math.min(limit, 500);
       const sortField = sort ?? 'start';
       const sortDir: SortDirection = direction ?? 'Descending';
       let pageIndex = 1; // API pages start at 1
@@ -256,7 +328,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
         const chunk = await RunService.runServiceListTestRuns({
           testId: resolvedTestId,
           ...(trashed !== undefined ? { trashed } : {}),
-          limit: pageSize,
+          limit: fetchPageSize,
           page: pageIndex,
           sort: sortField,
           direction: sortDir,
@@ -276,7 +348,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
             break;
           }
         }
-        if (runs.length < pageSize) break;
+        if (runs.length < fetchPageSize) break;
         pageIndex += 1;
       }
 
@@ -288,14 +360,22 @@ export async function startHttpServer(server: McpServer, env: Env) {
         return true;
       });
 
-      // Optional client-side pagination if requested
-      let finalRuns = withinRange as unknown[];
-      if (limit !== undefined && page !== undefined && page > 0) {
-        const startIdx = Math.max(0, (page - 1) * limit);
-        finalRuns = withinRange.slice(startIdx, startIdx + limit);
-      }
+      // Client-side pagination of filtered results
+      const startIdx = Math.max(0, (page - 1) * limit);
+      const finalRuns = withinRange.slice(startIdx, startIdx + limit);
+      const hasMore = startIdx + limit < withinRange.length;
+      const nextPageToken = hasMore
+        ? encodePageToken({ page: page + 1, limit })
+        : undefined;
 
-      return res.status(200).json({ total: withinRange.length, runs: finalRuns });
+      return res.status(200).json({
+        runs: finalRuns,
+        pagination: {
+          ...(nextPageToken ? { nextPageToken } : {}),
+          hasMore,
+          totalCount: withinRange.length,
+        },
+      });
     } catch (err) {
       // Map common error cases
       const anyErr = err as { status?: number; message?: string; body?: unknown };
@@ -372,24 +452,65 @@ export async function startHttpServer(server: McpServer, env: Env) {
         );
       }
 
-      const limit = body.limit as number | undefined;
-      const page = body.page as number | undefined;
       const direction = body.direction as SortDirection | undefined;
       const roles = body.roles as string | undefined;
       const name = body.name as string | undefined;
       const folder = body.folder as string | undefined;
+
+      // Support both pageToken/pageSize (new) and page/limit (legacy)
+      const pageToken = body.pageToken as string | undefined;
+      const pageSize = body.pageSize as number | undefined;
+      const legacyLimit = body.limit as number | undefined;
+      const legacyPage = body.page as number | undefined;
+
+      let limit: number;
+      let page: number;
+
+      if (pageToken) {
+        const cursor = decodePageToken(pageToken);
+        if (!cursor) {
+          return sendContractError(
+            res,
+            400,
+            'INVALID_REQUEST',
+            'Invalid pageToken provided.'
+          );
+        }
+        page = cursor.page;
+        limit = cursor.limit;
+      } else {
+        limit = Math.min(Math.max(1, pageSize ?? legacyLimit ?? 100), 1000);
+        page = legacyPage ?? 1;
+      }
 
       // If a specific folder is provided, query just that folder
       if (folder) {
         const result = await TestService.testServiceGetTestSummary({
           ...(roles !== undefined ? { roles } : {}),
           folder,
-          ...(limit !== undefined ? { limit } : {}),
-          ...(page !== undefined ? { page } : {}),
+          limit,
+          page,
           ...(direction ? { direction } : {}),
           ...(name ? { name } : {}),
         });
-        return res.status(200).json(result);
+
+        const tests = Array.isArray((result as { tests?: unknown }).tests)
+          ? (result as { tests: unknown[] }).tests
+          : [];
+        const total = (result as { count?: number }).count ?? tests.length;
+        const hasMore = tests.length >= limit;
+        const nextPageToken = hasMore
+          ? encodePageToken({ page: page + 1, limit })
+          : undefined;
+
+        return res.status(200).json({
+          tests,
+          pagination: {
+            ...(nextPageToken ? { nextPageToken } : {}),
+            hasMore,
+            totalCount: total,
+          },
+        });
       }
 
       // Otherwise, aggregate across top-level and all folders
@@ -414,16 +535,22 @@ export async function startHttpServer(server: McpServer, env: Env) {
       );
       const total = aggregated.length;
 
-      // Optional client-side pagination after aggregation
-      let paged = aggregated;
-      if (page === 0) {
-        paged = aggregated;
-      } else if (limit !== undefined && page !== undefined) {
-        const start = Math.max(0, (page - 1) * limit);
-        paged = aggregated.slice(start, start + limit);
-      }
+      // Client-side pagination after aggregation
+      const startIdx = Math.max(0, (page - 1) * limit);
+      const paged = aggregated.slice(startIdx, startIdx + limit);
+      const hasMore = startIdx + limit < aggregated.length;
+      const nextPageToken = hasMore
+        ? encodePageToken({ page: page + 1, limit })
+        : undefined;
 
-      return res.status(200).json({ tests: paged, count: total });
+      return res.status(200).json({
+        tests: paged,
+        pagination: {
+          ...(nextPageToken ? { nextPageToken } : {}),
+          hasMore,
+          totalCount: total,
+        },
+      });
     } catch (err) {
       const anyErr = err as { status?: number; message?: string; body?: unknown };
       if (anyErr?.status === 404) {
