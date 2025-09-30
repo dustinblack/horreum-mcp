@@ -20,10 +20,23 @@ const EnvSchema = z.object({
   LLM_MODEL: z.string().min(1).optional(),
 
   // Phase 6: SSL/TLS Configuration
-  HORREUM_TLS_VERIFY: z.coerce
-    .boolean()
+  HORREUM_TLS_VERIFY: z
+    .string()
     .optional()
-    .default(true)
+    .default('true')
+    .transform((val) => {
+      // Custom boolean parsing that correctly handles string "false"
+      const lower = val.toLowerCase();
+      if (lower === 'false' || lower === '0' || lower === 'no' || lower === '') {
+        return false;
+      }
+      if (lower === 'true' || lower === '1' || lower === 'yes') {
+        return true;
+      }
+      throw new Error(
+        `HORREUM_TLS_VERIFY must be 'true' or 'false' (or 1/0, yes/no), got: ${val}`
+      );
+    })
     .describe(
       'Enable SSL certificate verification (set to false for testing with self-signed certs)'
     ),

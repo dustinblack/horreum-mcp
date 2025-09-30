@@ -50,10 +50,30 @@ async function main() {
   const env = await loadEnv();
 
   // Apply SSL/TLS configuration from environment
+  logger.info(
+    {
+      HORREUM_TLS_VERIFY: env.HORREUM_TLS_VERIFY,
+      NODE_TLS_REJECT_UNAUTHORIZED_BEFORE: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+    },
+    'SSL/TLS configuration'
+  );
+
   if (!env.HORREUM_TLS_VERIFY) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     logger.warn(
+      {
+        HORREUM_TLS_VERIFY: env.HORREUM_TLS_VERIFY,
+        NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+      },
       'SSL certificate verification is DISABLED. This should only be used for testing.'
+    );
+  } else {
+    logger.info(
+      {
+        HORREUM_TLS_VERIFY: env.HORREUM_TLS_VERIFY,
+        NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+      },
+      'SSL certificate verification is ENABLED (default secure mode)'
     );
   }
 
