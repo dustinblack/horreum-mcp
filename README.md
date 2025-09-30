@@ -533,6 +533,8 @@ curl -X POST http://localhost:3000/api/tools/source.describe \
 - `POST /api/tools/horreum_list_tests` - List tests with optional name filter
 - `POST /api/tools/horreum_list_schemas` - List available schemas
 - `POST /api/tools/horreum_get_schema` - Get schema by ID or name
+- `POST /api/tools/horreum_list_datasets` - Search/list datasets by test, schema, or time
+- `POST /api/tools/horreum_get_dataset` - Get raw dataset content by ID
 - `POST /api/tools/source.describe` - Discover server capabilities
 
 See [RHIVOS_INTEGRATION.md](RHIVOS_INTEGRATION.md) for complete HTTP API

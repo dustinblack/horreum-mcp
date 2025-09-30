@@ -79,13 +79,15 @@ The development will follow an iterative, phased approach with a read-first prio
 This phase addresses integration requirements from RHIVOS PerfScale MCP end-to-end testing. These changes enable Domain MCP servers to call Horreum MCP directly via HTTP POST endpoints without requiring MCP client libraries.
 
 1. **Direct HTTP Tool Endpoints**: Add POST endpoints that mirror MCP tools:
-   - `POST /api/tools/horreum_list_runs` - List runs with time filtering
-   - `POST /api/tools/horreum_get_run` - Get specific run by ID
-   - `POST /api/tools/horreum_list_tests` - List tests with optional name filter
-   - `POST /api/tools/horreum_list_schemas` - List available schemas
-   - `POST /api/tools/horreum_get_schema` - Get schema by ID or name
-   - All endpoints accept Bearer token auth and return JSON responses
-   - Use same underlying Horreum API calls as MCP tools
+   - `POST /api/tools/horreum_list_runs` - List runs with time filtering ✅
+   - `POST /api/tools/horreum_get_run` - Get specific run by ID ✅
+   - `POST /api/tools/horreum_list_tests` - List tests with optional name filter ✅
+   - `POST /api/tools/horreum_list_schemas` - List available schemas ✅
+   - `POST /api/tools/horreum_get_schema` - Get schema by ID or name ✅
+   - `POST /api/tools/horreum_list_datasets` - Search/list datasets by test, schema, or time ✅
+   - `POST /api/tools/horreum_get_dataset` - Get raw dataset content by ID ✅
+   - All endpoints accept Bearer token auth and return JSON responses ✅
+   - Use same underlying Horreum API calls as MCP tools ✅
 
 2. **Standardized Error Handling (CR-20250930-1)**: Implement Source MCP Contract error format:
    - Structured error codes: INVALID_REQUEST, NOT_FOUND, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE, TIMEOUT
@@ -409,12 +411,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Implement `POST /api/tools/horreum_list_tests` endpoint (2025-09-30)
      - [x] Implement `POST /api/tools/horreum_list_schemas` endpoint (2025-09-30)
      - [x] Implement `POST /api/tools/horreum_get_schema` endpoint (2025-09-30)
-     - [x] Standardize error handling with Source MCP Contract format (CR-20250930-1) (2025-09-30) - Added `sendContractError` helper with error codes, retryable flag, retryAfter - Applied to all five HTTP endpoints with mapping for 404/401/403/429/503/504
+     - [x] Implement `POST /api/tools/horreum_list_datasets` endpoint (2025-09-30)
+     - [x] Implement `POST /api/tools/horreum_get_dataset` endpoint (2025-09-30)
+     - [x] Standardize error handling with Source MCP Contract format (CR-20250930-1) (2025-09-30) - Added `sendContractError` helper with error codes, retryable flag, retryAfter - Applied to all HTTP endpoints with mapping for 404/401/403/429/503/504
      - [x] Implement consistent pagination across all list tools (CR-20250930-3) (2025-09-30) - Added pageToken/pageSize with backward compat for page/limit - Opaque base64 tokens - Response: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}` - Applied to list_runs and list_tests - Added smoke test `scripts/smoke-http-pagination.mjs`
      - [x] Implement source.describe capability discovery tool (CR-20250930-2) (2025-09-30) - Added as MCP tool and HTTP endpoint - Returns sourceType, version, contractVersion, capabilities, limits - Added smoke test `scripts/smoke-http-source-describe.mjs`
      - [x] Document time range filtering behavior (CR-20250930-5) (2025-09-30) - Created comprehensive `docs/TIME_RANGE_FILTERING.md` - Updated README with HTTP API examples and time filtering reference - Documented timestamp formats, inclusivity, timezone handling, edge cases
-     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation - Added `scripts/smoke-http-source-describe.mjs` for capability discovery
-     - [~] Add schema URI filtering to datasets.search (CR-20250930-4) - Deferred: datasets.search tool not implemented yet (future work)
+     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 7 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation - Added `scripts/smoke-http-source-describe.mjs` for capability discovery - Added `scripts/smoke-http-datasets.mjs` for dataset endpoints
+     - [x] Add schema URI filtering to datasets.search (CR-20250930-4) (2025-09-30) - Implemented in list_datasets tool with schemaUri parameter - Filters via DatasetService.datasetServiceListDatasetsBySchema - Combined with test-based filtering and time range support
+     - [x] SSL/TLS certificate configuration for corporate environments (2025-09-30) - Added HORREUM_TLS_VERIFY env var with boolean parsing - Container support for CA certificate mounting - Comprehensive documentation and testing
    - Phase 7 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -463,6 +468,20 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase 6 Dataset Endpoints Added**: Implemented missing dataset endpoints
+     required by RHIVOS PerfScale MCP integration. Added `list_datasets` MCP tool that
+     searches datasets by test*id, test_name, or schema_uri with optional time filtering
+     (from/to). Uses DatasetService.datasetServiceListByTest for test-based filtering and
+     DatasetService.datasetServiceListDatasetsBySchema for schema-based filtering. Added
+     `get_dataset` MCP tool to retrieve raw dataset content by ID. Both tools mapped to
+     HTTP POST endpoints: `/api/tools/horreum_list_datasets` and `/api/tools/horreum*
+     get_dataset`. Applied standardized error handling and included dataset info in
+responses (dataset_id, run_id, test_id, test_name, schemas, content). Created
+comprehensive smoke test `scripts/smoke-http-datasets.mjs` with 8 test cases covering
+     filtering by test ID, test name, schema URI, time ranges, and error handling. Updated
+     README.md to include new endpoints in HTTP API list. Updated development plan Phase 6
+     endpoints list and status checklist. Completes CR-20250930-4 (schema URI filtering)
+     that was previously deferred. All 7 HTTP endpoints now fully implemented and tested.
    - 2025-09-30 — **Phase 6 SSL/TLS Configuration Added**: Implemented SSL/TLS certificate
      support for corporate and self-signed certificates. Added user-friendly
      `HORREUM_TLS_VERIFY` environment variable (defaults to `true`) in `src/config/env.ts`

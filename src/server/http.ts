@@ -12,6 +12,7 @@ import { logger } from '../observability/logging.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
+import { DatasetService } from '../horreum/generated/services/DatasetService.js';
 import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 import type { TestListing } from '../horreum/generated/models/TestListing.js';
 import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
@@ -892,6 +893,269 @@ export async function startHttpServer(server: McpServer, env: Env) {
         );
       }
       logger.error({ err }, 'Unhandled error in horreum_get_run');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_list_datasets
+  app.post('/api/tools/horreum_list_datasets', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const testId = body.test_id as number | undefined;
+      const testName = body.test_name as string | undefined;
+      const schemaUri = body.schema_uri as string | undefined;
+      const from = body.from as string | undefined;
+      const to = body.to as string | undefined;
+      const pageSize = body.page_size as number | undefined;
+      const page = body.page as number | undefined;
+      const sort = body.sort as string | undefined;
+      const direction = body.direction as SortDirection | undefined;
+
+      // Resolve test ID from name if provided
+      let resolvedTestId: number | undefined = testId;
+      if (!resolvedTestId && testName) {
+        const test = await TestService.testServiceGetByNameOrId({
+          name: testName,
+        });
+        resolvedTestId = test.id;
+      }
+
+      const parseTime = (s?: string): number | undefined => {
+        if (!s) return undefined;
+        if (/^\d+$/.test(s)) return Number(s);
+        const t = Date.parse(s);
+        return Number.isFinite(t) ? t : undefined;
+      };
+      const fromMs = parseTime(from);
+      const toMs = parseTime(to);
+
+      // Determine which API endpoint to use based on filters
+      let datasetList;
+      if (schemaUri) {
+        // Use schema-based listing
+        datasetList = await DatasetService.datasetServiceListDatasetsBySchema({
+          uri: schemaUri,
+          limit: pageSize ?? 100,
+          page: page ?? 0,
+          ...(sort ? { sort } : {}),
+          ...(direction ? { direction } : {}),
+        });
+      } else if (resolvedTestId) {
+        // Use test-based listing
+        datasetList = await DatasetService.datasetServiceListByTest({
+          testId: resolvedTestId,
+          limit: pageSize ?? 100,
+          page: page ?? 0,
+          ...(sort ? { sort } : {}),
+          ...(direction ? { direction } : {}),
+        });
+      } else {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Please provide either test_id, test_name, or schema_uri to filter datasets.'
+        );
+      }
+
+      // Apply time filtering client-side if specified
+      let filteredDatasets = datasetList.datasets;
+      if (fromMs !== undefined || toMs !== undefined) {
+        filteredDatasets = datasetList.datasets.filter((ds) => {
+          const startMs = Number(ds.start) || Date.parse(String(ds.start));
+          if (!Number.isFinite(startMs)) return false;
+          if (fromMs !== undefined && startMs < fromMs) return false;
+          if (toMs !== undefined && startMs > toMs) return false;
+          return true;
+        });
+      }
+
+      // Map to response format
+      const response = {
+        datasets: filteredDatasets.map((ds) => ({
+          dataset_id: ds.id,
+          run_id: ds.runId,
+          test_id: ds.testId,
+          test_name: ds.testname,
+          start: ds.start,
+          stop: ds.stop,
+          schema_uri: ds.schemas?.[0]?.uri ?? null,
+          schemas: ds.schemas?.map((s) => s.uri) ?? [],
+        })),
+        pagination: {
+          has_more: filteredDatasets.length < datasetList.total,
+          total_count: datasetList.total,
+        },
+      };
+
+      return res.status(200).json(response);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Resource not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_list_datasets');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_get_dataset
+  app.post('/api/tools/horreum_get_dataset', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const datasetId = body.dataset_id as number | undefined;
+      if (!datasetId || !Number.isFinite(datasetId)) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide valid 'dataset_id' parameter."
+        );
+      }
+
+      const dataset = await DatasetService.datasetServiceGetDataset({
+        id: datasetId,
+      });
+
+      const response = {
+        dataset_id: dataset.id,
+        run_id: dataset.runId,
+        test_id: dataset.testid,
+        start: dataset.start,
+        stop: dataset.stop,
+        description: dataset.description,
+        content: dataset.data,
+      };
+
+      return res.status(200).json(response);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Dataset not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_dataset');
       return sendContractError(
         res,
         500,

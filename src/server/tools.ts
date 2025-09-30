@@ -6,6 +6,7 @@ import { OpenAPI } from '../horreum/generated/index.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
+import { DatasetService } from '../horreum/generated/services/DatasetService.js';
 import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 import type { TestListing } from '../horreum/generated/models/TestListing.js';
 import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
@@ -540,6 +541,137 @@ export async function registerTools(
         ...(args.description ? { description: args.description as string } : {}),
       });
       return { content: [text(typeof res === 'string' ? res : JSON.stringify(res))] };
+    }
+  );
+
+  // list_datasets - Search for datasets with optional filtering
+  withTool(
+    'list_datasets',
+    'Search for datasets across tests and runs with optional filtering.',
+    {
+      test_id: z.number().int().positive().optional().describe('Filter by test ID'),
+      test_name: z.string().optional().describe('Filter by test name'),
+      schema_uri: z.string().optional().describe('Filter by schema URI'),
+      from: z
+        .string()
+        .optional()
+        .describe('Start time filter (ISO timestamp or epoch millis)'),
+      to: z
+        .string()
+        .optional()
+        .describe('End time filter (ISO timestamp or epoch millis)'),
+      page_size: z.number().int().positive().max(1000).optional(),
+      page: z.number().int().min(0).optional(),
+      sort: z.string().optional(),
+      direction: z.enum(['Ascending', 'Descending']).optional(),
+    },
+    async (args) => {
+      // Resolve test ID from name if provided
+      let resolvedTestId: number | undefined = args.test_id as number | undefined;
+      if (!resolvedTestId && args.test_name) {
+        const t = await TestService.testServiceGetByNameOrId({
+          name: args.test_name as string,
+        });
+        resolvedTestId = t.id;
+      }
+
+      const parseTime = (s?: string): number | undefined => {
+        if (!s) return undefined;
+        if (/^\d+$/.test(s)) return Number(s);
+        const t = Date.parse(s);
+        return Number.isFinite(t) ? t : undefined;
+      };
+      const fromMs = parseTime(args.from as string | undefined);
+      const toMs = parseTime(args.to as string | undefined);
+
+      // Determine which API endpoint to use based on filters
+      let datasetList;
+      if (args.schema_uri) {
+        // Use schema-based listing
+        datasetList = await DatasetService.datasetServiceListDatasetsBySchema({
+          uri: args.schema_uri as string,
+          limit: (args.page_size as number | undefined) ?? 100,
+          page: (args.page as number | undefined) ?? 0,
+          ...(args.sort ? { sort: args.sort as string } : {}),
+          ...(args.direction ? { direction: args.direction as SortDirection } : {}),
+        });
+      } else if (resolvedTestId) {
+        // Use test-based listing
+        datasetList = await DatasetService.datasetServiceListByTest({
+          testId: resolvedTestId,
+          limit: (args.page_size as number | undefined) ?? 100,
+          page: (args.page as number | undefined) ?? 0,
+          ...(args.sort ? { sort: args.sort as string } : {}),
+          ...(args.direction ? { direction: args.direction as SortDirection } : {}),
+        });
+      } else {
+        return {
+          content: [
+            text(
+              'Please provide either test_id, test_name, or schema_uri to filter datasets.'
+            ),
+          ],
+          isError: true,
+        };
+      }
+
+      // Apply time filtering client-side if specified
+      let filteredDatasets = datasetList.datasets;
+      if (fromMs !== undefined || toMs !== undefined) {
+        filteredDatasets = datasetList.datasets.filter((ds) => {
+          const startMs = Number(ds.start) || Date.parse(String(ds.start));
+          if (!Number.isFinite(startMs)) return false;
+          if (fromMs !== undefined && startMs < fromMs) return false;
+          if (toMs !== undefined && startMs > toMs) return false;
+          return true;
+        });
+      }
+
+      // Map to response format
+      const response = {
+        datasets: filteredDatasets.map((ds) => ({
+          dataset_id: ds.id,
+          run_id: ds.runId,
+          test_id: ds.testId,
+          test_name: ds.testname,
+          start: ds.start,
+          stop: ds.stop,
+          schema_uri: ds.schemas?.[0]?.uri ?? null,
+          schemas: ds.schemas?.map((s) => s.uri) ?? [],
+        })),
+        pagination: {
+          has_more: filteredDatasets.length < datasetList.total,
+          total_count: datasetList.total,
+        },
+      };
+
+      return { content: [text(JSON.stringify(response, null, 2))] };
+    }
+  );
+
+  // get_dataset - Retrieve raw content of a specific dataset
+  withTool(
+    'get_dataset',
+    'Get the raw JSON content of a specific dataset by ID.',
+    {
+      dataset_id: z.number().int().positive().describe('Dataset ID to retrieve'),
+    },
+    async (args) => {
+      const dataset = await DatasetService.datasetServiceGetDataset({
+        id: args.dataset_id as number,
+      });
+
+      const response = {
+        dataset_id: dataset.id,
+        run_id: dataset.runId,
+        test_id: dataset.testid,
+        start: dataset.start,
+        stop: dataset.stop,
+        description: dataset.description,
+        content: dataset.data,
+      };
+
+      return { content: [text(JSON.stringify(response, null, 2))] };
     }
   );
 
