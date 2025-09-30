@@ -74,41 +74,80 @@ The development will follow an iterative, phased approach with a read-first prio
 - Security: add container vulnerability scanning (e.g., Trivy or osv-scanner),
   and image hardening tasks (rootless, minimal packages, labels).
 
-**Phase 6: Enhanced CI/CD Pipeline**
+**Phase 6: Direct HTTP API for Server-to-Server Integration (PRIORITY)**
+
+This phase addresses integration requirements from RHIVOS PerfScale MCP end-to-end testing. These changes enable Domain MCP servers to call Horreum MCP directly via HTTP POST endpoints without requiring MCP client libraries.
+
+1. **Direct HTTP Tool Endpoints**: Add POST endpoints that mirror MCP tools:
+   - `POST /api/tools/horreum_list_runs` - List runs with time filtering
+   - `POST /api/tools/horreum_get_run` - Get specific run by ID
+   - `POST /api/tools/horreum_list_tests` - List tests with optional name filter
+   - `POST /api/tools/horreum_list_schemas` - List available schemas
+   - `POST /api/tools/horreum_get_schema` - Get schema by ID or name
+   - All endpoints accept Bearer token auth and return JSON responses
+   - Use same underlying Horreum API calls as MCP tools
+
+2. **Standardized Error Handling (CR-20250930-1)**: Implement Source MCP Contract error format:
+   - Structured error codes: INVALID_REQUEST, NOT_FOUND, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE, TIMEOUT
+   - Consistent error response: `{error: {code, message, details, retryable, retryAfter?}}`
+   - Helpful context in error details (IDs, suggestions, available options)
+   - Machine-parseable and human-readable error messages
+
+3. **Pagination Support (CR-20250930-3)**: Implement consistent pagination for all list tools:
+   - Input parameters: pageToken (opaque), pageSize (1-1000, default 100)
+   - Response format: `{data: [...], pagination: {nextPageToken?, hasMore, totalCount?}}`
+   - Opaque page tokens (base64 encoded cursors)
+   - Consistent ordering across pages (timestamp DESC)
+   - Map to Horreum's pagination mechanism
+
+4. **Schema URI Filtering (CR-20250930-4)**: Add dataset filtering by schema:
+   - Add schemaUri parameter to datasets.search tool
+   - Exact match on dataset.$schema field
+   - Support combining with other filters (testId, time range)
+
+5. **Capability Discovery (CR-20250930-2)**: Implement source.describe tool:
+   - Return sourceType, version, contractVersion
+   - Expose capabilities: pagination, caching, streaming, schemas
+   - Document limits: maxPageSize, maxDatasetSize, rateLimitPerMinute
+
+6. **Documentation Improvements (CR-20250930-5)**:
+   - Clarify time range filtering (from/to parameters)
+   - Document timestamp field used, inclusivity, timezone handling
+   - Add examples and error handling for edge cases
+
+**Phase 7: Enhanced CI/CD Pipeline**
 
 - Multi-stage testing pipeline with parallel execution and performance regression testing
 - Comprehensive security scanning (osv-scanner, SAST, license compliance)
 - Performance optimizations (caching, job interruption, conditional workflows)
 - Release automation (semantic versioning, NPM/container publishing)
 
-**Phase 7: Architecture Refactoring & Modularity**
+**Phase 8: Architecture Refactoring & Modularity**
 
 - Extract shared logic into reusable modules with plugin architecture
 - Make observability features truly optional with dependency injection
 - Centralized error handling with circuit breaker patterns
 - Hierarchical configuration system with validation and hot-reload
 
-**Phase 8: Alternative HTTP API Mode & External MCP Integration**
+**Phase 9: Alternative REST API Mode**
 
 - REST API endpoints (`GET /api/v1/tests`, `POST /api/v1/tests/{id}/runs`, etc.)
 - OpenAPI 3.0 specification with Pydantic-compatible responses
 - API versioning strategy with rate limiting and backward compatibility
-- Service-based HTTP endpoints for external MCP consumption (`POST /tools/tests.list`, etc.)
-- Support for "Independent MCPs" topology for MCP-to-MCP communication
 
-**Phase 9: Build System Enhancement**
+**Phase 10: Build System Enhancement**
 
 - Multi-architecture builds with cross-compilation and bundle optimization
 - Advanced dependency management with automated updates and vulnerability scanning
 - Build performance optimization (incremental builds, parallel processes)
 
-**Phase 10: Testing & Security Hardening**
+**Phase 11: Testing & Security Hardening**
 
 - Enhanced testing framework (unit, integration, contract, performance testing)
 - Runtime security monitoring with secrets management and audit logging
 - Operational readiness (health checks, metrics, graceful shutdown)
 
-**Phase 11: Data Analysis**
+**Phase 12: Data Analysis**
 
 - `analyze_run_data` tool for server-side statistical analysis with testing
 
@@ -278,8 +317,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
 
 4. Current execution directive
    - Phase 5 (Containerization & Multi-Architecture Support) completed (2025-09-26).
-   - Development is now authorized for Phase 6 (Enhanced CI/CD Pipeline).
-   - Priority focus: Implement multi-stage testing, comprehensive security scanning, performance optimizations, release automation, and rollback.
+   - **NEXT PRIORITY**: Phase 6 (Direct HTTP API for Server-to-Server Integration) is now the immediate next priority based on RHIVOS PerfScale MCP integration requirements (2025-09-30).
+   - Development is now authorized for Phase 6 with focus on: Direct HTTP tool endpoints, standardized error handling, pagination support, schema URI filtering, capability discovery, and time range documentation.
+   - Phase 7 (Enhanced CI/CD Pipeline) and Phase 8 (Architecture Refactoring) follow after Phase 6 completion.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -347,29 +387,40 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
          (2025-09-26)
    - [x] Fix WebAssembly and QEMU emulation issues for multi-architecture builds
          (2025-09-29)
-   - Phase 6 — Enhanced CI/CD Pipeline
+   - Phase 6 — Direct HTTP API for Server-to-Server Integration (PRIORITY)
+     - [ ] Add direct HTTP POST endpoints for MCP tools (`/api/tools/horreum_*`)
+     - [ ] Implement `POST /api/tools/horreum_list_runs` endpoint
+     - [ ] Implement `POST /api/tools/horreum_get_run` endpoint
+     - [ ] Implement `POST /api/tools/horreum_list_tests` endpoint
+     - [ ] Implement `POST /api/tools/horreum_list_schemas` endpoint
+     - [ ] Implement `POST /api/tools/horreum_get_schema` endpoint
+     - [ ] Standardize error handling with Source MCP Contract format (CR-20250930-1)
+     - [ ] Implement consistent pagination across all list tools (CR-20250930-3)
+     - [ ] Add schema URI filtering to datasets.search (CR-20250930-4)
+     - [ ] Implement source.describe capability discovery tool (CR-20250930-2)
+     - [ ] Document time range filtering behavior (CR-20250930-5)
+     - [ ] Add tests for all new HTTP endpoints and features
+   - Phase 7 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
      - [ ] Implement performance optimizations (caching, job interruption, parallel execution)
      - [ ] Set up release automation (semantic versioning, release notes, publishing)
      - [ ] Add quality gates and code coverage requirements
      - [ ] Implement deployment pipeline with rollback capabilities
-   - Phase 7 — Architecture Refactoring & Modularity
+   - Phase 8 — Architecture Refactoring & Modularity
      - [ ] Extract shared logic into reusable modules
      - [ ] Implement plugin architecture for optional features
      - [ ] Add dependency injection for better testability
      - [ ] Make observability features truly optional
      - [ ] Implement centralized error handling with proper error types
      - [ ] Add hierarchical configuration system with validation
-   - Phase 8 — Alternative HTTP API Mode & External MCP Integration
+   - Phase 9 — Alternative REST API Mode
      - [ ] Implement REST API endpoints (`GET /api/v1/tests`, etc.)
      - [ ] Create OpenAPI 3.0 specification and documentation
      - [ ] Ensure Pydantic-compatible response shapes
      - [ ] Add API versioning strategy and backward compatibility
      - [ ] Implement rate limiting and throttling for REST endpoints
-     - [ ] Implement service-based HTTP endpoints for external MCP consumption
-     - [ ] Add support for "Independent MCPs" topology and MCP-to-MCP communication
-   - Phase 9 — Build System Enhancement
+   - Phase 10 — Build System Enhancement
      - [x] Add multi-architecture build support (2025-09-26)
      - [ ] Add cross-compilation support
      - [ ] Implement advanced dependency management with automated updates
@@ -378,14 +429,14 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [ ] Implement incremental builds and CI caching
      - [ ] Create bundle size optimization and analysis tools
      - [ ] Implement development vs production build profiles
-   - Phase 10 — Testing & Security Hardening
+   - Phase 11 — Testing & Security Hardening
      - [ ] Set up comprehensive testing framework with high coverage requirements
      - [ ] Add integration testing with real external services
      - [ ] Implement contract testing for API endpoints
      - [ ] Add performance and load testing capabilities
      - [ ] Implement runtime security monitoring and secrets management
      - [ ] Add health check endpoints for all deployment modes
-   - Phase 11 — Data Analysis
+   - Phase 12 — Data Analysis
      - [ ] Design `analyze_run_data` tool for server-side statistical analysis
      - [ ] Implement analysis tool with suitable statistics library
      - [ ] Add unit and integration tests for analysis capabilities
@@ -397,6 +448,24 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase Reorganization**: Moved Direct HTTP API for Server-to-Server
+     Integration from Phase 8 to Phase 6 as the immediate next priority following
+     Phase 5 (Containerization). Renumbered all subsequent phases: Enhanced CI/CD
+     Pipeline (Phase 7), Architecture Refactoring & Modularity (Phase 8), Alternative
+     REST API Mode (Phase 9), Build System Enhancement (Phase 10), Testing & Security
+     Hardening (Phase 11), Data Analysis (Phase 12). Updated execution directive to
+     authorize Phase 6 implementation immediately. This prioritization ensures RHIVOS
+     PerfScale MCP integration requirements are addressed as the next actionable work.
+   - 2025-09-30 — **Phase Integration from RHIVOS Requirements**: Added comprehensive
+     Direct HTTP API for Server-to-Server Integration phase based on RHIVOS PerfScale
+     MCP integration requirements and end-to-end testing feedback. Includes: (1) Direct
+     HTTP POST endpoints for MCP tools (/api/tools/horreum\_\*), (2) Standardized error
+     handling compliant with Source MCP Contract (CR-20250930-1), (3) Consistent
+     pagination support across all list tools (CR-20250930-3), (4) Schema URI filtering
+     for datasets.search (CR-20250930-4), (5) Capability discovery via source.describe
+     tool (CR-20250930-2), and (6) Time range filtering documentation (CR-20250930-5).
+     References: /home/dblack/git/gitlab/perfscale/sandbox/rhivos-perfscale-mcp/docs/
+     horreum-mcp-requirements.md and horreum-mcp-change-requests.md.
    - 2025-09-29 — **Container Multi-Architecture Fixes**: Resolved critical WebAssembly
      and QEMU emulation issues preventing multi-architecture container builds. Fixed
      `ReferenceError: WebAssembly is not defined` by removing global `--jitless` flag
