@@ -25,15 +25,15 @@ following Phase 5 (Containerization).
 
 #### 1. Direct HTTP Tool Endpoints (Critical Priority)
 
-**Status**: In Progress (1 of 5 endpoints complete)
+**Status**: ✅ **COMPLETED** (5 of 5 endpoints complete)
 
 Add POST endpoints that mirror MCP tools for server-to-server communication:
 
-- ✅ `POST /api/tools/horreum_list_runs` - List runs with time filtering **(COMPLETED)**
-- ⏳ `POST /api/tools/horreum_get_run` - Get specific run by ID
-- ⏳ `POST /api/tools/horreum_list_tests` - List tests with optional name filter
-- ⏳ `POST /api/tools/horreum_list_schemas` - List available schemas
-- ⏳ `POST /api/tools/horreum_get_schema` - Get schema by ID or name
+- ✅ `POST /api/tools/horreum_list_runs` - List runs with time filtering
+- ✅ `POST /api/tools/horreum_get_run` - Get specific run by ID
+- ✅ `POST /api/tools/horreum_list_tests` - List tests with optional name filter
+- ✅ `POST /api/tools/horreum_list_schemas` - List available schemas
+- ✅ `POST /api/tools/horreum_get_schema` - Get schema by ID or name
 
 **Requirements**:
 
@@ -54,14 +54,15 @@ Add POST endpoints that mirror MCP tools for server-to-server communication:
 **Testing**:
 
 - ✅ Added `scripts/smoke-http-list-runs.mjs` with mock Horreum API
-- ✅ Verify endpoint accepts Bearer token auth
-- ✅ Test JSON request/response format
-- ✅ Validated response shape (runs array, total count)
+- ✅ Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints
+- ✅ Verify endpoints accept Bearer token auth
+- ✅ Test JSON request/response format for all endpoints
+- ✅ Validated response shapes for all endpoints
 - ⏳ Integration test with Domain MCP adapter (pending)
 
 #### 2. Standardized Error Handling (Medium Priority)
 
-**Status**: In Progress (applied to horreum_list_runs endpoint)  
+**Status**: ✅ **COMPLETED** (applied to all 5 HTTP endpoints)  
 **Change Request**: CR-20250930-1
 
 Implement Source MCP Contract error format for all tools and endpoints:
@@ -261,13 +262,13 @@ Clarify and document time range filtering behavior:
 
 ## Change Request Status
 
-| CR ID         | Title                       | Priority | Type          | Status      |
-| ------------- | --------------------------- | -------- | ------------- | ----------- |
-| CR-20250930-1 | Enhanced Error Messages     | Medium   | Enhancement   | In Progress |
-| CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Pending     |
-| CR-20250930-3 | Pagination Support          | High     | Enhancement   | Pending     |
-| CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending     |
-| CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending     |
+| CR ID         | Title                       | Priority | Type          | Status    |
+| ------------- | --------------------------- | -------- | ------------- | --------- |
+| CR-20250930-1 | Enhanced Error Messages     | Medium   | Enhancement   | Completed |
+| CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Pending   |
+| CR-20250930-3 | Pagination Support          | High     | Enhancement   | Pending   |
+| CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending   |
+| CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending   |
 
 ## Implementation Order
 
@@ -323,6 +324,12 @@ Based on priority and dependencies:
 
 ## Changelog
 
+- 2025-09-30: **Major Milestone - All HTTP Endpoints Complete**: Implemented all five
+  HTTP endpoints (`list_runs`, `get_run`, `list_tests`, `list_schemas`, `get_schema`)
+  with consistent Source MCP Contract error handling across all endpoints. Added
+  comprehensive smoke test covering all endpoints. Core Direct HTTP API requirement
+  for RHIVOS PerfScale MCP integration is now complete. CR-20250930-1 (Enhanced Error
+  Messages) marked as completed.
 - 2025-09-30: Implemented first HTTP endpoint `POST /api/tools/horreum_list_runs`
   with Source MCP Contract error handling. Added `sendContractError` helper and
   smoke test. Updated status tracking for endpoints and error handling.

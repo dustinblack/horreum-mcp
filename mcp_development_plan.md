@@ -388,18 +388,18 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - [x] Fix WebAssembly and QEMU emulation issues for multi-architecture builds
          (2025-09-29)
    - Phase 6 — Direct HTTP API for Server-to-Server Integration (PRIORITY)
-     - [ip] Add direct HTTP POST endpoints for MCP tools (`/api/tools/horreum_*`)
+     - [x] Add direct HTTP POST endpoints for MCP tools (`/api/tools/horreum_*`) (2025-09-30)
      - [x] Implement `POST /api/tools/horreum_list_runs` endpoint (2025-09-30)
-     - [ ] Implement `POST /api/tools/horreum_get_run` endpoint
-     - [ ] Implement `POST /api/tools/horreum_list_tests` endpoint
-     - [ ] Implement `POST /api/tools/horreum_list_schemas` endpoint
-     - [ ] Implement `POST /api/tools/horreum_get_schema` endpoint
-     - [ip] Standardize error handling with Source MCP Contract format (CR-20250930-1) - Added `sendContractError` helper with error codes, retryable flag, retryAfter (2025-09-30) - Applied to `horreum_list_runs` with mapping for 404/401/403/429/503/504 (2025-09-30)
+     - [x] Implement `POST /api/tools/horreum_get_run` endpoint (2025-09-30)
+     - [x] Implement `POST /api/tools/horreum_list_tests` endpoint (2025-09-30)
+     - [x] Implement `POST /api/tools/horreum_list_schemas` endpoint (2025-09-30)
+     - [x] Implement `POST /api/tools/horreum_get_schema` endpoint (2025-09-30)
+     - [x] Standardize error handling with Source MCP Contract format (CR-20250930-1) (2025-09-30) - Added `sendContractError` helper with error codes, retryable flag, retryAfter - Applied to all five HTTP endpoints with mapping for 404/401/403/429/503/504
      - [ ] Implement consistent pagination across all list tools (CR-20250930-3)
      - [ ] Add schema URI filtering to datasets.search (CR-20250930-4)
      - [ ] Implement source.describe capability discovery tool (CR-20250930-2)
      - [ ] Document time range filtering behavior (CR-20250930-5)
-     - [ip] Add tests for all new HTTP endpoints and features - Added `scripts/smoke-http-list-runs.mjs` smoke for `/api/tools/horreum_list_runs` (2025-09-30)
+     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints
    - Phase 7 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -448,6 +448,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase 6 Major Milestone - All HTTP Endpoints Complete**: Implemented
+     all five direct HTTP API endpoints for server-to-server integration. Added `POST 
+/api/tools/horreum_get_run`, `/horreum_list_tests`, `/horreum_list_schemas`, and
+     `/horreum_get_schema` with consistent Source MCP Contract error handling across all
+     endpoints. Each endpoint uses the `sendContractError` helper, supports Bearer token
+     authentication, and returns appropriate JSON responses. `list_tests` includes
+     folder-aware aggregation logic; schema endpoints support lookup by id or name.
+     Created comprehensive smoke test `scripts/smoke-http-all-endpoints.mjs` that
+     validates all five endpoints with mock Horreum API. All tests passing. This
+     completes the core Direct HTTP API requirement for RHIVOS PerfScale MCP integration.
    - 2025-09-30 — **Phase 6 Implementation Started**: Implemented first direct HTTP API
      endpoint `POST /api/tools/horreum_list_runs` with Source MCP Contract error
      handling. Added `sendContractError` helper function that returns standardized

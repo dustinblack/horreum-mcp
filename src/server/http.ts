@@ -11,7 +11,10 @@ import type { Env } from '../config/env.js';
 import { logger } from '../observability/logging.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
+import { SchemaService } from '../horreum/generated/services/SchemaService.js';
 import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
+import type { TestListing } from '../horreum/generated/models/TestListing.js';
+import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
 
 /**
  * Starts the MCP server in HTTP mode.
@@ -347,6 +350,395 @@ export async function startHttpServer(server: McpServer, env: Env) {
         );
       }
       logger.error({ err }, 'Unhandled error in horreum_list_runs');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_list_tests
+  app.post('/api/tools/horreum_list_tests', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const limit = body.limit as number | undefined;
+      const page = body.page as number | undefined;
+      const direction = body.direction as SortDirection | undefined;
+      const roles = body.roles as string | undefined;
+      const name = body.name as string | undefined;
+      const folder = body.folder as string | undefined;
+
+      // If a specific folder is provided, query just that folder
+      if (folder) {
+        const result = await TestService.testServiceGetTestSummary({
+          ...(roles !== undefined ? { roles } : {}),
+          folder,
+          ...(limit !== undefined ? { limit } : {}),
+          ...(page !== undefined ? { page } : {}),
+          ...(direction ? { direction } : {}),
+          ...(name ? { name } : {}),
+        });
+        return res.status(200).json(result);
+      }
+
+      // Otherwise, aggregate across top-level and all folders
+      const folders = await TestService.testServiceFolders(
+        roles !== undefined ? { roles } : {}
+      );
+      const targets: (string | undefined)[] = [undefined, ...(folders ?? [])];
+      const listings: TestListing[] = await Promise.all(
+        targets.map((folderName) =>
+          TestService.testServiceGetTestSummary({
+            ...(roles !== undefined ? { roles } : {}),
+            ...(folderName ? { folder: folderName } : {}),
+            page: 0, // return all results for this folder
+            ...(direction ? { direction } : {}),
+            ...(name ? { name } : {}),
+          }).catch(() => ({ tests: [], count: 0 }) as unknown as TestListing)
+        )
+      );
+
+      const aggregated: TestSummary[] = listings.flatMap((l) =>
+        Array.isArray(l?.tests) ? l.tests : []
+      );
+      const total = aggregated.length;
+
+      // Optional client-side pagination after aggregation
+      let paged = aggregated;
+      if (page === 0) {
+        paged = aggregated;
+      } else if (limit !== undefined && page !== undefined) {
+        const start = Math.max(0, (page - 1) * limit);
+        paged = aggregated.slice(start, start + limit);
+      }
+
+      return res.status(200).json({ tests: paged, count: total });
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Tests not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_list_tests');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_get_schema
+  app.post('/api/tools/horreum_get_schema', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const id = body.id as number | undefined;
+      const name = body.name as string | undefined;
+
+      if (!id && !name) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide 'id' or 'name' parameter."
+        );
+      }
+
+      const result = id
+        ? await SchemaService.schemaServiceGetSchema({ id })
+        : await SchemaService.schemaServiceListSchemas({
+            ...(name ? { name } : {}),
+          });
+
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Schema not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_schema');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_list_schemas
+  app.post('/api/tools/horreum_list_schemas', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const name = body.name as string | undefined;
+      const result = await SchemaService.schemaServiceListSchemas({
+        ...(name ? { name } : {}),
+      });
+
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Schemas not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_list_schemas');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_get_run
+  app.post('/api/tools/horreum_get_run', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const runId = body.run_id as number | undefined;
+      if (!runId || !Number.isFinite(runId)) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide valid 'run_id' parameter."
+        );
+      }
+
+      const result = await RunService.runServiceGetRun({ id: runId });
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Run not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_run');
       return sendContractError(
         res,
         500,
