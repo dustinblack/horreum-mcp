@@ -788,6 +788,32 @@ export async function startHttpServer(server: McpServer, env: Env) {
     }
   });
 
+  // POST /api/tools/source.describe - Capability discovery
+  app.post('/api/tools/source.describe', authMiddleware, async (req, res) => {
+    try {
+      const response = {
+        sourceType: 'horreum',
+        version: '0.1.0', // From package.json
+        contractVersion: '1.0.0',
+        capabilities: {
+          pagination: true,
+          caching: false,
+          streaming: false,
+          schemas: true,
+        },
+        limits: {
+          maxPageSize: 1000,
+          maxDatasetSize: 10485760, // 10MB
+          rateLimitPerMinute: env.HORREUM_RATE_LIMIT || 60,
+        },
+      };
+      return res.status(200).json(response);
+    } catch (err) {
+      logger.error({ err }, 'Unhandled error in source.describe');
+      return sendContractError(res, 500, 'INTERNAL_ERROR', 'Internal server error');
+    }
+  });
+
   // POST /api/tools/horreum_get_run
   app.post('/api/tools/horreum_get_run', authMiddleware, async (req, res) => {
     try {

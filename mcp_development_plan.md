@@ -396,8 +396,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Implement `POST /api/tools/horreum_get_schema` endpoint (2025-09-30)
      - [x] Standardize error handling with Source MCP Contract format (CR-20250930-1) (2025-09-30) - Added `sendContractError` helper with error codes, retryable flag, retryAfter - Applied to all five HTTP endpoints with mapping for 404/401/403/429/503/504
      - [x] Implement consistent pagination across all list tools (CR-20250930-3) (2025-09-30) - Added pageToken/pageSize with backward compat for page/limit - Opaque base64 tokens - Response: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}` - Applied to list_runs and list_tests - Added smoke test `scripts/smoke-http-pagination.mjs`
-     - [ ] Add schema URI filtering to datasets.search (CR-20250930-4)
-     - [ ] Implement source.describe capability discovery tool (CR-20250930-2)
+     - [ ] Add schema URI filtering to datasets.search (CR-20250930-4) - Deferred: datasets.search tool not implemented yet
+     - [x] Implement source.describe capability discovery tool (CR-20250930-2) (2025-09-30) - Added as MCP tool and HTTP endpoint - Returns sourceType, version, contractVersion, capabilities, limits - Added smoke test `scripts/smoke-http-source-describe.mjs`
      - [ ] Document time range filtering behavior (CR-20250930-5)
      - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation
    - Phase 7 — Enhanced CI/CD Pipeline
@@ -448,6 +448,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase 6 Capability Discovery**: Implemented source.describe tool
+     (CR-20250930-2) for runtime capability discovery. Added as both MCP tool and HTTP
+     POST endpoint. Returns structured response with sourceType="horreum", version from
+     package.json, contractVersion, capabilities object (pagination, caching, streaming,
+     schemas), and limits object (maxPageSize, maxDatasetSize, rateLimitPerMinute).
+     Rate limit read from HORREUM_RATE_LIMIT env var. Created smoke test `scripts/
+smoke-http-source-describe.mjs` that validates response structure and values. This
+     allows Domain MCP servers to discover capabilities at runtime. Completes low-
+     priority CR-20250930-2.
    - 2025-09-30 — **Phase 6 Pagination Implementation**: Implemented Source MCP Contract
      pagination (CR-20250930-3) across list_runs and list_tests HTTP endpoints. Added
      pageToken/pageSize parameters with backward compatibility for legacy page/limit.

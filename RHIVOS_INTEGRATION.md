@@ -182,7 +182,7 @@ Add schema URI filtering to `datasets.search` tool:
 
 #### 5. Capability Discovery (Low Priority)
 
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Change Request**: CR-20250930-2
 
 Implement `source.describe` tool for runtime capability discovery:
@@ -265,7 +265,7 @@ Clarify and document time range filtering behavior:
 | CR ID         | Title                       | Priority | Type          | Status    |
 | ------------- | --------------------------- | -------- | ------------- | --------- |
 | CR-20250930-1 | Enhanced Error Messages     | Medium   | Enhancement   | Completed |
-| CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Pending   |
+| CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Completed |
 | CR-20250930-3 | Pagination Support          | High     | Enhancement   | Completed |
 | CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending   |
 | CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending   |
@@ -324,6 +324,12 @@ Based on priority and dependencies:
 
 ## Changelog
 
+- 2025-09-30: **Capability Discovery Complete**: Implemented source.describe tool
+  (CR-20250930-2) as both MCP tool and HTTP POST endpoint. Returns sourceType, version,
+  contractVersion, capabilities (pagination, caching, streaming, schemas), and limits
+  (maxPageSize, maxDatasetSize, rateLimitPerMinute). Enables Domain MCP servers to
+  discover Horreum MCP capabilities at runtime. Added smoke test `scripts/smoke-http-
+source-describe.mjs` validating response structure. CR-20250930-2 marked as completed.
 - 2025-09-30: **Pagination Implementation Complete**: Implemented Source MCP Contract
   pagination (CR-20250930-3) for `list_runs` and `list_tests` HTTP endpoints. Added
   pageToken/pageSize support with backward compatibility for page/limit. Page tokens are

@@ -542,4 +542,31 @@ export async function registerTools(
       return { content: [text(typeof res === 'string' ? res : JSON.stringify(res))] };
     }
   );
+
+  // source.describe - Capability discovery tool
+  withTool(
+    'source.describe',
+    'Discover the capabilities and limits of the Horreum MCP server.',
+    {},
+    async () => {
+      const env = await getEnv();
+      const response = {
+        sourceType: 'horreum',
+        version: '0.1.0', // From package.json
+        contractVersion: '1.0.0',
+        capabilities: {
+          pagination: true,
+          caching: false,
+          streaming: false,
+          schemas: true,
+        },
+        limits: {
+          maxPageSize: 1000,
+          maxDatasetSize: 10485760, // 10MB
+          rateLimitPerMinute: env.HORREUM_RATE_LIMIT || 60,
+        },
+      };
+      return { content: [text(JSON.stringify(response, null, 2))] };
+    }
+  );
 }
