@@ -223,7 +223,7 @@ Implement `source.describe` tool for runtime capability discovery:
 
 #### 6. Documentation Improvements (Low Priority)
 
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Change Request**: CR-20250930-5
 
 Clarify and document time range filtering behavior:
@@ -268,7 +268,7 @@ Clarify and document time range filtering behavior:
 | CR-20250930-2 | Tool Discovery/Capabilities | Low      | Enhancement   | Completed |
 | CR-20250930-3 | Pagination Support          | High     | Enhancement   | Completed |
 | CR-20250930-4 | Schema URI Filtering        | Medium   | Enhancement   | Pending   |
-| CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Pending   |
+| CR-20250930-5 | Time Range Filtering Docs   | Low      | Documentation | Completed |
 
 ## Implementation Order
 
@@ -324,6 +324,14 @@ Based on priority and dependencies:
 
 ## Changelog
 
+- 2025-09-30: **Phase 6 Complete - Documentation**: Created comprehensive time range
+  filtering documentation (CR-20250930-5). Added `docs/TIME_RANGE_FILTERING.md`
+  covering timestamp formats, inclusivity, timezone handling, edge cases, and best
+  practices. Updated README.md with HTTP API examples, direct HTTP API section with
+  curl examples for all endpoints, and cross-references to documentation. Phase 6 now
+  substantially complete with 4 of 5 CRs implemented (CR-4 deferred - datasets.search
+  doesn't exist). All critical/high-priority features delivered for RHIVOS PerfScale
+  MCP integration. CR-20250930-5 marked as completed.
 - 2025-09-30: **Capability Discovery Complete**: Implemented source.describe tool
   (CR-20250930-2) as both MCP tool and HTTP POST endpoint. Returns sourceType, version,
   contractVersion, capabilities (pagination, caching, streaming, schemas), and limits

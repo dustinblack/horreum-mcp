@@ -316,10 +316,17 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - `[c]` cancelled
 
 4. Current execution directive
-   - Phase 5 (Containerization & Multi-Architecture Support) completed (2025-09-26).
-   - **NEXT PRIORITY**: Phase 6 (Direct HTTP API for Server-to-Server Integration) is now the immediate next priority based on RHIVOS PerfScale MCP integration requirements (2025-09-30).
-   - Development is now authorized for Phase 6 with focus on: Direct HTTP tool endpoints, standardized error handling, pagination support, schema URI filtering, capability discovery, and time range documentation.
-   - Phase 7 (Enhanced CI/CD Pipeline) and Phase 8 (Architecture Refactoring) follow after Phase 6 completion.
+   - **Phase 6 (Direct HTTP API for Server-to-Server Integration) COMPLETED (2025-09-30)**.
+   - Successfully delivered all critical and high-priority features for RHIVOS PerfScale MCP integration:
+     - ✅ 5 Direct HTTP POST endpoints for server-to-server communication
+     - ✅ Source MCP Contract compliant error handling (CR-20250930-1)
+     - ✅ Pagination with pageToken/pageSize support (CR-20250930-3)
+     - ✅ Capability discovery via source.describe tool (CR-20250930-2)
+     - ✅ Comprehensive time range filtering documentation (CR-20250930-5)
+     - ✅ 4 smoke test suites validating all functionality
+     - [~] Schema URI filtering (CR-20250930-4) deferred as datasets.search tool doesn't exist yet
+   - **NEXT PRIORITY**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
+   - Phase 8 (Architecture Refactoring) and beyond follow after Phase 7 completion.
 
 5. Status checklist
    - Phase 1 — Planning
@@ -387,7 +394,7 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
          (2025-09-26)
    - [x] Fix WebAssembly and QEMU emulation issues for multi-architecture builds
          (2025-09-29)
-   - Phase 6 — Direct HTTP API for Server-to-Server Integration (PRIORITY)
+   - [x] Phase 6 — Direct HTTP API for Server-to-Server Integration (COMPLETE)
      - [x] Add direct HTTP POST endpoints for MCP tools (`/api/tools/horreum_*`) (2025-09-30)
      - [x] Implement `POST /api/tools/horreum_list_runs` endpoint (2025-09-30)
      - [x] Implement `POST /api/tools/horreum_get_run` endpoint (2025-09-30)
@@ -396,10 +403,10 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Implement `POST /api/tools/horreum_get_schema` endpoint (2025-09-30)
      - [x] Standardize error handling with Source MCP Contract format (CR-20250930-1) (2025-09-30) - Added `sendContractError` helper with error codes, retryable flag, retryAfter - Applied to all five HTTP endpoints with mapping for 404/401/403/429/503/504
      - [x] Implement consistent pagination across all list tools (CR-20250930-3) (2025-09-30) - Added pageToken/pageSize with backward compat for page/limit - Opaque base64 tokens - Response: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}` - Applied to list_runs and list_tests - Added smoke test `scripts/smoke-http-pagination.mjs`
-     - [ ] Add schema URI filtering to datasets.search (CR-20250930-4) - Deferred: datasets.search tool not implemented yet
      - [x] Implement source.describe capability discovery tool (CR-20250930-2) (2025-09-30) - Added as MCP tool and HTTP endpoint - Returns sourceType, version, contractVersion, capabilities, limits - Added smoke test `scripts/smoke-http-source-describe.mjs`
-     - [ ] Document time range filtering behavior (CR-20250930-5)
-     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation
+     - [x] Document time range filtering behavior (CR-20250930-5) (2025-09-30) - Created comprehensive `docs/TIME_RANGE_FILTERING.md` - Updated README with HTTP API examples and time filtering reference - Documented timestamp formats, inclusivity, timezone handling, edge cases
+     - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 5 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation - Added `scripts/smoke-http-source-describe.mjs` for capability discovery
+     - [~] Add schema URI filtering to datasets.search (CR-20250930-4) - Deferred: datasets.search tool not implemented yet (future work)
    - Phase 7 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -448,6 +455,17 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-09-30 — **Phase 6 Complete - Documentation**: Created comprehensive time range
+     filtering documentation (CR-20250930-5). Added `docs/TIME_RANGE_FILTERING.md` with
+     detailed explanation of from/to parameter behavior, timestamp formats (ISO 8601
+     and epoch millis), inclusivity rules (inclusive on both ends), timezone handling
+     (UTC recommended), error handling (lenient parsing), edge cases, and best
+     practices. Updated README.md with HTTP API examples showing time filtering, added
+     direct HTTP API section with curl examples for all 6 endpoints (5 tools +
+     source.describe), updated status to Phase 6 Complete, and added cross-references
+     to new documentation. Phase 6 substantially complete with 4 of 5 CRs implemented
+     (CR-4 deferred as datasets.search doesn't exist yet). All critical and high-
+     priority features delivered for RHIVOS PerfScale MCP integration.
    - 2025-09-30 — **Phase 6 Capability Discovery**: Implemented source.describe tool
      (CR-20250930-2) for runtime capability discovery. Added as both MCP tool and HTTP
      POST endpoint. Returns structured response with sourceType="horreum", version from

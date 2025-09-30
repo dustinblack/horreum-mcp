@@ -52,12 +52,18 @@ npm start -- --log-level info
 
 ## Status
 
-**Phase 5 Complete** - Production ready with full observability:
+**Phase 6 Complete** - Server-to-server integration with Source MCP Contract compliance:
 
-- ✅ **Core Tools**: `ping`, `list_tests`, `get_schema`, `list_runs`, `upload_run`
-- ✅ **Dual Transport**: stdio (default) and HTTP server modes
-- ✅ **Multi-Architecture**: AMD64 and ARM64 container support with QEMU compatibility
+- ✅ **Core MCP Tools**: `ping`, `list_tests`, `list_runs`, `get_schema`, `upload_run`,
+  `source.describe`
+- ✅ **Direct HTTP API**: 5 POST endpoints for server-to-server integration
+- ✅ **Pagination**: pageToken/pageSize support with backward compatibility
+- ✅ **Error Handling**: Standardized Source MCP Contract error responses
+- ✅ **Capability Discovery**: Runtime capability introspection via `source.describe`
+- ✅ **Dual Transport**: stdio (default) and HTTP server modes with Bearer auth
+- ✅ **Multi-Architecture**: AMD64 and ARM64 container support
 - ✅ **Production Ready**: Structured logging, metrics, tracing, security
+- 📚 **Documented**: Comprehensive time range filtering and API documentation
 - 🚀 **Next Phase**: Enhanced CI/CD and security scanning
 
 ## Features
@@ -67,8 +73,11 @@ npm start -- --log-level info
 - **`ping`**: Simple connectivity check and health monitoring
 - **`list_tests`**: Browse tests with pagination and filtering support
 - **`get_schema`**: Retrieve schema definitions by ID or name
-- **`list_runs`**: Query test runs with sorting and time-based filtering
+- **`list_runs`**: Query test runs with sorting and time-based filtering (see
+  [Time Range Filtering](docs/TIME_RANGE_FILTERING.md) for details)
 - **`upload_run`**: Submit new test run data to Horreum
+- **`source.describe`**: Runtime capability discovery for integration (returns
+  sourceType, version, capabilities, limits)
 
 ### MCP Resources
 
@@ -140,24 +149,30 @@ graph TB
     classDef planned fill:#fff3e0,stroke:#ff9800,stroke-width:2px,stroke-dasharray: 5 5,color:#000000
     classDef external fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#000000
 
-    class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS,HTTP,LLM implemented
-
-    %% Future Enhancements (Phase 6+)
-    subgraph "Enterprise Features 🚧"
+    subgraph "Direct HTTP API"
         direction TB
-        REST[REST API Endpoints<br/>🚧 PHASE 8]
-        PLUGIN[Plugin Architecture<br/>🚧 PHASE 7]
+        HTTPAPI[HTTP Tool Endpoints<br/>✅ PHASE 6]
     end
 
-    HTTP -.->|"Future"| REST
+    HTTP --> HTTPAPI
+    HTTPAPI -->|"POST /api/tools/*"| HORREUM
+
+    class AI,STDIO,MCP,HORREUM,PROM,OTEL,LOGS,HTTP,LLM,HTTPAPI implemented
+
+    %% Future Enhancements (Phase 7+)
+    subgraph "Enterprise Features 🚧"
+        direction TB
+        PLUGIN[Plugin Architecture<br/>🚧 PHASE 8]
+    end
+
     MCP -.->|"Future"| PLUGIN
 
-    class REST,PLUGIN planned
+    class PLUGIN planned
 
     %% Legend
     subgraph Legend[" "]
-        L1[✅ Implemented - Phase 1-5 Complete]
-        L2[🚧 Planned - Phase 6+ Roadmap]
+        L1[✅ Implemented - Phase 1-6 Complete]
+        L2[🚧 Planned - Phase 7+ Roadmap]
         L3[🔗 External - Third-party Services]
     end
 
@@ -442,11 +457,49 @@ Configure your AI client to spawn the MCP server as a local process:
 
 ### HTTP Mode (Advanced)
 
-For persistent servers or remote access:
+For persistent servers, remote access, or server-to-server integration:
+
+#### MCP over HTTP (AI Clients)
 
 1. Start the server: `HTTP_MODE_ENABLED=true npm start`
-2. Configure client to connect to `http://localhost:3000/mcp`
+2. Configure AI client to connect to `http://localhost:3000/mcp`
 3. Add `Authorization: Bearer changeme` header if auth is enabled
+
+#### Direct HTTP API (Server-to-Server)
+
+For backend integration without MCP protocol overhead:
+
+```bash
+# List runs with time filtering
+curl -X POST http://localhost:3000/api/tools/horreum_list_runs \
+  -H "Authorization: Bearer changeme" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "test": "boot-time-verbose",
+    "from": "2025-09-23T00:00:00Z",
+    "to": "2025-09-30T23:59:59Z",
+    "pageSize": 10
+  }'
+
+# Discover capabilities
+curl -X POST http://localhost:3000/api/tools/source.describe \
+  -H "Authorization: Bearer changeme" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Available HTTP endpoints:**
+
+- `POST /api/tools/horreum_list_runs` - List runs with time filtering
+- `POST /api/tools/horreum_get_run` - Get specific run by ID
+- `POST /api/tools/horreum_list_tests` - List tests with optional name filter
+- `POST /api/tools/horreum_list_schemas` - List available schemas
+- `POST /api/tools/horreum_get_schema` - Get schema by ID or name
+- `POST /api/tools/source.describe` - Discover server capabilities
+
+See [RHIVOS_INTEGRATION.md](RHIVOS_INTEGRATION.md) for complete HTTP API
+documentation and [Time Range Filtering](docs/TIME_RANGE_FILTERING.md) for
+time-based query details.
 
 ## What You Can Do
 
