@@ -23,30 +23,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 0
-      - name: Compute base commit (use merge-base to detect all changes in PR/push)
-        id: compute_base
-        run: |
-          # For main branch pushes: use merge-base with origin/main~1 to catch all commits in the push
-          # This ensures multi-commit pushes are properly detected
-          if [ "${{ github.event.workflow_run.head_branch }}" = "main" ]; then
-            # Find where this push diverged from previous main
-            BASE_SHA=$(git merge-base origin/main~1 "${{ github.event.workflow_run.head_sha }}" 2>/dev/null || git rev-parse "${{ github.event.workflow_run.head_sha }}^")
-            echo "Using merge-base with origin/main~1: $BASE_SHA"
-          else
-            # For other branches: compare against merge-base with main
-            BASE_SHA=$(git merge-base origin/main "${{ github.event.workflow_run.head_sha }}" 2>/dev/null || git rev-parse "${{ github.event.workflow_run.head_sha }}^")
-            echo "Using merge-base with origin/main: $BASE_SHA"
-          fi
-
-          echo "base=${BASE_SHA}" >> "$GITHUB_OUTPUT"
-          echo "Comparing $BASE_SHA..${{ github.event.workflow_run.head_sha }}"
+          fetch-depth: 100 # Fetch enough history for multi-commit pushes
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ steps.compute_base.outputs.base }}
-          ref: ${{ github.event.workflow_run.head_sha }}
-          initial-fetch-depth: 0
+          # Let paths-filter use list-files=shell mode which properly detects
+          # all changes in the push by comparing against the default branch
+          list-files: shell
           filters: |
             build:
               - 'Containerfile'
