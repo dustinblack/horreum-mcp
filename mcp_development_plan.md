@@ -590,6 +590,14 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-01 — **Phase 6.5 COMPLETE AND VERIFIED**: All three blocking issues resolved and
+     verified with live integration tests against production Horreum API. Created comprehensive
+     integration status report (INTEGRATION_STATUS_REPORT.md) documenting all working features
+     and debunking Domain MCP team's "BLOCKED on Horreum MCP" claims. Natural language time
+     queries VERIFIED WORKING with actual HTTP endpoint tests (tested "last week", "yesterday"
+     with real data from test ID 262). All smoke tests passing. All unit tests passing. Schema
+     compliance verified. 1-based pagination aligned. READY FOR FULL INTEGRATION with Domain
+     MCP. The blocking claim in the Domain MCP integration report is OUTDATED information.
    - 2025-10-01 — **Phase 6.5 COMPLETE - Pagination Alignment**: Aligned all endpoints to Horreum's
      1-based pagination model. Updated schema validators across all list endpoints (list_tests,
      list_runs, list_datasets) to require `page >= 1` instead of `page >= 0`. Removed all `page=0`

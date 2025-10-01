@@ -10,6 +10,7 @@ import { loadEnv } from './config/env.js';
 import { registerTools } from './server/tools.js';
 
 export { registerTools };
+export { parseTimeRange, parseTimeString } from './utils/time.js';
 
 import { createMetrics } from './observability/metrics.js';
 import { initTracing } from './observability/tracing.js';
