@@ -12,6 +12,7 @@ testing workflows through natural language.
 - 🤖 **Works with AI assistants** through the Model Context Protocol (MCP)
 - 🚀 **Upload test runs** and manage testing workflows
 - 📈 **Access schemas** and test configurations
+- 🗣️ **Natural language time queries** - Use "last week" or "yesterday" instead of timestamps
 
 ## Quick Start
 
