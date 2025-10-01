@@ -545,7 +545,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
           TestService.testServiceGetTestSummary({
             ...(roles !== undefined ? { roles } : {}),
             ...(folderName ? { folder: folderName } : {}),
-            page: 0, // return all results for this folder
+            // Omit page parameter to get all results for aggregation
             ...(direction ? { direction } : {}),
             ...(name ? { name } : {}),
           }).catch(() => ({ tests: [], count: 0 }) as unknown as TestListing)
@@ -969,46 +969,25 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
       // Determine which API endpoint to use based on filters
       let datasetList;
+      const pageNum = page ?? 1; // Default to page 1 (1-based pagination)
       if (schemaUri) {
-        // Use schema-based listing
-        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
-        // Only send page parameter if it's > 0
-        const params: {
-          uri: string;
-          limit: number;
-          page?: number;
-          sort?: string;
-          direction?: SortDirection;
-        } = {
+        // Use schema-based listing with 1-based pagination
+        datasetList = await DatasetService.datasetServiceListDatasetsBySchema({
           uri: schemaUri,
           limit: pageSize ?? 100,
+          page: pageNum,
           ...(sort ? { sort } : {}),
           ...(direction ? { direction } : {}),
-        };
-        if (page && page > 0) {
-          params.page = page;
-        }
-        datasetList = await DatasetService.datasetServiceListDatasetsBySchema(params);
+        });
       } else if (resolvedTestId) {
-        // Use test-based listing
-        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
-        // Only send page parameter if it's > 0
-        const params: {
-          testId: number;
-          limit: number;
-          page?: number;
-          sort?: string;
-          direction?: SortDirection;
-        } = {
+        // Use test-based listing with 1-based pagination
+        datasetList = await DatasetService.datasetServiceListByTest({
           testId: resolvedTestId,
           limit: pageSize ?? 100,
+          page: pageNum,
           ...(sort ? { sort } : {}),
           ...(direction ? { direction } : {}),
-        };
-        if (page && page > 0) {
-          params.page = page;
-        }
-        datasetList = await DatasetService.datasetServiceListByTest(params);
+        });
       } else {
         return sendContractError(
           res,

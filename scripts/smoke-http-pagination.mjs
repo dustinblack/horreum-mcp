@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Smoke test: HTTP pagination with pageToken/pageSize
- * Tests the new pagination format with nextPageToken, hasMore, totalCount
+ * Tests the new pagination format with next_page_token, has_more, total_count
+ * and 1-based pagination (first page is page=1)
  */
 import http from 'node:http';
 import { execa } from 'execa';
@@ -58,16 +59,17 @@ function startMockHorreum() {
 
     // GET /api/test/summary
     if (req.method === 'GET' && url.pathname === '/api/test/summary') {
-      const page = Number(url.searchParams.get('page') ?? '1');
+      const pageParam = url.searchParams.get('page');
       const limit = Number(url.searchParams.get('limit') ?? '5');
 
-      // page=0 means return all tests (for aggregation)
+      // No page parameter = return all tests (for aggregation)
       const tests = [];
-      if (page === 0) {
+      if (pageParam === null) {
         for (let id = 1; id <= 8; id++) {
           tests.push({ id, name: `test-${id}` });
         }
       } else {
+        const page = Number(pageParam);
         const startId = (page - 1) * limit;
         for (let i = 0; i < limit; i++) {
           const id = startId + i + 1;
@@ -155,24 +157,34 @@ async function run() {
     if (!page1.pagination) {
       throw new Error('Missing pagination metadata');
     }
-    if (!page1.pagination.nextPageToken) {
-      throw new Error('Missing nextPageToken on first page');
+    if (!page1.pagination.next_page_token) {
+      throw new Error('Missing next_page_token on first page');
     }
-    if (page1.pagination.hasMore !== true) {
-      throw new Error('hasMore should be true on first page');
+    if (page1.pagination.has_more !== true) {
+      throw new Error('has_more should be true on first page');
     }
-    if (page1.pagination.totalCount !== 12) {
-      throw new Error(`Expected totalCount=12, got ${page1.pagination.totalCount}`);
+    if (page1.pagination.total_count !== 12) {
+      throw new Error(`Expected total_count=12, got ${page1.pagination.total_count}`);
     }
     if (page1.runs.length !== 5) {
       throw new Error(`Expected 5 runs, got ${page1.runs.length}`);
     }
-    console.log('✅ First page: pageSize=5, hasMore=true, totalCount=12');
+    // Verify snake_case (no camelCase)
+    if (
+      page1.pagination.nextPageToken ||
+      page1.pagination.hasMore ||
+      page1.pagination.totalCount
+    ) {
+      throw new Error('Pagination should use snake_case, not camelCase');
+    }
+    console.log(
+      '✅ First page: pageSize=5, has_more=true, total_count=12, snake_case ✓'
+    );
 
     console.log('\n=== Testing pagination with pageToken (second page) ===');
     const page2 = await callEndpoint('/api/tools/horreum_list_runs', {
       test: 'example-test',
-      pageToken: page1.pagination.nextPageToken,
+      pageToken: page1.pagination.next_page_token,
     });
 
     if (!page2.pagination) {
@@ -181,24 +193,24 @@ async function run() {
     if (page2.runs.length !== 5) {
       throw new Error(`Expected 5 runs on page 2, got ${page2.runs.length}`);
     }
-    if (page2.pagination.hasMore !== true) {
-      throw new Error('hasMore should be true on second page');
+    if (page2.pagination.has_more !== true) {
+      throw new Error('has_more should be true on second page');
     }
     console.log('✅ Second page: using pageToken, got 5 more runs');
 
     console.log('\n=== Testing last page ===');
     const page3 = await callEndpoint('/api/tools/horreum_list_runs', {
       test: 'example-test',
-      pageToken: page2.pagination.nextPageToken,
+      pageToken: page2.pagination.next_page_token,
     });
 
-    if (page3.pagination.hasMore !== false) {
-      throw new Error('hasMore should be false on last page');
+    if (page3.pagination.has_more !== false) {
+      throw new Error('has_more should be false on last page');
     }
-    if (page3.pagination.nextPageToken) {
-      throw new Error('nextPageToken should be absent on last page');
+    if (page3.pagination.next_page_token) {
+      throw new Error('next_page_token should be absent on last page');
     }
-    console.log('✅ Last page: hasMore=false, no nextPageToken');
+    console.log('✅ Last page: has_more=false, no next_page_token');
 
     console.log('\n=== Testing invalid pageToken ===');
     try {
@@ -217,7 +229,7 @@ async function run() {
       pageSize: 3,
     });
 
-    if (!testPage1.pagination || testPage1.pagination.hasMore !== true) {
+    if (!testPage1.pagination || testPage1.pagination.has_more !== true) {
       throw new Error('list_tests pagination failed');
     }
     if (testPage1.tests.length !== 3) {
@@ -226,7 +238,7 @@ async function run() {
     console.log('✅ list_tests: first page with pageSize=3');
 
     const testPage2 = await callEndpoint('/api/tools/horreum_list_tests', {
-      pageToken: testPage1.pagination.nextPageToken,
+      pageToken: testPage1.pagination.next_page_token,
     });
 
     if (testPage2.tests.length !== 3) {

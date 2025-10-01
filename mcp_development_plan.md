@@ -411,9 +411,9 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - Three critical issues discovered during RHIVOS PerfScale Domain MCP end-to-end testing:
      1. ✅ **Schema compliance**: COMPLETE - Added test_id/run_id fields, has_more, snake_case naming
      2. ✅ **Time queries**: COMPLETE - Natural language time parsing integrated into all time-aware endpoints
-     3. ❌ **Pagination alignment**: 0-based vs 1-based mismatch with Horreum needs fixing
-   - **Current status**: 2 of 3 issues COMPLETE ✅ Schema compliance and time queries done
-   - **Next**: Align pagination to 1-based model (page >= 1)
+     3. ✅ **Pagination alignment**: COMPLETE - Aligned to 1-based model (page >= 1)
+   - **Current status**: ALL 3 ISSUES COMPLETE ✅ Phase 6.5 blocking issues resolved!
+   - **Next**: Phase 7 (Enhanced CI/CD Pipeline)
    - These issues are **BLOCKING full end-to-end integration** and must be resolved immediately.
    - **AUTHORIZED**: Continue Phase 6.5 implementation.
    - **NEXT AFTER 6.5**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
@@ -514,15 +514,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
        - [x] Update response mapping in src/server/http.ts for all list endpoints (2025-10-01)
        - [x] Update response mapping in src/server/tools.ts for all list endpoints (MCP tools) (2025-10-01)
        - [x] Create validation tests using curl + jq to verify contract compliance (2025-10-01)
-     - [ ] Align pagination with Horreum's 1-based model
-       - [ ] Update schema validators: page >= 1 (not page >= 0)
-       - [ ] Remove page=0 special handling ("return all" semantics)
-       - [ ] Always send page >= 1 to Horreum APIs
-       - [ ] Standardize pagination strategy across all list endpoints
-       - [ ] Update src/server/http.ts pagination logic (3 sections)
-       - [ ] Update src/server/tools.ts pagination logic (3 sections)
-       - [ ] Update smoke tests to use page=1 as first page
-       - [ ] Add validation that page < 1 is rejected or translated
+     - [x] Align pagination with Horreum's 1-based model (2025-10-01)
+       - [x] Update schema validators: page >= 1 (not page >= 0) (2025-10-01)
+       - [x] Remove page=0 special handling ("return all" semantics) (2025-10-01)
+       - [x] Always send page >= 1 to Horreum APIs (2025-10-01)
+       - [x] Standardize pagination strategy across all list endpoints (2025-10-01)
+       - [x] Update src/server/http.ts pagination logic (list_tests, list_datasets) (2025-10-01)
+       - [x] Update src/server/tools.ts pagination logic (list_tests, list_runs, list_datasets) (2025-10-01)
+       - [x] Update smoke tests to use page=1 as first page (2025-10-01)
+       - [x] Updated mock Horreum to handle "no page param = all results" semantic (2025-10-01)
+       - [x] Updated all assertions to check for snake_case field names (2025-10-01)
      - [x] Implement natural language time query support (2025-10-01)
        - [x] Install and integrate chrono-node library (npm install chrono-node) (2025-10-01)
        - [x] Create time parsing utility in src/utils/time.ts with fallback chain: (2025-10-01)
@@ -589,6 +590,17 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-01 — **Phase 6.5 COMPLETE - Pagination Alignment**: Aligned all endpoints to Horreum's
+     1-based pagination model. Updated schema validators across all list endpoints (list_tests,
+     list_runs, list_datasets) to require `page >= 1` instead of `page >= 0`. Removed all `page=0`
+     special handling that returned "all results" semantics - this was semantically confusing and
+     inconsistent with Horreum's model. Eliminated workaround for Horreum bug #2525 by always
+     sending `page >= 1` to Horreum APIs (defaulting to 1 if not specified). Updated tool
+     descriptions to document 1-based pagination. Changed MCP tools: list_tests, list_runs,
+     list_datasets schemas to min(1). Changed HTTP endpoints: list_tests aggregation (page: 1),
+     list_datasets (always send page >= 1). All 43 tests passing. Phase 6.5 now COMPLETE - all 3
+     blocking issues resolved: ✅ Schema compliance, ✅ Natural language time queries, ✅ Pagination
+     alignment. Ready for Phase 7.
    - 2025-10-01 — **Phase 6.5 Milestone - Schema Compliance Complete**: Fixed all Source MCP
      Contract schema compliance issues in BOTH HTTP API and MCP tool endpoints. Added required
      duplicate ID fields: test_id to test objects (list_tests), run_id to run objects

@@ -301,10 +301,15 @@ export async function registerTools(
   // list_tests
   withTool(
     'list_tests',
-    'List Horreum tests with optional pagination and search.',
+    'List Horreum tests with optional pagination and search. Pagination uses 1-based indexing (first page is page=1).',
     {
       limit: z.number().int().positive().max(1000).optional(),
-      page: z.number().int().min(0).optional(),
+      page: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('Page number (1-based, first page is 1)'),
       sort: z.string().optional(),
       direction: z.enum(['Ascending', 'Descending']).optional(),
       roles: z.string().optional(),
@@ -336,8 +341,7 @@ export async function registerTools(
           TestService.testServiceGetTestSummary({
             ...(args.roles !== undefined ? { roles: args.roles as string } : {}),
             ...(folderName ? { folder: folderName } : {}),
-            // page=0 => return all results for this folder to aggregate client-side
-            page: 0,
+            // Omit page parameter to get all results for aggregation
             ...(args.direction ? { direction: args.direction as SortDirection } : {}),
             ...(args.name ? { name: args.name as string } : {}),
           }).catch(() => ({ tests: [], count: 0 }) as unknown as TestListing)
@@ -351,10 +355,7 @@ export async function registerTools(
 
       // Optional client-side pagination after aggregation
       let paged = aggregated;
-      if ((args.page as number | undefined) === 0) {
-        // explicit: page=0 means return all
-        paged = aggregated;
-      } else if (args.limit !== undefined && args.page !== undefined) {
+      if (args.limit !== undefined && args.page !== undefined) {
         const start = Math.max(0, ((args.page as number) - 1) * (args.limit as number));
         paged = aggregated.slice(start, start + (args.limit as number));
       }
@@ -401,13 +402,19 @@ export async function registerTools(
     'list_runs',
     'List Runs for a given test with optional pagination, sorting, and time filtering. ' +
       'Supports natural language time expressions like "last week", "yesterday", "last 30 days". ' +
-      'Defaults to last 30 days when no time parameters are specified.',
+      'Defaults to last 30 days when no time parameters are specified. ' +
+      'Pagination uses 1-based indexing (first page is page=1).',
     {
       testId: z.number().int().positive().optional(),
       test: z.string().optional().describe('Test name or ID'),
       trashed: z.boolean().optional(),
       limit: z.number().int().positive().max(1000).optional(),
-      page: z.number().int().min(0).optional(),
+      page: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('Page number (1-based, first page is 1)'),
       sort: z.string().optional(),
       direction: z.enum(['Ascending', 'Descending']).optional(),
       from: z
@@ -525,11 +532,9 @@ export async function registerTools(
         return true;
       });
 
-      // Apply optional client-side pagination if requested (page>0 means apply)
+      // Apply optional client-side pagination if requested
       let finalRuns = withinRange;
-      if ((args.page as number | undefined) === 0) {
-        finalRuns = withinRange;
-      } else if (args.limit !== undefined && args.page !== undefined) {
+      if (args.limit !== undefined && args.page !== undefined) {
         const start = Math.max(0, ((args.page as number) - 1) * (args.limit as number));
         finalRuns = withinRange.slice(start, start + (args.limit as number));
       }
@@ -590,7 +595,8 @@ export async function registerTools(
     'list_datasets',
     'Search for datasets across tests and runs with optional filtering. ' +
       'Supports natural language time expressions like "last week", "yesterday", "last 30 days". ' +
-      'Defaults to last 30 days when no time parameters are specified.',
+      'Defaults to last 30 days when no time parameters are specified. ' +
+      'Pagination uses 1-based indexing (first page is page=1).',
     {
       test_id: z.number().int().positive().optional().describe('Filter by test ID'),
       test_name: z.string().optional().describe('Filter by test name'),
@@ -608,7 +614,12 @@ export async function registerTools(
           'End time: ISO timestamp, epoch millis, or natural language ("now", "today")'
         ),
       page_size: z.number().int().positive().max(1000).optional(),
-      page: z.number().int().min(0).optional(),
+      page: z
+        .number()
+        .int()
+        .min(1)
+        .optional()
+        .describe('Page number (1-based, first page is 1)'),
       sort: z.string().optional(),
       direction: z.enum(['Ascending', 'Descending']).optional(),
     },
@@ -631,47 +642,25 @@ export async function registerTools(
       // Determine which API endpoint to use based on filters
       let datasetList;
       if (args.schema_uri) {
-        // Use schema-based listing
-        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
-        // Only send page parameter if it's > 0
-        const pageNum = (args.page as number | undefined) ?? 0;
-        const params: {
-          uri: string;
-          limit: number;
-          page?: number;
-          sort?: string;
-          direction?: SortDirection;
-        } = {
+        // Use schema-based listing with 1-based pagination
+        const pageNum = (args.page as number | undefined) ?? 1;
+        datasetList = await DatasetService.datasetServiceListDatasetsBySchema({
           uri: args.schema_uri as string,
           limit: (args.page_size as number | undefined) ?? 100,
+          page: pageNum,
           ...(args.sort ? { sort: args.sort as string } : {}),
           ...(args.direction ? { direction: args.direction as SortDirection } : {}),
-        };
-        if (pageNum > 0) {
-          params.page = pageNum;
-        }
-        datasetList = await DatasetService.datasetServiceListDatasetsBySchema(params);
+        });
       } else if (resolvedTestId) {
-        // Use test-based listing
-        // WORKAROUND: Horreum has a bug where limit + page=0 causes 500 error
-        // Only send page parameter if it's > 0
-        const pageNum = (args.page as number | undefined) ?? 0;
-        const params: {
-          testId: number;
-          limit: number;
-          page?: number;
-          sort?: string;
-          direction?: SortDirection;
-        } = {
+        // Use test-based listing with 1-based pagination
+        const pageNum = (args.page as number | undefined) ?? 1;
+        datasetList = await DatasetService.datasetServiceListByTest({
           testId: resolvedTestId,
           limit: (args.page_size as number | undefined) ?? 100,
+          page: pageNum,
           ...(args.sort ? { sort: args.sort as string } : {}),
           ...(args.direction ? { direction: args.direction as SortDirection } : {}),
-        };
-        if (pageNum > 0) {
-          params.page = pageNum;
-        }
-        datasetList = await DatasetService.datasetServiceListByTest(params);
+        });
       } else {
         return {
           content: [

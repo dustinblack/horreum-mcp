@@ -96,8 +96,8 @@ npm start -- --log-level info
 - ✅ **Core MCP Tools**: `ping`, `list_tests`, `list_runs`, `get_schema`, `upload_run`,
   `source.describe`
 - ✅ **Direct HTTP API**: 5 POST endpoints for server-to-server integration
-- ✅ **Pagination**: pageToken/pageSize support with backward compatibility
-- ✅ **Error Handling**: Standardized Source MCP Contract error responses
+- ✅ **1-Based Pagination**: Aligned with Horreum's native pagination model (first page is 1)
+- ✅ **Error Handling**: Standardized Source MCP Contract error responses with snake_case
 - ✅ **Capability Discovery**: Runtime capability introspection via `source.describe`
 - ✅ **Dual Transport**: stdio (default) and HTTP server modes with Bearer auth
 - ✅ **Multi-Architecture**: AMD64 and ARM64 container support
