@@ -74,9 +74,9 @@ The development will follow an iterative, phased approach with a read-first prio
 - Security: add container vulnerability scanning (e.g., Trivy or osv-scanner),
   and image hardening tasks (rootless, minimal packages, labels).
 
-**Phase 6: Direct HTTP API for Server-to-Server Integration (PRIORITY)**
+**Phase 6: Direct HTTP API for Server-to-Server Integration (COMPLETED 2025-09-30)**
 
-This phase addresses integration requirements from RHIVOS PerfScale MCP end-to-end testing. These changes enable Domain MCP servers to call Horreum MCP directly via HTTP POST endpoints without requiring MCP client libraries.
+This phase addressed integration requirements from RHIVOS PerfScale MCP end-to-end testing. These changes enable Domain MCP servers to call Horreum MCP directly via HTTP POST endpoints without requiring MCP client libraries.
 
 1. **Direct HTTP Tool Endpoints**: Add POST endpoints that mirror MCP tools:
    - `POST /api/tools/horreum_list_runs` - List runs with time filtering ✅
@@ -89,40 +89,115 @@ This phase addresses integration requirements from RHIVOS PerfScale MCP end-to-e
    - All endpoints accept Bearer token auth and return JSON responses ✅
    - Use same underlying Horreum API calls as MCP tools ✅
 
-   **WORKAROUND NOTE**: The `horreum_list_datasets` endpoint contains a workaround for a Horreum server bug where using `limit` + `page` parameters together causes HTTP 500 errors. The workaround omits the `page` parameter when `page=0`. This should be reverted once Horreum fixes the bug in their `/api/dataset/list/{testId}` endpoint.
+   **WORKAROUND NOTE**: The `horreum_list_datasets` endpoint contains a workaround for a Horreum server bug where using `limit` + `page=0` parameters together causes HTTP 500 errors. The workaround omits the `page` parameter when `page=0`. However, this is **semantically incomplete** as it doesn't align with Horreum's 1-based pagination model (pages start at 1, not 0). The correct fix is to align our pagination with Horreum's design (see Phase 6.5).
    - **Location**: `src/server/http.ts` (lines ~948-980) and `src/server/tools.ts` (lines ~588-620)
-   - **Issue reported**: 2025-09-30
-   - **Revert when**: Horreum server bug is fixed (monitor Horreum releases)
+   - **Bug tracked**: [Hyperfoil/Horreum#2525](https://github.com/Hyperfoil/Horreum/issues/2525)
+   - **Proper fix**: Phase 6.5 pagination alignment (use 1-based pagination throughout)
+   - **Analysis**: See `HORREUM_PAGINATION_ANALYSIS.md`
 
-2. **Standardized Error Handling (CR-20250930-1)**: Implement Source MCP Contract error format:
+**Phase 6.5: End-to-End Integration Fixes (PRIORITY - HIGH)**
+
+This phase addresses three critical issues discovered during end-to-end testing with the RHIVOS PerfScale Domain MCP that are blocking full integration. These must be completed before Phase 7.
+
+**References:**
+
+- `/home/dblack/git/gitlab/perfscale/sandbox/rhivos-perfscale-mcp/docs/horreum-mcp-schema-fixes.md`
+- `/home/dblack/git/gitlab/perfscale/sandbox/rhivos-perfscale-mcp/docs/horreum-mcp-time-query-requirements.md`
+- `HORREUM_PAGINATION_ANALYSIS.md` (pagination alignment analysis)
+- [Hyperfoil/Horreum#2525](https://github.com/Hyperfoil/Horreum/issues/2525) (pagination bug)
+
+1. **Source MCP Contract Schema Compliance (CRITICAL)**: Fix Pydantic validation errors
+   - **Problem**: Response schemas don't match Source MCP Contract, causing validation failures in Domain MCP
+   - **Impact**: Domain MCP cannot parse responses from Horreum MCP endpoints
+   - **Required fixes**:
+     - Add `test_id` field to all test objects (duplicate of `id` field per contract)
+     - Add `run_id` field to all run objects (duplicate of `id` field per contract)
+     - Note: `dataset_id` already exists and is correct ✅
+     - Add `has_more` boolean field to all pagination objects
+     - **Standardize to snake_case naming throughout all responses**:
+       - `nextPageToken` → `next_page_token`
+       - `hasMore` → `has_more` (also add where missing)
+       - `totalCount` → `total_count`
+     - Ensure consistency: All HTTP responses use snake_case per Source MCP Contract
+   - **Affected endpoints**: All list endpoints (tests, runs, datasets)
+   - **Implementation**: Update response mapping in `src/server/http.ts` and `src/server/tools.ts`
+   - **Testing**: Verify with curl + jq that responses match contract schema exactly
+
+2. **Natural Language Time Query Support (CRITICAL)**: Enable AI-friendly time queries
+   - **Problem**: Endpoints reject natural language time expressions ("last week", "yesterday")
+   - **Impact**: AI clients must calculate dates instead of passing through user intent
+   - **Architectural rationale**: Time parsing is a generic data layer concern, not domain-specific
+   - **Required support**:
+     - Accept relative time: "last week", "yesterday", "last 7 days", "now", "today"
+     - Accept simple dates: "2025-09-24"
+     - Maintain backward compatibility with ISO 8601 and epoch millis
+     - **Add intelligent default behavior**: When no time parameters provided:
+       - Default to "last 30 days" to avoid overwhelming responses
+       - Log the applied default for transparency
+       - Document this behavior clearly in tool descriptions
+   - **Affected endpoints**: `horreum_list_runs`, `horreum_list_datasets`
+   - **Recommended library**: `chrono-node` (MIT license, actively maintained)
+   - **Implementation**:
+     - Create time parsing utility in `src/utils/time.ts` with fallback chain:
+       1. Try chrono-node natural language parsing
+       2. Fall back to epoch milliseconds parsing
+       3. Fall back to ISO 8601 parsing
+       4. Apply default if not provided
+     - Integrate into affected tools/endpoints
+   - **Schema updates**: Update tool descriptions to document natural language support and default behavior
+   - **Testing**: Comprehensive test suite for relative dates, edge cases, defaults, and format compatibility
+
+3. **Pagination Alignment with Horreum (CRITICAL)**: Fix semantic mismatch with 1-based pagination
+   - **Problem**: Our API uses `page >= 0` semantics, but Horreum uses 1-based pagination (`page >= 1`)
+   - **Impact**:
+     - Incomplete workaround for Horreum bug #2525 (page=0 + limit causes 500 errors)
+     - Semantic confusion: `page=0` interpreted as "all results" instead of "first page"
+     - Mixed pagination strategies across codebase (server-side, client-side, special cases)
+   - **Root cause**: Horreum pagination starts at page 1, not page 0; `page=0` behavior is undefined/inconsistent
+   - **Required fixes**:
+     - Update schema validators: `page >= 1` (not `page >= 0`)
+     - Remove `page=0` special handling that returns "all results"
+     - Always send `page >= 1` to Horreum APIs (never omit or send page=0)
+     - Update default pagination: `page = legacyPage ?? 1` (already correct in some places)
+     - Standardize pagination strategy across all list endpoints
+   - **Affected endpoints**: All list endpoints (tests, runs, datasets) - HTTP and MCP
+   - **Implementation**:
+     - Update `src/server/http.ts` (lines 217-380, 478-555, 950-1030)
+     - Update `src/server/tools.ts` (lines 301-360, 391-510, 548-640)
+     - Update schema definitions for page parameter
+   - **Testing**: Update smoke tests to use `page=1` as first page, validate rejection of `page=0`
+   - **Benefit**: Once Horreum fixes bug #2525, no workaround needed - our code will already be correct!
+   - **Reference**: See `HORREUM_PAGINATION_ANALYSIS.md` for detailed analysis
+
+4. **Standardized Error Handling (CR-20250930-1)**: Implement Source MCP Contract error format:
    - Structured error codes: INVALID_REQUEST, NOT_FOUND, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE, TIMEOUT
    - Consistent error response: `{error: {code, message, details, retryable, retryAfter?}}`
    - Helpful context in error details (IDs, suggestions, available options)
    - Machine-parseable and human-readable error messages
 
-3. **Pagination Support (CR-20250930-3)**: Implement consistent pagination for all list tools:
+5. **Pagination Support (CR-20250930-3)**: Implement consistent pagination for all list tools:
    - Input parameters: pageToken (opaque), pageSize (1-1000, default 100)
    - Response format: `{data: [...], pagination: {nextPageToken?, hasMore, totalCount?}}`
    - Opaque page tokens (base64 encoded cursors)
    - Consistent ordering across pages (timestamp DESC)
    - Map to Horreum's pagination mechanism
 
-4. **Schema URI Filtering (CR-20250930-4)**: Add dataset filtering by schema:
+6. **Schema URI Filtering (CR-20250930-4)**: Add dataset filtering by schema:
    - Add schemaUri parameter to datasets.search tool
    - Exact match on dataset.$schema field
    - Support combining with other filters (testId, time range)
 
-5. **Capability Discovery (CR-20250930-2)**: Implement source.describe tool:
+7. **Capability Discovery (CR-20250930-2)**: Implement source.describe tool:
    - Return sourceType, version, contractVersion
    - Expose capabilities: pagination, caching, streaming, schemas
    - Document limits: maxPageSize, maxDatasetSize, rateLimitPerMinute
 
-6. **Documentation Improvements (CR-20250930-5)**:
+8. **Documentation Improvements (CR-20250930-5)**:
    - Clarify time range filtering (from/to parameters)
    - Document timestamp field used, inclusivity, timezone handling
    - Add examples and error handling for edge cases
 
-7. **SSL/TLS Certificate Configuration**:
+9. **SSL/TLS Certificate Configuration**:
    - Support for corporate/self-signed SSL certificates via mounted CA bundles
    - User-friendly `HORREUM_TLS_VERIFY` environment variable (defaults to `true`)
    - Automatic CA trust update in container entrypoint when certificates are mounted
@@ -332,15 +407,13 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
 
 4. Current execution directive
    - **Phase 6 (Direct HTTP API for Server-to-Server Integration) COMPLETED (2025-09-30)**.
-   - Successfully delivered all critical and high-priority features for RHIVOS PerfScale MCP integration:
-     - ✅ 5 Direct HTTP POST endpoints for server-to-server communication
-     - ✅ Source MCP Contract compliant error handling (CR-20250930-1)
-     - ✅ Pagination with pageToken/pageSize support (CR-20250930-3)
-     - ✅ Capability discovery via source.describe tool (CR-20250930-2)
-     - ✅ Comprehensive time range filtering documentation (CR-20250930-5)
-     - ✅ 4 smoke test suites validating all functionality
-     - [~] Schema URI filtering (CR-20250930-4) deferred as datasets.search tool doesn't exist yet
-   - **NEXT PRIORITY**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
+   - **Phase 6.5 (End-to-End Integration Fixes) IN PROGRESS (2025-10-01)** - BLOCKING ISSUES
+   - Two critical issues discovered during RHIVOS PerfScale Domain MCP end-to-end testing:
+     1. ❌ **Schema compliance**: Response schemas don't match Source MCP Contract (missing test_id, has_more fields)
+     2. ❌ **Time queries**: Natural language time expressions rejected ("last week" returns 400)
+   - These issues are **BLOCKING full end-to-end integration** and must be resolved immediately.
+   - **AUTHORIZED**: Begin Phase 6.5 implementation immediately.
+   - **NEXT AFTER 6.5**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
    - Phase 8 (Architecture Refactoring) and beyond follow after Phase 7 completion.
 
 5. Status checklist
@@ -425,6 +498,46 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Add tests for all new HTTP endpoints and features (2025-09-30) - Added `scripts/smoke-http-list-runs.mjs` smoke for `horreum_list_runs` - Added `scripts/smoke-http-all-endpoints.mjs` comprehensive test for all 7 endpoints - Added `scripts/smoke-http-pagination.mjs` for pageToken/pageSize validation - Added `scripts/smoke-http-source-describe.mjs` for capability discovery - Added `scripts/smoke-http-datasets.mjs` for dataset endpoints
      - [x] Add schema URI filtering to datasets.search (CR-20250930-4) (2025-09-30) - Implemented in list_datasets tool with schemaUri parameter - Filters via DatasetService.datasetServiceListDatasetsBySchema - Combined with test-based filtering and time range support
      - [x] SSL/TLS certificate configuration for corporate environments (2025-09-30) - Added HORREUM_TLS_VERIFY env var with boolean parsing - Container support for CA certificate mounting - Comprehensive documentation and testing
+   - [ip] Phase 6.5 — End-to-End Integration Fixes (CRITICAL - IN PROGRESS 2025-10-01)
+     - [ ] Fix Source MCP Contract schema compliance (test_id, has_more, snake_case)
+       - [ ] Add `test_id` field to test objects in list_tests responses (HTTP + MCP)
+       - [ ] Add `run_id` field to run objects in list_runs responses (HTTP + MCP)
+       - [ ] Verify `dataset_id` is present in list_datasets responses (already correct)
+       - [ ] Add `has_more` boolean to all pagination objects
+       - [ ] Standardize all pagination to snake_case naming:
+         - [ ] `nextPageToken` → `next_page_token`
+         - [ ] `hasMore` → `has_more`
+         - [ ] `totalCount` → `total_count`
+       - [ ] Update response mapping in src/server/http.ts for all list endpoints
+       - [ ] Update response mapping in src/server/tools.ts for all list endpoints
+       - [ ] Create validation tests using curl + jq to verify contract compliance
+     - [ ] Align pagination with Horreum's 1-based model
+       - [ ] Update schema validators: page >= 1 (not page >= 0)
+       - [ ] Remove page=0 special handling ("return all" semantics)
+       - [ ] Always send page >= 1 to Horreum APIs
+       - [ ] Standardize pagination strategy across all list endpoints
+       - [ ] Update src/server/http.ts pagination logic (3 sections)
+       - [ ] Update src/server/tools.ts pagination logic (3 sections)
+       - [ ] Update smoke tests to use page=1 as first page
+       - [ ] Add validation that page < 1 is rejected or translated
+     - [ ] Implement natural language time query support
+       - [ ] Install and integrate chrono-node library (npm install chrono-node)
+       - [ ] Create time parsing utility in src/utils/time.ts with fallback chain:
+         - [ ] Try chrono-node natural language parsing first
+         - [ ] Fall back to epoch milliseconds parsing (existing behavior)
+         - [ ] Fall back to ISO 8601 parsing (existing behavior)
+         - [ ] Apply "last 30 days" default when no time params provided
+       - [ ] Update horreum_list_runs (HTTP + MCP) to use new time parser
+       - [ ] Update horreum_list_datasets (HTTP + MCP) to use new time parser
+       - [ ] Add logging when default time range is applied
+       - [ ] Update tool schemas to document natural language support and defaults
+       - [ ] Create comprehensive test suite for time parsing:
+         - [ ] Test relative dates ("last week", "yesterday", "last 7 days")
+         - [ ] Test simple dates ("2025-09-24")
+         - [ ] Test ISO 8601 backward compatibility
+         - [ ] Test epoch millis backward compatibility
+         - [ ] Test default behavior (no params → last 30 days)
+         - [ ] Test edge cases and error handling
    - Phase 7 — Enhanced CI/CD Pipeline
      - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
      - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -473,6 +586,32 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-01 — **Phase 6.5 Initiated - End-to-End Integration Fixes**: Added new critical
+     priority phase to address two blocking issues discovered during RHIVOS PerfScale Domain
+     MCP end-to-end testing. (1) Source MCP Contract schema compliance: Response schemas
+     missing required `test_id`, `run_id` fields and `has_more` boolean in pagination
+     objects, plus inconsistent camelCase vs snake_case naming, causing Pydantic validation
+     errors in Domain MCP. All list endpoints (tests, runs, datasets) affected. Solution:
+     Add duplicate ID fields, standardize all responses to snake_case (`next_page_token`,
+     `has_more`, `total_count`). (2) Natural language time query support: Endpoints reject
+     natural language time expressions like "last week" or "yesterday", forcing AI clients
+     to calculate dates instead of passing through user intent. Solution: Integrate
+     chrono-node library for time parsing with fallback chain, add intelligent "last 30 days"
+     default when no time params provided. Affected endpoints: list_runs, list_datasets
+     (both HTTP and MCP). Both issues are CRITICAL and BLOCKING full integration.
+     References: horreum-mcp-schema-fixes.md and horreum-mcp-time-query-requirements.md
+     from Domain MCP repository. Expanded scope based on codebase analysis to include
+     snake_case standardization and default time range behavior. Execution directive
+     updated to authorize immediate Phase 6.5 implementation before proceeding to Phase 7.
+   - 2025-10-01 — **CI Build Fix - Native GitHub Paths Filtering**: Resolved persistent CI
+     container build detection issues by replacing workflow_run + dorny/paths-filter approach
+     with GitHub's native on.push.paths filtering. Root cause: workflow_run uses workflow
+     file from default branch (not triggering commit), making it impossible for paths-filter
+     to determine correct base commit for comparison. Result was comparing commit X to itself
+     (0 changes). Solution: Direct push trigger with paths filter handles multi-commit pushes
+     correctly out of the box. Removed complex base commit calculation logic and changes job.
+     Workflow now triggers directly on push to main when relevant files change. Much simpler
+     and more reliable.
    - 2025-09-30 — **Phase 6 Dataset Endpoints Added**: Implemented missing dataset endpoints
      required by RHIVOS PerfScale MCP integration. Added `list_datasets` MCP tool that
      searches datasets by test*id, test_name, or schema_uri with optional time filtering
