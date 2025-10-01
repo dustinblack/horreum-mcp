@@ -590,6 +590,21 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-01 — **Gemini CLI Support via HTTP Proxy Bridge**: Implemented stdio-to-HTTP proxy
+     bridge (scripts/mcp-http-proxy.mjs) that enables Gemini CLI to connect to HTTP-based MCP
+     servers. Background: MCP SDK's StreamableHTTPServerTransport uses POST-based JSON-RPC, but
+     Gemini CLI expects pure SSE (Server-Sent Events) streaming initiated via GET requests. The
+     proxy accepts stdio input from Gemini, forwards JSON-RPC messages to HTTP server via POST,
+     manages session IDs automatically, and returns responses via stdout. This pattern is similar
+     to how Claude Desktop connects to remote servers. Updated src/server/http.ts GET /mcp
+     endpoint to return clear 405 Method Not Allowed error (replacing confusing 400 "Invalid
+     session ID" error) with helpful message directing clients to use POST for initialization.
+     Added comprehensive Gemini CLI documentation to README.md with configuration examples for
+     both CLI command and manual settings.json editing, verification steps, and authentication
+     support. Proxy script includes detailed header comments with usage examples for both Gemini
+     and Claude Desktop. Connection verified: gemini mcp list shows horreum-mcp as Connected.
+     This enables Gemini CLI users to connect to containerized Horreum MCP servers without
+     requiring native SSE streaming support in the MCP SDK.
    - 2025-10-01 — **Phase 6.5 COMPLETE AND VERIFIED**: All three blocking issues resolved and
      verified with live integration tests against production Horreum API. Created comprehensive
      integration status report (INTEGRATION_STATUS_REPORT.md) documenting all working features

@@ -130,16 +130,23 @@ export async function startHttpServer(server: McpServer, env: Env) {
     }
   });
 
-  // Handle GET requests for SSE streams (if needed)
+  // Handle GET requests for SSE streams
+  // Note: The MCP SDK's StreamableHTTPServerTransport requires POST-first
+  // initialization and doesn't support pure SSE GET streaming.
+  // For now, we'll return a helpful error message directing clients to use POST.
   app.get('/mcp', authMiddleware, async (req, res) => {
-    const sessionId = req.headers['mcp-session-id'] as string;
-    if (!sessionId || !transports[sessionId]) {
-      res.status(400).send('Invalid or missing session ID');
-      return;
-    }
+    logger.warn('GET request to /mcp received - MCP requires POST for initialization');
 
-    const transport = transports[sessionId];
-    await transport.handleRequest(req, res);
+    res.status(405).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message:
+          'Method Not Allowed: MCP initialization requires POST request. ' +
+          'Send a POST request with an initialize message to start a session.',
+      },
+      id: null,
+    });
   });
 
   // ----------------------------------------------

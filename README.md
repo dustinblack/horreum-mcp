@@ -494,15 +494,93 @@ Configure your AI client to spawn the MCP server as a local process:
 - Args: `/absolute/path/to/horreum-mcp/build/index.js`
 - Env: `HORREUM_BASE_URL`, `HORREUM_TOKEN`
 
+### HTTP Mode with Gemini CLI
+
+**Gemini CLI** requires a different approach since it expects SSE-based streaming, while
+the MCP SDK uses POST-based JSON-RPC. We provide an HTTP proxy bridge that makes
+them compatible.
+
+**Prerequisites:**
+
+1. Horreum MCP server running in HTTP mode (container or local)
+2. The `mcp-http-proxy.mjs` script from this repository
+
+**Configuration:**
+
+```bash
+# Option 1: Using gemini CLI command
+gemini mcp add horreum-mcp node \
+  /absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs \
+  http://localhost:3001/mcp
+
+# Option 2: Manually edit ~/.gemini/settings.json
+```
+
+```json
+{
+  "mcpServers": {
+    "horreum-mcp": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs",
+        "http://localhost:3001/mcp"
+      ]
+    }
+  }
+}
+```
+
+**Verification:**
+
+```bash
+# Check connection status
+gemini mcp list
+
+# Should show:
+# ✓ horreum-mcp: ... (stdio) - Connected
+```
+
+**How it works:**
+
+- Gemini spawns the proxy as a local stdio process
+- Proxy forwards MCP messages to your HTTP server via POST
+- Server responses are piped back to Gemini via stdout
+- Session management is handled automatically
+
+**With Authentication:**
+
+If your HTTP server requires authentication, add the token as a third argument:
+
+```bash
+gemini mcp add horreum-mcp node \
+  /absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs \
+  http://localhost:3001/mcp \
+  your-auth-token
+```
+
+> [!NOTE]
+> The MCP SDK's `StreamableHTTPServerTransport` uses POST-based JSON-RPC, not pure
+> SSE GET streaming. The proxy bridges this gap, allowing Gemini CLI to work with
+> standard MCP HTTP servers.
+
 ### HTTP Mode (Advanced)
 
 For persistent servers, remote access, or server-to-server integration:
 
-#### MCP over HTTP (AI Clients)
+#### MCP over HTTP (Direct Connection)
 
-1. Start the server: `HTTP_MODE_ENABLED=true npm start`
-2. Configure AI client to connect to `http://localhost:3000/mcp`
-3. Add `Authorization: Bearer changeme` header if auth is enabled
+**Important:** Most AI clients (Claude, Cursor) use stdio mode. Direct HTTP
+connections are primarily for:
+
+- Server-to-server integration (e.g., Domain MCP → Horreum MCP)
+- Custom client implementations
+- Testing and debugging
+
+**Requirements:**
+
+- Server uses POST-based JSON-RPC over HTTP
+- Client must send `Accept: application/json, text/event-stream` header
+- Sessions initialized via POST `/mcp` with initialize message
 
 #### Direct HTTP API (Server-to-Server)
 
