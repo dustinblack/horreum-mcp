@@ -1,9 +1,17 @@
 name: container-build
 
 on:
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
+  # Trigger on push to main ONLY when relevant files change
+  push:
+    branches:
+      - main
+    paths:
+      - 'Containerfile'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - 'scripts/**/*.sh'
+      - '.github/workflows/container-build.yml'
   workflow_dispatch: {}
 
 concurrency:
@@ -15,66 +23,10 @@ env:
   OCI_REVISION: ${{ github.sha }}
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      build: ${{ steps.filter.outputs.build }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 100 # Fetch enough history for multi-commit pushes
-      - name: Get base commit for comparison
-        id: base
-        run: |
-          # For workflow_run, we need to find the commit BEFORE this push started
-          # Strategy: Find the first commit that was already on origin/main before this push
-
-          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
-
-          # Walk back from HEAD to find the last commit that was on main before this push
-          # We do this by checking each parent until we find one that's an ancestor of origin/main~1
-          BASE_SHA="${HEAD_SHA}"
-          for i in {1..20}; do
-            CANDIDATE="${HEAD_SHA}~${i}"
-            if ! git rev-parse "${CANDIDATE}" >/dev/null 2>&1; then
-              # Reached the beginning of history
-              BASE_SHA="${HEAD_SHA}~$((i-1))"
-              break
-            fi
-            # Check if this commit exists in the reflog of origin/main (was previously on main)
-            if git merge-base --is-ancestor "${CANDIDATE}" "origin/main~1" 2>/dev/null; then
-              # This commit was on main before, so the push starts at the next commit
-              BASE_SHA="${CANDIDATE}"
-              break
-            fi
-          done
-
-          echo "base=${BASE_SHA}" >> "$GITHUB_OUTPUT"
-          echo "Detected push range: ${BASE_SHA}..${HEAD_SHA}"
-          echo "Changed files in this range:"
-          git diff --name-only "${BASE_SHA}..${HEAD_SHA}" | head -20
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          # Explicitly provide base and ref for workflow_run events
-          # This ensures we check ALL commits in the push, not just the last one
-          base: ${{ steps.base.outputs.base }}
-          ref: ${{ github.event.workflow_run.head_sha }}
-          list-files: shell
-          filters: |
-            build:
-              - 'Containerfile'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'src/**/*'
-              - 'scripts/**/*.sh'
-              - '.github/workflows/container-build.yml'
-
   build_and_push:
     name: Build and push multi-arch image
-    needs: changes
-    if: needs.changes.outputs.build == 'true' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    # Only run on main branch pushes (not PRs)
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
