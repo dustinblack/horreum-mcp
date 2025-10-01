@@ -359,8 +359,16 @@ export async function registerTools(
         paged = aggregated.slice(start, start + (args.limit as number));
       }
 
-      const result: { tests: TestSummary[]; count: number } = {
-        tests: paged as TestSummary[],
+      // Transform for Source MCP Contract compliance
+      const testsWithId = (
+        paged as Array<{ id?: number | string; [key: string]: unknown }>
+      ).map((test) => ({
+        ...test,
+        test_id: String(test.id ?? test.test_id ?? ''),
+      }));
+
+      const result = {
+        tests: testsWithId as unknown as TestSummary[],
         count: total,
       };
       return { content: [text(JSON.stringify(result, null, 2))] };
@@ -452,7 +460,24 @@ export async function registerTools(
           ...(args.sort ? { sort: args.sort as string } : {}),
           ...(args.direction ? { direction: args.direction as SortDirection } : {}),
         });
-        return { content: [text(JSON.stringify(res, null, 2))] };
+
+        // Transform for Source MCP Contract compliance
+        const runs = Array.isArray((res as { runs?: unknown }).runs)
+          ? (res as { runs: unknown[] }).runs
+          : [];
+        const runsWithId = (
+          runs as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((run) => ({
+          ...run,
+          run_id: String(run.id ?? run.run_id ?? ''),
+        }));
+
+        const transformed = {
+          ...res,
+          runs: runsWithId,
+        };
+
+        return { content: [text(JSON.stringify(transformed, null, 2))] };
       }
 
       // Time-filtered: fetch pages and filter client-side by start timestamp
@@ -509,9 +534,15 @@ export async function registerTools(
         finalRuns = withinRange.slice(start, start + (args.limit as number));
       }
 
-      const result: import('../horreum/generated/models/RunsSummary.js').RunsSummary = {
+      // Transform for Source MCP Contract compliance
+      const runsWithId = finalRuns.map((run) => ({
+        ...run,
+        run_id: String(run.id ?? run.run_id ?? ''),
+      }));
+
+      const result = {
         total: withinRange.length,
-        runs: finalRuns,
+        runs: runsWithId as unknown as typeof finalRuns,
       };
       return { content: [text(JSON.stringify(result, null, 2))] };
     }

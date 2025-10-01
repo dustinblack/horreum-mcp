@@ -303,12 +303,20 @@ export async function startHttpServer(server: McpServer, env: Env) {
           ? encodePageToken({ page: page + 1, limit })
           : undefined;
 
+        // Add run_id field for Source MCP Contract compliance
+        const runsWithId = (
+          runs as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((run) => ({
+          ...run,
+          run_id: String(run.id ?? run.run_id ?? ''),
+        }));
+
         return res.status(200).json({
-          runs,
+          runs: runsWithId,
           pagination: {
-            ...(nextPageToken ? { nextPageToken } : {}),
-            hasMore,
-            totalCount: total,
+            ...(nextPageToken ? { next_page_token: nextPageToken } : {}),
+            has_more: hasMore,
+            total_count: total,
           },
         });
       }
@@ -366,12 +374,20 @@ export async function startHttpServer(server: McpServer, env: Env) {
         ? encodePageToken({ page: page + 1, limit })
         : undefined;
 
+      // Add run_id field for Source MCP Contract compliance
+      const runsWithId = (
+        finalRuns as Array<{ id?: number | string; [key: string]: unknown }>
+      ).map((run) => ({
+        ...run,
+        run_id: String(run.id ?? run.run_id ?? ''),
+      }));
+
       return res.status(200).json({
-        runs: finalRuns,
+        runs: runsWithId,
         pagination: {
-          ...(nextPageToken ? { nextPageToken } : {}),
-          hasMore,
-          totalCount: withinRange.length,
+          ...(nextPageToken ? { next_page_token: nextPageToken } : {}),
+          has_more: hasMore,
+          total_count: withinRange.length,
         },
       });
     } catch (err) {
@@ -501,12 +517,20 @@ export async function startHttpServer(server: McpServer, env: Env) {
           ? encodePageToken({ page: page + 1, limit })
           : undefined;
 
+        // Add test_id field for Source MCP Contract compliance
+        const testsWithId = (
+          tests as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((test) => ({
+          ...test,
+          test_id: String(test.id ?? test.test_id ?? ''),
+        }));
+
         return res.status(200).json({
-          tests,
+          tests: testsWithId,
           pagination: {
-            ...(nextPageToken ? { nextPageToken } : {}),
-            hasMore,
-            totalCount: total,
+            ...(nextPageToken ? { next_page_token: nextPageToken } : {}),
+            has_more: hasMore,
+            total_count: total,
           },
         });
       }
@@ -541,12 +565,20 @@ export async function startHttpServer(server: McpServer, env: Env) {
         ? encodePageToken({ page: page + 1, limit })
         : undefined;
 
+      // Add test_id field for Source MCP Contract compliance
+      const testsWithId = (
+        paged as Array<{ id?: number | string; [key: string]: unknown }>
+      ).map((test) => ({
+        ...test,
+        test_id: String(test.id ?? test.test_id ?? ''),
+      }));
+
       return res.status(200).json({
-        tests: paged,
+        tests: testsWithId,
         pagination: {
-          ...(nextPageToken ? { nextPageToken } : {}),
-          hasMore,
-          totalCount: total,
+          ...(nextPageToken ? { next_page_token: nextPageToken } : {}),
+          has_more: hasMore,
+          total_count: total,
         },
       });
     } catch (err) {

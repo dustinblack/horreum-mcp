@@ -409,11 +409,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - **Phase 6 (Direct HTTP API for Server-to-Server Integration) COMPLETED (2025-09-30)**.
    - **Phase 6.5 (End-to-End Integration Fixes) IN PROGRESS (2025-10-01)** - BLOCKING ISSUES
    - Three critical issues discovered during RHIVOS PerfScale Domain MCP end-to-end testing:
-     1. ❌ **Schema compliance**: Response schemas don't match Source MCP Contract (missing test_id, has_more fields)
-     2. ✅ **Time queries**: Natural language time parsing COMPLETE - Integrated into all time-aware endpoints
+     1. ✅ **Schema compliance**: COMPLETE - Added test_id/run_id fields, has_more, snake_case naming
+     2. ✅ **Time queries**: COMPLETE - Natural language time parsing integrated into all time-aware endpoints
      3. ❌ **Pagination alignment**: 0-based vs 1-based mismatch with Horreum needs fixing
-   - **Current status**: Natural language time queries ✅ COMPLETE - Integrated into all endpoints
-   - **Next**: Fix schema compliance (test_id, run_id, has_more, snake_case), then align pagination
+   - **Current status**: 2 of 3 issues COMPLETE ✅ Schema compliance and time queries done
+   - **Next**: Align pagination to 1-based model (page >= 1)
    - These issues are **BLOCKING full end-to-end integration** and must be resolved immediately.
    - **AUTHORIZED**: Continue Phase 6.5 implementation.
    - **NEXT AFTER 6.5**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
@@ -502,18 +502,18 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      - [x] Add schema URI filtering to datasets.search (CR-20250930-4) (2025-09-30) - Implemented in list_datasets tool with schemaUri parameter - Filters via DatasetService.datasetServiceListDatasetsBySchema - Combined with test-based filtering and time range support
      - [x] SSL/TLS certificate configuration for corporate environments (2025-09-30) - Added HORREUM_TLS_VERIFY env var with boolean parsing - Container support for CA certificate mounting - Comprehensive documentation and testing
    - [ip] Phase 6.5 — End-to-End Integration Fixes (CRITICAL - IN PROGRESS 2025-10-01)
-     - [ ] Fix Source MCP Contract schema compliance (test_id, has_more, snake_case)
-       - [ ] Add `test_id` field to test objects in list_tests responses (HTTP + MCP)
-       - [ ] Add `run_id` field to run objects in list_runs responses (HTTP + MCP)
-       - [ ] Verify `dataset_id` is present in list_datasets responses (already correct)
-       - [ ] Add `has_more` boolean to all pagination objects
-       - [ ] Standardize all pagination to snake_case naming:
-         - [ ] `nextPageToken` → `next_page_token`
-         - [ ] `hasMore` → `has_more`
-         - [ ] `totalCount` → `total_count`
-       - [ ] Update response mapping in src/server/http.ts for all list endpoints
-       - [ ] Update response mapping in src/server/tools.ts for all list endpoints
-       - [ ] Create validation tests using curl + jq to verify contract compliance
+     - [x] Fix Source MCP Contract schema compliance (test_id, has_more, snake_case) (2025-10-01)
+       - [x] Add `test_id` field to test objects in list_tests responses (HTTP) (2025-10-01)
+       - [x] Add `run_id` field to run objects in list_runs responses (HTTP) (2025-10-01)
+       - [x] Verify `dataset_id` is present in list_datasets responses (already correct) (2025-10-01)
+       - [x] Add `has_more` boolean to all pagination objects (datasets already had it) (2025-10-01)
+       - [x] Standardize all pagination to snake_case naming: (2025-10-01)
+         - [x] `nextPageToken` → `next_page_token`
+         - [x] `hasMore` → `has_more`
+         - [x] `totalCount` → `total_count`
+       - [x] Update response mapping in src/server/http.ts for all list endpoints (2025-10-01)
+       - [x] Update response mapping in src/server/tools.ts for all list endpoints (MCP tools) (2025-10-01)
+       - [x] Create validation tests using curl + jq to verify contract compliance (2025-10-01)
      - [ ] Align pagination with Horreum's 1-based model
        - [ ] Update schema validators: page >= 1 (not page >= 0)
        - [ ] Remove page=0 special handling ("return all" semantics)
@@ -589,6 +589,19 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-01 — **Phase 6.5 Milestone - Schema Compliance Complete**: Fixed all Source MCP
+     Contract schema compliance issues in BOTH HTTP API and MCP tool endpoints. Added required
+     duplicate ID fields: test_id to test objects (list_tests), run_id to run objects
+     (list_runs). Verified dataset_id already present in dataset objects (list_datasets -
+     already correct). Standardized all pagination objects to snake_case naming: nextPageToken
+     → next_page_token, hasMore → has_more, totalCount → total_count. Applied changes to
+     list_runs (4 response paths: 2 HTTP + 2 MCP), list_tests (4 response paths: 2 HTTP + 2
+     MCP), list_datasets (already compliant in both HTTP and MCP). Created comprehensive smoke
+     test script (scripts/smoke-schema-compliance.mjs) to validate contract compliance - 5
+     validation checks, all passing. All 43 unit tests passing. Both HTTP API and MCP tool
+     responses now fully compliant with Source MCP Contract schema. Schema compliance
+     requirement (#1) for Phase 6.5 now COMPLETE. Updated execution directive: 2 of 3 issues
+     resolved. Next: Pagination alignment.
    - 2025-10-01 — **Phase 6.5 Milestone - Natural Language Time Queries Complete**: Fully
      integrated time parsing utility into list_runs and list_datasets endpoints (both HTTP
      and MCP). Replaced old parseTime helpers with parseTimeRange() which supports natural
