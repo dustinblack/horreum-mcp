@@ -14,6 +14,7 @@ import { createRateLimitedFetch } from '../horreum/fetch.js';
 import { fetch as undiciFetch } from 'undici';
 import type { Env } from '../config/env.js';
 import { Metrics } from '../observability/metrics.js';
+import { parseTimeRange } from '../utils/time.js';
 
 type FetchLike = (
   input: Parameters<typeof fetch>[0],
@@ -390,7 +391,9 @@ export async function registerTools(
   // list_runs
   withTool(
     'list_runs',
-    'List Runs for a given test with optional pagination, sorting, and time filtering.',
+    'List Runs for a given test with optional pagination, sorting, and time filtering. ' +
+      'Supports natural language time expressions like "last week", "yesterday", "last 30 days". ' +
+      'Defaults to last 30 days when no time parameters are specified.',
     {
       testId: z.number().int().positive().optional(),
       test: z.string().optional().describe('Test name or ID'),
@@ -399,8 +402,18 @@ export async function registerTools(
       page: z.number().int().min(0).optional(),
       sort: z.string().optional(),
       direction: z.enum(['Ascending', 'Descending']).optional(),
-      from: z.string().optional().describe('ISO timestamp or epoch millis'),
-      to: z.string().optional().describe('ISO timestamp or epoch millis'),
+      from: z
+        .string()
+        .optional()
+        .describe(
+          'Start time: ISO timestamp, epoch millis, or natural language ("last week", "yesterday")'
+        ),
+      to: z
+        .string()
+        .optional()
+        .describe(
+          'End time: ISO timestamp, epoch millis, or natural language ("now", "today")'
+        ),
     },
     async (args) => {
       // Resolve testId from name if needed
@@ -423,14 +436,11 @@ export async function registerTools(
         };
       }
 
-      const parseTime = (s?: string): number | undefined => {
-        if (!s) return undefined;
-        if (/^\d+$/.test(s)) return Number(s);
-        const t = Date.parse(s);
-        return Number.isFinite(t) ? t : undefined;
-      };
-      const fromMs = parseTime(args.from as string | undefined);
-      const toMs = parseTime(args.to as string | undefined);
+      // Parse time range with natural language support
+      const { fromMs, toMs } = parseTimeRange(
+        args.from as string | undefined,
+        args.to as string | undefined
+      );
 
       // If no time filters are provided, defer to a single API call (server-side pagination)
       if (fromMs === undefined && toMs === undefined) {
@@ -547,7 +557,9 @@ export async function registerTools(
   // list_datasets - Search for datasets with optional filtering
   withTool(
     'list_datasets',
-    'Search for datasets across tests and runs with optional filtering.',
+    'Search for datasets across tests and runs with optional filtering. ' +
+      'Supports natural language time expressions like "last week", "yesterday", "last 30 days". ' +
+      'Defaults to last 30 days when no time parameters are specified.',
     {
       test_id: z.number().int().positive().optional().describe('Filter by test ID'),
       test_name: z.string().optional().describe('Filter by test name'),
@@ -555,11 +567,15 @@ export async function registerTools(
       from: z
         .string()
         .optional()
-        .describe('Start time filter (ISO timestamp or epoch millis)'),
+        .describe(
+          'Start time: ISO timestamp, epoch millis, or natural language ("last week", "yesterday")'
+        ),
       to: z
         .string()
         .optional()
-        .describe('End time filter (ISO timestamp or epoch millis)'),
+        .describe(
+          'End time: ISO timestamp, epoch millis, or natural language ("now", "today")'
+        ),
       page_size: z.number().int().positive().max(1000).optional(),
       page: z.number().int().min(0).optional(),
       sort: z.string().optional(),
@@ -575,14 +591,11 @@ export async function registerTools(
         resolvedTestId = t.id;
       }
 
-      const parseTime = (s?: string): number | undefined => {
-        if (!s) return undefined;
-        if (/^\d+$/.test(s)) return Number(s);
-        const t = Date.parse(s);
-        return Number.isFinite(t) ? t : undefined;
-      };
-      const fromMs = parseTime(args.from as string | undefined);
-      const toMs = parseTime(args.to as string | undefined);
+      // Parse time range with natural language support
+      const { fromMs, toMs } = parseTimeRange(
+        args.from as string | undefined,
+        args.to as string | undefined
+      );
 
       // Determine which API endpoint to use based on filters
       let datasetList;

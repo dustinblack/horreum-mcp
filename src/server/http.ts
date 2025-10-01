@@ -16,6 +16,7 @@ import { DatasetService } from '../horreum/generated/services/DatasetService.js'
 import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 import type { TestListing } from '../horreum/generated/models/TestListing.js';
 import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
+import { parseTimeRange } from '../utils/time.js';
 
 /**
  * Starts the MCP server in HTTP mode.
@@ -177,14 +178,6 @@ export async function startHttpServer(server: McpServer, env: Env) {
     return res.status(httpStatus).json(payload);
   };
 
-  const parseTime = (s?: unknown): number | undefined => {
-    if (typeof s !== 'string') return undefined;
-    if (!s) return undefined;
-    if (/^\d+$/.test(s)) return Number(s);
-    const t = Date.parse(s);
-    return Number.isFinite(t) ? t : undefined;
-  };
-
   // Pagination helpers for pageToken/pageSize support
   type PageCursor = {
     page: number;
@@ -232,8 +225,12 @@ export async function startHttpServer(server: McpServer, env: Env) {
       const trashed = body.trashed as boolean | undefined;
       const sort = body.sort as string | undefined;
       const direction = body.direction as SortDirection | undefined;
-      const fromMs = parseTime(body.from);
-      const toMs = parseTime(body.to);
+
+      // Parse time range with natural language support
+      const { fromMs, toMs } = parseTimeRange(
+        body.from as string | undefined,
+        body.to as string | undefined
+      );
 
       // Support both pageToken/pageSize (new) and page/limit (legacy)
       const pageToken = body.pageToken as string | undefined;
@@ -918,12 +915,16 @@ export async function startHttpServer(server: McpServer, env: Env) {
       const testId = body.test_id as number | undefined;
       const testName = body.test_name as string | undefined;
       const schemaUri = body.schema_uri as string | undefined;
-      const from = body.from as string | undefined;
-      const to = body.to as string | undefined;
       const pageSize = body.page_size as number | undefined;
       const page = body.page as number | undefined;
       const sort = body.sort as string | undefined;
       const direction = body.direction as SortDirection | undefined;
+
+      // Parse time range with natural language support
+      const { fromMs, toMs } = parseTimeRange(
+        body.from as string | undefined,
+        body.to as string | undefined
+      );
 
       // Resolve test ID from name if provided
       let resolvedTestId: number | undefined = testId;
@@ -933,15 +934,6 @@ export async function startHttpServer(server: McpServer, env: Env) {
         });
         resolvedTestId = test.id;
       }
-
-      const parseTime = (s?: string): number | undefined => {
-        if (!s) return undefined;
-        if (/^\d+$/.test(s)) return Number(s);
-        const t = Date.parse(s);
-        return Number.isFinite(t) ? t : undefined;
-      };
-      const fromMs = parseTime(from);
-      const toMs = parseTime(to);
 
       // Determine which API endpoint to use based on filters
       let datasetList;

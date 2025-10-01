@@ -410,10 +410,10 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - **Phase 6.5 (End-to-End Integration Fixes) IN PROGRESS (2025-10-01)** - BLOCKING ISSUES
    - Three critical issues discovered during RHIVOS PerfScale Domain MCP end-to-end testing:
      1. ❌ **Schema compliance**: Response schemas don't match Source MCP Contract (missing test_id, has_more fields)
-     2. 🔄 **Time queries**: Natural language time parsing utility implemented, integration in progress
+     2. ✅ **Time queries**: Natural language time parsing COMPLETE - Integrated into all time-aware endpoints
      3. ❌ **Pagination alignment**: 0-based vs 1-based mismatch with Horreum needs fixing
-   - **Current status**: Time parsing utility complete (parseTimeString, parseTimeRange) with 22 passing tests
-   - **Next**: Integrate time parsing into list_runs/list_datasets, fix schema compliance, align pagination
+   - **Current status**: Natural language time queries ✅ COMPLETE - Integrated into all endpoints
+   - **Next**: Fix schema compliance (test_id, run_id, has_more, snake_case), then align pagination
    - These issues are **BLOCKING full end-to-end integration** and must be resolved immediately.
    - **AUTHORIZED**: Continue Phase 6.5 implementation.
    - **NEXT AFTER 6.5**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
@@ -523,17 +523,17 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
        - [ ] Update src/server/tools.ts pagination logic (3 sections)
        - [ ] Update smoke tests to use page=1 as first page
        - [ ] Add validation that page < 1 is rejected or translated
-     - [ip] Implement natural language time query support
+     - [x] Implement natural language time query support (2025-10-01)
        - [x] Install and integrate chrono-node library (npm install chrono-node) (2025-10-01)
        - [x] Create time parsing utility in src/utils/time.ts with fallback chain: (2025-10-01)
          - [x] Try chrono-node natural language parsing first
          - [x] Fall back to epoch milliseconds parsing (existing behavior)
          - [x] Fall back to ISO 8601 parsing (existing behavior)
          - [x] Apply "last 30 days" default when no time params provided
-       - [ ] Update horreum_list_runs (HTTP + MCP) to use new time parser
-       - [ ] Update horreum_list_datasets (HTTP + MCP) to use new time parser
+       - [x] Update horreum_list_runs (HTTP + MCP) to use new time parser (2025-10-01)
+       - [x] Update horreum_list_datasets (HTTP + MCP) to use new time parser (2025-10-01)
        - [x] Add logging when default time range is applied (2025-10-01)
-       - [ ] Update tool schemas to document natural language support and defaults
+       - [x] Update tool schemas to document natural language support and defaults (2025-10-01)
        - [x] Create comprehensive test suite for time parsing: (2025-10-01)
          - [x] Test relative dates ("last week", "yesterday", "last 7 days")
          - [x] Test simple dates ("2025-09-24")
@@ -589,6 +589,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-01 — **Phase 6.5 Milestone - Natural Language Time Queries Complete**: Fully
+     integrated time parsing utility into list_runs and list_datasets endpoints (both HTTP
+     and MCP). Replaced old parseTime helpers with parseTimeRange() which supports natural
+     language ("last week", "yesterday", "last 30 days"), ISO 8601, epoch millis, and
+     intelligent "last 30 days" default. Updated tool descriptions to document natural language
+     support. Removed two redundant parseTime helper functions from http.ts. All 43 tests
+     passing (23 for time parsing, 19 for SSL config, 1 placeholder). Natural language time
+     query requirement (#2) for Phase 6.5 now COMPLETE. Updated execution directive to reflect
+     completion status. Next: Schema compliance fixes (test_id, run_id, has_more, snake_case)
+     and pagination alignment.
    - 2025-10-01 — **Phase 6.5 Progress - Time Parsing Utility Complete**: Implemented
      comprehensive time parsing utility (src/utils/time.ts) with chrono-node integration.
      Created parseTimeString() with multi-strategy parsing (epoch, ISO 8601, natural language),
