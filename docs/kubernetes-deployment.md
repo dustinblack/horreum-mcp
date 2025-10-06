@@ -441,6 +441,10 @@ metadata:
   namespace: horreum-mcp
   labels:
     app: horreum-mcp
+  annotations:
+    # Enable sticky sessions for MCP protocol session management
+    haproxy.router.openshift.io/balance: source
+    haproxy.router.openshift.io/disable_cookies: 'false'
 spec:
   host: horreum-mcp.apps.cluster.example.com
   to:
@@ -560,6 +564,32 @@ If you see errors like:
 values from the Deployment. OpenShift assigns UIDs dynamically from the
 namespace's allocated range. The manifests in this guide are already
 configured correctly for OpenShift.
+
+**MCP Session Errors ("No valid session ID provided"):**
+
+If you see errors like:
+
+```
+Bad Request: No valid session ID provided
+```
+
+**Cause**: The MCP server stores sessions in memory. With multiple replicas,
+requests must go to the same pod that created the session.
+
+**Solution**: The Route must have sticky sessions enabled. Add these
+annotations to your Route:
+
+```yaml
+annotations:
+  haproxy.router.openshift.io/balance: source
+  haproxy.router.openshift.io/disable_cookies: 'false'
+```
+
+Or temporarily scale to 1 replica for testing:
+
+```bash
+oc scale deployment/horreum-mcp -n horreum-mcp --replicas=1
+```
 
 ## Configuration
 
