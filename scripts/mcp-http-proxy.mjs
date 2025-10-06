@@ -138,6 +138,12 @@ rl.on('line', async (line) => {
       return;
     }
 
+    // Handle empty responses (notifications don't get responses)
+    if (!responseText || responseText.trim() === '') {
+      stderr.write(`<- Empty response (likely a notification)\n\n`);
+      return;
+    }
+
     // Parse and forward response
     const responseJson = JSON.parse(responseText);
     stderr.write(
