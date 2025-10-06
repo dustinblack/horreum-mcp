@@ -443,6 +443,21 @@ architectures with automatic QEMU emulation detection. When running under emulat
 the container automatically applies compatibility flags to prevent WebAssembly-related
 crashes while preserving performance on native architectures.
 
+### Kubernetes/OpenShift Deployment
+
+For production Kubernetes or OpenShift deployments with high availability and
+persistent HTTP mode, see the complete
+[Kubernetes Deployment Guide](docs/kubernetes-deployment.md).
+
+The guide includes:
+
+- Complete deployment manifests (Deployment, Service, Ingress, ConfigMap, Secret)
+- OpenShift-specific configuration (Routes, SCCs, CA certificate mounting)
+- High availability setup with multiple replicas and health checks
+- Monitoring integration (Prometheus ServiceMonitor)
+- Advanced scenarios (Helm, Kustomize, HPA, Network Policies)
+- Comprehensive troubleshooting and security best practices
+
 ### Local Development
 
 For testing and development:
