@@ -226,6 +226,12 @@ spec:
                   name: horreum-mcp-config
                   key: HORREUM_TIMEOUT
                   optional: true
+            - name: HORREUM_TLS_VERIFY
+              valueFrom:
+                configMapKeyRef:
+                  name: horreum-mcp-config
+                  key: HORREUM_TLS_VERIFY
+                  optional: true
             - name: LOG_LEVEL
               valueFrom:
                 configMapKeyRef:
@@ -890,19 +896,50 @@ them suitable for Kubernetes health checks.
 
 **Connection to Horreum failing:**
 
+If you see errors like `fetch failed` or `TypeError: fetch failed` in the logs:
+
 ```bash
+# Check the logs for network errors
+kubectl logs -n horreum-mcp -l app=horreum-mcp | grep -i "error\|failed"
+
+# Test connectivity to Horreum from the pod
+kubectl exec -n horreum-mcp deployment/horreum-mcp -- \
+  curl -v https://horreum.example.com/api/config/keycloak
+
 # Test DNS resolution from pod
 kubectl exec -n horreum-mcp deployment/horreum-mcp -- \
   nslookup horreum.example.com
-
-# Test connectivity to Horreum
-kubectl exec -n horreum-mcp deployment/horreum-mcp -- \
-  curl -v -k https://horreum.example.com
-
-# Check if SSL verification is the issue
-kubectl logs -n horreum-mcp -l app=horreum-mcp | grep -i ssl
-kubectl logs -n horreum-mcp -l app=horreum-mcp | grep -i certificate
 ```
+
+**SSL/TLS Certificate Issues:**
+
+If the curl test fails with exit code 60 (SSL certificate problem):
+
+```bash
+# Verify the error
+kubectl exec -n horreum-mcp deployment/horreum-mcp -- \
+  curl -v https://horreum.example.com 2>&1 | grep -i certificate
+
+# Check environment variables
+kubectl exec -n horreum-mcp deployment/horreum-mcp -- env | grep HORREUM_TLS_VERIFY
+```
+
+**Solution 1: Disable TLS Verification (Testing Only)**
+
+For testing or corporate environments with self-signed certificates:
+
+1. Uncomment `HORREUM_TLS_VERIFY: 'false'` in the ConfigMap
+2. Ensure the Deployment has the corresponding `configMapKeyRef` (see Deployment
+   manifest line ~229)
+3. Restart pods: `kubectl rollout restart deployment/horreum-mcp -n horreum-mcp`
+4. Verify: `kubectl exec -n horreum-mcp deployment/horreum-mcp -- env | grep
+HORREUM_TLS_VERIFY`
+
+**Solution 2: Add CA Certificate (Production)**
+
+For production deployments, add the CA certificate instead of disabling
+verification (see "OpenShift Specific Configuration" → "Mounting Custom CA
+Certificates")
 
 **Performance issues:**
 
