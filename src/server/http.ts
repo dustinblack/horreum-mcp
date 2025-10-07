@@ -1197,6 +1197,748 @@ export async function startHttpServer(server: McpServer, env: Env) {
     }
   });
 
+  // POST /api/tools/horreum_get_run_count
+  app.post('/api/tools/horreum_get_run_count', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+      const testId = body.test_id as number | undefined;
+      if (!testId || !Number.isFinite(testId)) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide valid 'test_id' parameter."
+        );
+      }
+      const result = await RunService.runServiceRunCount({ testId });
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Test not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_run_count');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_list_all_runs
+  app.post('/api/tools/horreum_list_all_runs', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+      const query = body.query as string | undefined;
+      const roles = body.roles as string | undefined;
+      const trashed = body.trashed as boolean | undefined;
+      const sort = body.sort as string | undefined;
+      const direction = body.direction as SortDirection | undefined;
+      const pageSize = Math.min(
+        Math.max(1, (body.limit as number | undefined) ?? 100),
+        1000
+      );
+      const page = (body.page as number | undefined) ?? 1;
+
+      const { fromMs, toMs } = parseTimeRange(
+        body.from as string | undefined,
+        body.to as string | undefined
+      );
+
+      // If no time filters, defer to API pagination
+      if (fromMs === undefined && toMs === undefined) {
+        const result = await RunService.runServiceListAllRuns({
+          ...(query ? { query } : {}),
+          ...(roles ? { roles } : {}),
+          ...(trashed !== undefined ? { trashed } : {}),
+          limit: pageSize,
+          page,
+          ...(sort ? { sort } : {}),
+          ...(direction ? { direction } : {}),
+        });
+        const runs = Array.isArray((result as { runs?: unknown }).runs)
+          ? (result as { runs: unknown[] }).runs
+          : [];
+        const total = (result as { total?: number }).total ?? runs.length;
+        const hasMore = runs.length >= pageSize;
+        const runsWithId = (
+          runs as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((run) => ({
+          ...run,
+          run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
+        }));
+        return res.status(200).json({
+          runs: runsWithId,
+          pagination: {
+            has_more: hasMore,
+            total_count: total,
+            next_page_token: hasMore
+              ? Buffer.from(
+                  JSON.stringify({ page: page + 1, limit: pageSize })
+                ).toString('base64')
+              : undefined,
+          },
+        });
+      }
+
+      // Time-filtered path: aggregate client-side
+      let apiPage = 1;
+      const fetchSize = Math.min(pageSize, 500);
+      const sortField = sort ?? 'start';
+      const sortDir: SortDirection = direction ?? 'Descending';
+      const aggregated: Array<{ start?: number | string }> = [];
+      for (;;) {
+        const chunk = await RunService.runServiceListAllRuns({
+          ...(query ? { query } : {}),
+          ...(roles ? { roles } : {}),
+          ...(trashed !== undefined ? { trashed } : {}),
+          limit: fetchSize,
+          page: apiPage,
+          sort: sortField,
+          direction: sortDir,
+        });
+        const runs = Array.isArray((chunk as { runs?: unknown }).runs)
+          ? ((chunk as { runs: unknown[] }).runs as unknown[])
+          : [];
+        aggregated.push(...(runs as Array<{ start?: number | string }>));
+        if (runs.length < fetchSize) break;
+        apiPage += 1;
+      }
+      const withinRange = aggregated.filter((r) => {
+        const s = Number(r.start) || Date.parse(String(r.start));
+        if (!Number.isFinite(s)) return false;
+        if (fromMs !== undefined && s < fromMs) return false;
+        if (toMs !== undefined && s > toMs) return false;
+        return true;
+      });
+      const startIdx = Math.max(0, (page - 1) * pageSize);
+      const finalRuns = withinRange.slice(startIdx, startIdx + pageSize);
+      const hasMore = startIdx + pageSize < withinRange.length;
+      const runsWithId = (
+        finalRuns as Array<{ id?: number | string; [key: string]: unknown }>
+      ).map((run) => ({
+        ...run,
+        run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
+      }));
+      return res.status(200).json({
+        runs: runsWithId,
+        pagination: {
+          has_more: hasMore,
+          total_count: withinRange.length,
+          next_page_token: hasMore
+            ? Buffer.from(JSON.stringify({ page: page + 1, limit: pageSize })).toString(
+                'base64'
+              )
+            : undefined,
+        },
+      });
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Runs not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_list_all_runs');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_get_dataset_summary
+  app.post(
+    '/api/tools/horreum_get_dataset_summary',
+    authMiddleware,
+    async (req, res) => {
+      try {
+        const body = req.body as Record<string, unknown> | undefined;
+        if (!body || typeof body !== 'object') {
+          return sendContractError(
+            res,
+            400,
+            'INVALID_REQUEST',
+            'Request body must be a JSON object.'
+          );
+        }
+        const datasetId = body.dataset_id as number | undefined;
+        if (!datasetId || !Number.isFinite(datasetId)) {
+          return sendContractError(
+            res,
+            400,
+            'INVALID_REQUEST',
+            "Provide valid 'dataset_id' parameter."
+          );
+        }
+        const viewId = body.view_id as number | undefined;
+        const result = await DatasetService.datasetServiceGetDatasetSummary({
+          datasetId,
+          ...(viewId ? { viewId } : {}),
+        });
+        return res.status(200).json(result);
+      } catch (err) {
+        const anyErr = err as { status?: number; message?: string; body?: unknown };
+        if (anyErr?.status === 404) {
+          return sendContractError(
+            res,
+            404,
+            'NOT_FOUND',
+            anyErr.message || 'Dataset not found',
+            anyErr.body,
+            false
+          );
+        }
+        if (anyErr?.status === 401 || anyErr?.status === 403) {
+          return sendContractError(
+            res,
+            anyErr.status,
+            'INVALID_REQUEST',
+            anyErr.message || 'Authentication failed',
+            anyErr.body,
+            false
+          );
+        }
+        if (anyErr?.status === 429) {
+          return sendContractError(
+            res,
+            429,
+            'RATE_LIMITED',
+            'Rate limited by upstream Horreum API',
+            anyErr.body,
+            true
+          );
+        }
+        if (anyErr?.status === 503 || anyErr?.status === 502) {
+          return sendContractError(
+            res,
+            anyErr.status,
+            'SERVICE_UNAVAILABLE',
+            'Upstream service unavailable',
+            anyErr.body,
+            true
+          );
+        }
+        if (anyErr?.status === 504) {
+          return sendContractError(
+            res,
+            504,
+            'TIMEOUT',
+            'Request timed out',
+            anyErr.body,
+            true
+          );
+        }
+        logger.error({ err }, 'Unhandled error in horreum_get_dataset_summary');
+        return sendContractError(
+          res,
+          500,
+          'INTERNAL_ERROR',
+          anyErr?.message || 'Internal server error'
+        );
+      }
+    }
+  );
+
+  // POST /api/tools/horreum_get_run_data
+  app.post('/api/tools/horreum_get_run_data', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+      const runId = body.run_id as number | undefined;
+      if (!runId || !Number.isFinite(runId)) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide valid 'run_id' parameter."
+        );
+      }
+      const schemaUri = body.schema_uri as string | undefined;
+      const result = await RunService.runServiceGetData({
+        id: runId,
+        ...(schemaUri ? { schemaUri } : {}),
+      });
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Run not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_run_data');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_get_run_metadata
+  app.post('/api/tools/horreum_get_run_metadata', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+      const runId = body.run_id as number | undefined;
+      if (!runId || !Number.isFinite(runId)) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide valid 'run_id' parameter."
+        );
+      }
+      const schemaUri = body.schema_uri as string | undefined;
+      const result = await RunService.runServiceGetMetadata({
+        id: runId,
+        ...(schemaUri ? { schemaUri } : {}),
+      });
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Run not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_run_metadata');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_get_run_summary
+  app.post('/api/tools/horreum_get_run_summary', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+      const runId = body.run_id as number | undefined;
+      if (!runId || !Number.isFinite(runId)) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide valid 'run_id' parameter."
+        );
+      }
+      const result = await RunService.runServiceGetRunSummary({ id: runId });
+      return res.status(200).json(result);
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      if (anyErr?.status === 404) {
+        return sendContractError(
+          res,
+          404,
+          'NOT_FOUND',
+          anyErr.message || 'Run not found',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 401 || anyErr?.status === 403) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'INVALID_REQUEST',
+          anyErr.message || 'Authentication failed',
+          anyErr.body,
+          false
+        );
+      }
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'Rate limited by upstream Horreum API',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 503 || anyErr?.status === 502) {
+        return sendContractError(
+          res,
+          anyErr.status,
+          'SERVICE_UNAVAILABLE',
+          'Upstream service unavailable',
+          anyErr.body,
+          true
+        );
+      }
+      if (anyErr?.status === 504) {
+        return sendContractError(
+          res,
+          504,
+          'TIMEOUT',
+          'Request timed out',
+          anyErr.body,
+          true
+        );
+      }
+      logger.error({ err }, 'Unhandled error in horreum_get_run_summary');
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Internal server error'
+      );
+    }
+  });
+
+  // POST /api/tools/horreum_list_runs_by_schema
+  app.post(
+    '/api/tools/horreum_list_runs_by_schema',
+    authMiddleware,
+    async (req, res) => {
+      try {
+        const body = req.body as Record<string, unknown> | undefined;
+        if (!body || typeof body !== 'object') {
+          return sendContractError(
+            res,
+            400,
+            'INVALID_REQUEST',
+            'Request body must be a JSON object.'
+          );
+        }
+        const uri = body.schema_uri as string | undefined;
+        if (!uri) {
+          return sendContractError(
+            res,
+            400,
+            'INVALID_REQUEST',
+            "Provide 'schema_uri'."
+          );
+        }
+        const limit = Math.min(
+          Math.max(1, (body.limit as number | undefined) ?? 100),
+          1000
+        );
+        const page = (body.page as number | undefined) ?? 1;
+        const sort = body.sort as string | undefined;
+        const direction = body.direction as SortDirection | undefined;
+        const result = await RunService.runServiceListRunsBySchema({
+          uri,
+          limit,
+          page,
+          ...(sort ? { sort } : {}),
+          ...(direction ? { direction } : {}),
+        });
+        const runs = Array.isArray((result as { runs?: unknown }).runs)
+          ? (result as { runs: unknown[] }).runs
+          : [];
+        const total = (result as { total?: number }).total ?? runs.length;
+        const hasMore = runs.length >= limit;
+        const runsWithId = (
+          runs as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((run) => ({
+          ...run,
+          run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
+        }));
+        return res.status(200).json({
+          runs: runsWithId,
+          pagination: {
+            has_more: hasMore,
+            total_count: total,
+            next_page_token: hasMore
+              ? Buffer.from(JSON.stringify({ page: page + 1, limit })).toString(
+                  'base64'
+                )
+              : undefined,
+          },
+        });
+      } catch (err) {
+        const anyErr = err as { status?: number; message?: string; body?: unknown };
+        if (anyErr?.status === 404) {
+          return sendContractError(
+            res,
+            404,
+            'NOT_FOUND',
+            anyErr.message || 'Runs not found',
+            anyErr.body,
+            false
+          );
+        }
+        if (anyErr?.status === 401 || anyErr?.status === 403) {
+          return sendContractError(
+            res,
+            anyErr.status,
+            'INVALID_REQUEST',
+            anyErr.message || 'Authentication failed',
+            anyErr.body,
+            false
+          );
+        }
+        if (anyErr?.status === 429) {
+          return sendContractError(
+            res,
+            429,
+            'RATE_LIMITED',
+            'Rate limited by upstream Horreum API',
+            anyErr.body,
+            true
+          );
+        }
+        if (anyErr?.status === 503 || anyErr?.status === 502) {
+          return sendContractError(
+            res,
+            anyErr.status,
+            'SERVICE_UNAVAILABLE',
+            'Upstream service unavailable',
+            anyErr.body,
+            true
+          );
+        }
+        if (anyErr?.status === 504) {
+          return sendContractError(
+            res,
+            504,
+            'TIMEOUT',
+            'Request timed out',
+            anyErr.body,
+            true
+          );
+        }
+        logger.error({ err }, 'Unhandled error in horreum_list_runs_by_schema');
+        return sendContractError(
+          res,
+          500,
+          'INTERNAL_ERROR',
+          anyErr?.message || 'Internal server error'
+        );
+      }
+    }
+  );
+
   // POST /api/tools/horreum_get_dataset_label_values
   app.post(
     '/api/tools/horreum_get_dataset_label_values',

@@ -732,6 +732,23 @@ export async function registerTools(
     }
   );
 
+  // get_dataset_summary - dataset summary with optional viewId
+  withTool(
+    'get_dataset_summary',
+    'Get dataset summary by Dataset ID; optionally filter by View ID.',
+    {
+      dataset_id: z.number().int().positive(),
+      view_id: z.number().int().positive().optional(),
+    },
+    async (args) => {
+      const res = await DatasetService.datasetServiceGetDatasetSummary({
+        datasetId: args.dataset_id as number,
+        ...(args.view_id ? { viewId: args.view_id as number } : {}),
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
   // get_run_label_values - Label values for a specific run
   withTool(
     'get_run_label_values',
@@ -880,6 +897,247 @@ export async function registerTools(
         datasetId: args.dataset_id as number,
       });
       return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // get_run - expose run resource as a tool
+  withTool(
+    'get_run',
+    'Get extended Run information by Run ID.',
+    { run_id: z.number().int().positive() },
+    async (args) => {
+      const res = await RunService.runServiceGetRun({ id: args.run_id as number });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // get_run_data - raw run payload (optional schemaUri)
+  withTool(
+    'get_run_data',
+    'Get raw run data payload; optionally filter by schema URI.',
+    {
+      run_id: z.number().int().positive(),
+      schema_uri: z.string().optional(),
+    },
+    async (args) => {
+      const res = await RunService.runServiceGetData({
+        id: args.run_id as number,
+        ...(args.schema_uri ? { schemaUri: args.schema_uri as string } : {}),
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // get_run_metadata - metadata only (optional schemaUri)
+  withTool(
+    'get_run_metadata',
+    'Get run metadata; optionally filter by schema URI.',
+    {
+      run_id: z.number().int().positive(),
+      schema_uri: z.string().optional(),
+    },
+    async (args) => {
+      const res = await RunService.runServiceGetMetadata({
+        id: args.run_id as number,
+        ...(args.schema_uri ? { schemaUri: args.schema_uri as string } : {}),
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // get_run_summary - lightweight run overview
+  withTool(
+    'get_run_summary',
+    'Get run summary information by Run ID.',
+    { run_id: z.number().int().positive() },
+    async (args) => {
+      const res = await RunService.runServiceGetRunSummary({
+        id: args.run_id as number,
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // list_runs_by_schema - list runs filtered by schema URI
+  withTool(
+    'list_runs_by_schema',
+    'List runs filtered by a given schema URI. Pagination is 1-based.',
+    {
+      schema_uri: z.string(),
+      limit: z.number().int().positive().max(1000).optional(),
+      page: z.number().int().min(1).optional(),
+      sort: z.string().optional(),
+      direction: z.enum(['Ascending', 'Descending']).optional(),
+    },
+    async (args) => {
+      const limit = (args.limit as number | undefined) ?? 100;
+      const page = (args.page as number | undefined) ?? 1;
+      const res = await RunService.runServiceListRunsBySchema({
+        uri: args.schema_uri as string,
+        limit,
+        page,
+        ...(args.sort ? { sort: args.sort as string } : {}),
+        ...(args.direction ? { direction: args.direction as SortDirection } : {}),
+      });
+
+      const runs = Array.isArray((res as { runs?: unknown }).runs)
+        ? (res as { runs: unknown[] }).runs
+        : [];
+      const total = (res as { total?: number }).total ?? runs.length;
+      const hasMore = runs.length >= limit;
+
+      const runsWithId = (
+        runs as Array<{ id?: number | string; [key: string]: unknown }>
+      ).map((run) => ({
+        ...run,
+        run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
+      }));
+
+      const transformed = {
+        runs: runsWithId,
+        pagination: {
+          has_more: hasMore,
+          total_count: total,
+          next_page_token: hasMore
+            ? Buffer.from(JSON.stringify({ page: page + 1, limit })).toString('base64')
+            : undefined,
+        },
+      };
+      return { content: [text(JSON.stringify(transformed, null, 2))] };
+    }
+  );
+
+  // get_run_count - count summary for a test
+  withTool(
+    'get_run_count',
+    'Get Run count summary for a given Test ID.',
+    { test_id: z.number().int().positive() },
+    async (args) => {
+      const res = await RunService.runServiceRunCount({
+        testId: args.test_id as number,
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // list_all_runs - global run search with optional time filters
+  withTool(
+    'list_all_runs',
+    'List all runs across all tests. Supports natural language time expressions. ' +
+      'Pagination uses 1-based indexing (first page is 1).',
+    {
+      query: z.string().optional(),
+      roles: z.string().optional(),
+      trashed: z.boolean().optional(),
+      limit: z.number().int().positive().max(1000).optional(),
+      page: z.number().int().min(1).optional(),
+      sort: z.string().optional(),
+      direction: z.enum(['Ascending', 'Descending']).optional(),
+      from: z
+        .string()
+        .optional()
+        .describe('Start time: ISO, epoch millis, or natural language ("last week")'),
+      to: z
+        .string()
+        .optional()
+        .describe('End time: ISO, epoch millis, or natural language ("now")'),
+    },
+    async (args) => {
+      const limit = Math.min((args.limit as number | undefined) ?? 100, 1000);
+      const page = (args.page as number | undefined) ?? 1;
+
+      // If no time filters, defer to API pagination
+      if (!args.from && !args.to) {
+        const res = await RunService.runServiceListAllRuns({
+          ...(args.query ? { query: args.query as string } : {}),
+          ...(args.roles ? { roles: args.roles as string } : {}),
+          ...(args.trashed !== undefined ? { trashed: args.trashed as boolean } : {}),
+          limit,
+          page,
+          ...(args.sort ? { sort: args.sort as string } : {}),
+          ...(args.direction ? { direction: args.direction as SortDirection } : {}),
+        });
+        const runs = Array.isArray((res as { runs?: unknown }).runs)
+          ? (res as { runs: unknown[] }).runs
+          : [];
+        const total = (res as { total?: number }).total ?? runs.length;
+        const hasMore = runs.length >= limit;
+        const runsWithId = (
+          runs as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((run) => ({
+          ...run,
+          run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
+        }));
+        const transformed = {
+          runs: runsWithId,
+          pagination: {
+            has_more: hasMore,
+            total_count: total,
+            next_page_token: hasMore
+              ? Buffer.from(JSON.stringify({ page: page + 1, limit })).toString(
+                  'base64'
+                )
+              : undefined,
+          },
+        };
+        return { content: [text(JSON.stringify(transformed, null, 2))] };
+      }
+
+      // Time-filtered: aggregate pages client-side and filter by start timestamp
+      const { fromMs, toMs } = parseTimeRange(
+        args.from as string | undefined,
+        args.to as string | undefined
+      );
+
+      let apiPage = 1;
+      const pageSize = Math.min(limit, 500);
+      const sortField = (args.sort as string | undefined) ?? 'start';
+      const sortDir = (args.direction as SortDirection | undefined) ?? 'Descending';
+      const aggregated: Array<{ start?: number | string }> = [];
+      for (;;) {
+        const chunk = await RunService.runServiceListAllRuns({
+          ...(args.query ? { query: args.query as string } : {}),
+          ...(args.roles ? { roles: args.roles as string } : {}),
+          ...(args.trashed !== undefined ? { trashed: args.trashed as boolean } : {}),
+          limit: pageSize,
+          page: apiPage,
+          sort: sortField,
+          direction: sortDir,
+        });
+        const runs = Array.isArray((chunk as { runs?: unknown }).runs)
+          ? ((chunk as { runs: unknown[] }).runs as unknown[])
+          : [];
+        aggregated.push(...(runs as Array<{ start?: number | string }>));
+        if (runs.length < pageSize) break;
+        apiPage += 1;
+      }
+
+      const withinRange = aggregated.filter((r) => {
+        const s = Number(r.start) || Date.parse(String(r.start));
+        if (!Number.isFinite(s)) return false;
+        if (fromMs !== undefined && s < fromMs) return false;
+        if (toMs !== undefined && s > toMs) return false;
+        return true;
+      });
+      const startIdx = Math.max(0, (page - 1) * limit);
+      const finalRuns = withinRange.slice(startIdx, startIdx + limit);
+      const hasMore = startIdx + limit < withinRange.length;
+      const result = {
+        runs: (
+          finalRuns as Array<{ id?: number | string; [key: string]: unknown }>
+        ).map((run) => ({
+          ...run,
+          run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
+        })),
+        pagination: {
+          has_more: hasMore,
+          total_count: withinRange.length,
+          next_page_token: hasMore
+            ? Buffer.from(JSON.stringify({ page: page + 1, limit })).toString('base64')
+            : undefined,
+        },
+      } as const;
+      return { content: [text(JSON.stringify(result, null, 2))] };
     }
   );
 

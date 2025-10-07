@@ -117,11 +117,18 @@ npm start -- --log-level info
 - **`upload_run`**: Submit new test run data to Horreum
 - **`source.describe`**: Runtime capability discovery for integration (returns
   sourceType, version, capabilities, limits)
-- **Label Values (Phase 6.6)**:
-  - `get_run_label_values`: Label values for a specific run with filtering
-  - `get_test_label_values`: Aggregated label values across a test with time
-    boundaries (natural language supported)
-  - `get_dataset_label_values`: Label values for a specific dataset
+- **`get_run`**: Extended run details by ID
+- **`get_run_data`**: Raw run payload (optional `schema_uri`)
+- **`get_run_metadata`**: Run metadata only (optional `schema_uri`)
+- **`get_run_summary`**: Lightweight run summary
+- **`list_runs_by_schema`**: Runs filtered by schema URI (1-based pagination)
+- **`get_run_count`**: Run count summary for a test
+- **`list_all_runs`**: Global run search with natural language time
+- **`get_dataset_summary`**: Dataset summary (optional `view_id`)
+- **`get_run_label_values`**: Label values for a specific run with filtering
+- **`get_test_label_values`**: Aggregated label values across a test with time
+  boundaries (natural language supported)
+- **`get_dataset_label_values`**: Label values for a specific dataset
 
 ### MCP Resources
 
@@ -634,6 +641,13 @@ curl -X POST http://localhost:3000/api/tools/source.describe \
 - `POST /api/tools/horreum_get_schema` - Get schema by ID or name
 - `POST /api/tools/horreum_list_datasets` - Search/list datasets by test, schema, or time
 - `POST /api/tools/horreum_get_dataset` - Get raw dataset content by ID
+- `POST /api/tools/horreum_get_run_data` - Raw run data (optional schemaUri)
+- `POST /api/tools/horreum_get_run_metadata` - Run metadata (optional schemaUri)
+- `POST /api/tools/horreum_get_run_summary` - Run summary
+- `POST /api/tools/horreum_list_runs_by_schema` - Runs filtered by schema URI
+- `POST /api/tools/horreum_get_run_count` - Run count for a test
+- `POST /api/tools/horreum_list_all_runs` - Global run search with time filters
+- `POST /api/tools/horreum_get_dataset_summary` - Dataset summary (optional viewId)
 - `POST /api/tools/horreum_get_run_label_values` - Run label values with
   filtering and pagination
 - `POST /api/tools/horreum_get_test_label_values` - Test-wide label values with

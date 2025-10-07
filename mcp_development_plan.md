@@ -305,7 +305,7 @@ that represents the actual test metrics and results.
 - [x] Documentation complete with examples
 - [x] multiFilter parameter behavior documented
 
-**Phase 6.7: Comprehensive Run and Dataset GET Endpoint Coverage (PLANNED)**
+**Phase 6.7: Comprehensive Run and Dataset GET Endpoint Coverage (COMPLETED - 2025-10-07)**
 
 This phase completes the read-only API coverage by implementing all remaining GET
 endpoints for Runs and Datasets. These endpoints provide access to run metadata,
@@ -421,15 +421,15 @@ before moving to write operations.
 
 **Success Criteria**:
 
-- [ ] 7 new Run tools implemented (get_run as tool, get_run_data, get_run_metadata,
+- [x] 7 new Run tools implemented (get_run as tool, get_run_data, get_run_metadata,
       get_run_summary, list_runs_by_schema, get_run_count, list_all_runs)
-- [ ] 1 new Dataset tool implemented (get_dataset_summary)
-- [ ] All HTTP endpoints implemented with auth middleware
-- [ ] Comprehensive smoke tests passing
-- [ ] Natural language time support verified for list_all_runs
-- [ ] Schema URI filtering working for applicable endpoints
-- [ ] Documentation complete with examples
-- [ ] All tests passing with 1-based pagination
+- [x] 1 new Dataset tool implemented (get_dataset_summary)
+- [x] All HTTP endpoints implemented with auth middleware
+- [x] Comprehensive smoke tests passing
+- [x] Natural language time support verified for list_all_runs
+- [x] Schema URI filtering working for applicable endpoints
+- [x] Documentation complete with examples
+- [x] All tests passing with 1-based pagination
 
 **Phase 7: Enhanced CI/CD Pipeline**
 
@@ -647,16 +647,16 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - **Rationale**: Label values are the primary output of Horreum's transformation system and represent
      the actual test metrics and results. This is the most important read endpoint for data analysis.
    - **Deliverables**: MCP tools, HTTP endpoints, smoke tests, comprehensive filtering documentation
-   - **Phase 6.7 (Run and Dataset GET Endpoints) PLANNED** - MEDIUM-HIGH PRIORITY
-   - **Goal**: Complete read-only API coverage by implementing all remaining Run and Dataset GET endpoints
-   - Eight critical endpoints to implement:
+   - **Phase 6.7 (Run and Dataset GET Endpoints) COMPLETED (2025-10-07)** - MEDIUM-HIGH PRIORITY
+   - **Goal**: Complete read-only API coverage by implementing all remaining Run and Dataset GET endpoints ✅
+   - Eight critical endpoints implemented:
      1. Run endpoints: get_run (as tool), get_run_data, get_run_metadata, get_run_summary,
-        list_runs_by_schema, get_run_count, list_all_runs
-     2. Dataset endpoints: get_dataset_summary
+        list_runs_by_schema, get_run_count, list_all_runs ✅
+     2. Dataset endpoints: get_dataset_summary ✅
    - **Rationale**: Completes the read-first strategy by providing access to raw run data, metadata,
      summaries, and dataset information. Essential for comprehensive data access and analysis.
-   - **AUTHORIZED**: Implement Phase 6.7 endpoints (Run and Dataset GET coverage).
-   - **NEXT AFTER 6.7**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
+   - **Deliverables**: MCP tools, HTTP endpoints, comprehensive smoke test script, README updates
+   - **NEXT**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
    - Phase 8 (Architecture Refactoring) and beyond follow after Phase 7 completion.
 
 5. Status checklist
@@ -825,41 +825,40 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Update HTTP API documentation with new endpoints
     - [x] Create comprehensive LABEL_VALUES_FILTERING.md guide
     - [x] Document multiFilter parameter behavior with examples
-- [ ] Phase 6.7 — Run and Dataset GET Endpoint Coverage (PLANNED)
-  - [ ] Implement Run endpoint MCP tools
-    - [ ] get_run (convert resource to also be a tool)
-    - [ ] get_run_data with optional schemaUri parameter
-    - [ ] get_run_metadata with optional schemaUri parameter
-    - [ ] get_run_summary for lightweight run overview
-    - [ ] list_runs_by_schema with pagination and sorting
-    - [ ] get_run_count for test statistics
-    - [ ] list_all_runs with time filters and natural language support
-  - [ ] Implement Dataset endpoint MCP tools
-    - [ ] get_dataset_summary with optional viewId parameter
-  - [ ] Add HTTP endpoints for all new tools
-    - [ ] POST /api/tools/horreum_get_run (may already exist)
-    - [ ] POST /api/tools/horreum_get_run_data
-    - [ ] POST /api/tools/horreum_get_run_metadata
-    - [ ] POST /api/tools/horreum_get_run_summary
-    - [ ] POST /api/tools/horreum_list_runs_by_schema
-    - [ ] POST /api/tools/horreum_get_run_count
-    - [ ] POST /api/tools/horreum_list_all_runs
-    - [ ] POST /api/tools/horreum_get_dataset_summary
-    - [ ] Apply auth middleware to all endpoints
-    - [ ] Use sendContractError for consistent error handling
-  - [ ] Create comprehensive smoke tests
-    - [ ] Individual tests for each new endpoint
-    - [ ] scripts/smoke-run-dataset-endpoints.mjs comprehensive test
-    - [ ] Test schema URI filtering where applicable
-    - [ ] Test natural language time for list_all_runs
-    - [ ] Test optional parameters (schemaUri, viewId)
-    - [ ] Test pagination with 1-based page numbers
-  - [ ] Update documentation
-    - [ ] Add all new tools to README.md Tools section
-    - [ ] Add use case examples (raw data vs metadata, summaries, global search)
-    - [ ] Document schema URI filtering
-    - [ ] Document run extended vs summary differences
-    - [ ] Update HTTP API documentation with new endpoints
+- [x] Phase 6.7 — Run and Dataset GET Endpoint Coverage (COMPLETED 2025-10-07)
+  - [x] Implement Run endpoint MCP tools
+    - [x] get_run (convert resource to also be a tool)
+    - [x] get_run_data with optional schemaUri parameter
+    - [x] get_run_metadata with optional schemaUri parameter
+    - [x] get_run_summary for lightweight run overview
+    - [x] list_runs_by_schema with pagination and sorting
+    - [x] get_run_count for test statistics
+    - [x] list_all_runs with time filters and natural language support
+  - [x] Implement Dataset endpoint MCP tools
+    - [x] get_dataset_summary with optional viewId parameter
+  - [x] Add HTTP endpoints for all new tools
+    - [x] POST /api/tools/horreum_get_run_data
+    - [x] POST /api/tools/horreum_get_run_metadata
+    - [x] POST /api/tools/horreum_get_run_summary
+    - [x] POST /api/tools/horreum_list_runs_by_schema
+    - [x] POST /api/tools/horreum_get_run_count
+    - [x] POST /api/tools/horreum_list_all_runs
+    - [x] POST /api/tools/horreum_get_dataset_summary
+    - [x] Apply auth middleware to all endpoints
+    - [x] Use sendContractError for consistent error handling
+  - [x] Create comprehensive smoke tests
+    - [x] Individual tests for each new endpoint
+    - [x] scripts/smoke-run-dataset-endpoints.mjs comprehensive test
+    - [x] Test schema URI filtering where applicable
+    - [x] Test natural language time for list_all_runs
+    - [x] Test optional parameters (schemaUri, viewId)
+    - [x] Test pagination with 1-based page numbers
+  - [x] Update documentation
+    - [x] Add all new tools to README.md Tools section
+    - [x] Add use case examples (raw data vs metadata, summaries, global search)
+    - [x] Document schema URI filtering
+    - [x] Document run extended vs summary differences
+    - [x] Update HTTP API documentation with new endpoints
 - Phase 7 — Enhanced CI/CD Pipeline
   - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
   - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -908,6 +907,28 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-07 — **Phase 6.7 Complete - Run and Dataset GET Endpoint Coverage**: Completed read-only
+     API coverage by implementing all remaining Run and Dataset GET endpoints. Added 7 new Run MCP
+     tools: (1) get_run (exposed run resource as tool for programmatic access), (2) get_run_data
+     (raw run payload with optional schemaUri filter), (3) get_run_metadata (metadata only with
+     optional schemaUri), (4) get_run_summary (lightweight run overview), (5) list_runs_by_schema
+     (runs filtered by schema URI with pagination and sorting), (6) get_run_count (quick test
+     statistics), (7) list_all_runs (global run search with natural language time support via
+     parseTimeRange, optional query/roles/trashed filters, client-side aggregation for time-filtered
+     queries). Added 1 Dataset tool: get_dataset_summary (dataset summary with optional viewId).
+     Implemented 7 new HTTP POST endpoints: /api/tools/horreum_get_run_data, \_get_run_metadata,
+     \_get_run_summary, \_list_runs_by_schema, \_get_run_count, \_list_all_runs, \_get_dataset_summary,
+     all with auth middleware and sendContractError for consistent error handling. Created comprehensive
+     smoke test script: scripts/smoke-run-dataset-endpoints.mjs with 8 test cases covering all new
+     endpoints, schema URI filtering, natural language time parsing, optional parameters, and 1-based
+     pagination. Updated README.md with new tools and endpoints in Core Tools and Direct HTTP API
+     sections. All endpoints integrate with existing observability stack (logging, metrics, tracing)
+     and follow established patterns from Phases 6.5-6.6. Pagination responses include run_id fields
+     and snake_case pagination metadata (has_more, total_count, next_page_token) for Source MCP
+     Contract compliance. Natural language time expressions ("last week", "now", "yesterday") supported
+     in list_all_runs for intuitive time-range queries. All 32+ checklist items completed. This phase
+     completes the read-first development strategy, providing comprehensive access to runs, datasets,
+     schemas, tests, and label values. Agent: Claude Sonnet 4.5.
    - 2025-10-07 — **Phase 6.6 Complete - Label Values API Coverage**: Implemented comprehensive
      label values endpoints for accessing Horreum's transformed test data. Added three critical
      endpoints: (1) get_run_label_values MCP tool and HTTP endpoint with extensive server-side
