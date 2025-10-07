@@ -542,7 +542,7 @@ export async function registerTools(
       // Transform for Source MCP Contract compliance
       const runsWithId = finalRuns.map((run) => ({
         ...run,
-        run_id: String(run.id ?? run.run_id ?? ''),
+        run_id: String(run.id ?? (run as { run_id?: unknown }).run_id ?? ''),
       }));
 
       const result = {
@@ -729,6 +729,157 @@ export async function registerTools(
       };
 
       return { content: [text(JSON.stringify(response, null, 2))] };
+    }
+  );
+
+  // get_run_label_values - Label values for a specific run
+  withTool(
+    'get_run_label_values',
+    'Get label values for a specific run with filtering and pagination. ' +
+      'When multiFilter=true, filter values can be arrays to match multiple values: ' +
+      '{"label_name": ["value1", "value2"]}',
+    {
+      run_id: z.number().int().positive().describe('Run ID'),
+      filter: z
+        .union([z.string(), z.record(z.unknown())])
+        .optional()
+        .describe(
+          'JSON sub-document or path expression. Use arrays when multiFilter=true: ' +
+            '{"label": ["val1", "val2"]}'
+        ),
+      include: z.array(z.string()).optional(),
+      exclude: z.array(z.string()).optional(),
+      multiFilter: z
+        .boolean()
+        .optional()
+        .describe('Enable array value matching in filter'),
+      sort: z.string().optional(),
+      direction: z.enum(['Ascending', 'Descending']).optional(),
+      limit: z.number().int().positive().optional(),
+      page: z.number().int().min(1).optional().describe('1-based page number'),
+    },
+    async (args) => {
+      const filterStr =
+        typeof args.filter === 'string'
+          ? (args.filter as string)
+          : args.filter && typeof args.filter === 'object'
+            ? JSON.stringify(args.filter)
+            : '{}';
+
+      const res = await RunService.runServiceGetRunLabelValues({
+        id: args.run_id as number,
+        filter: filterStr,
+        ...(args.sort ? { sort: args.sort as string } : {}),
+        ...(args.direction ? { direction: args.direction as unknown as string } : {}),
+        ...(args.limit !== undefined ? { limit: args.limit as number } : {}),
+        ...(args.page !== undefined ? { page: args.page as number } : {}),
+        ...(args.include ? { include: args.include as string[] } : {}),
+        ...(args.exclude ? { exclude: args.exclude as string[] } : {}),
+        ...(args.multiFilter !== undefined
+          ? { multiFilter: args.multiFilter as boolean }
+          : {}),
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // get_test_label_values - Aggregated label values across a test
+  withTool(
+    'get_test_label_values',
+    'Get aggregated label values across all runs for a test. ' +
+      'When multiFilter=true, filter values can be arrays to match multiple values: ' +
+      '{"label_name": ["value1", "value2"]}',
+    {
+      test_id: z.number().int().positive().optional(),
+      test_name: z.string().optional(),
+      filtering: z.boolean().optional().describe('Include filtering labels'),
+      metrics: z.boolean().optional().describe('Include metric labels'),
+      filter: z
+        .union([z.string(), z.record(z.unknown())])
+        .optional()
+        .describe(
+          'JSON sub-document or path expression. Use arrays when multiFilter=true: ' +
+            '{"label": ["val1", "val2"]}'
+        ),
+      before: z.string().optional().describe('ISO, epoch millis, or natural language'),
+      after: z.string().optional().describe('ISO, epoch millis, or natural language'),
+      sort: z.string().optional(),
+      direction: z.enum(['Ascending', 'Descending']).optional(),
+      limit: z.number().int().positive().optional(),
+      page: z.number().int().min(1).optional().describe('1-based page number'),
+      include: z.array(z.string()).optional(),
+      exclude: z.array(z.string()).optional(),
+      multiFilter: z
+        .boolean()
+        .optional()
+        .describe('Enable array value matching in filter'),
+    },
+    async (args) => {
+      // Resolve test ID from name if provided
+      let resolvedTestId: number | undefined = args.test_id as number | undefined;
+      if (!resolvedTestId && args.test_name) {
+        const t = await TestService.testServiceGetByNameOrId({
+          name: args.test_name as string,
+        });
+        resolvedTestId = t.id;
+      }
+      if (!resolvedTestId) {
+        return {
+          content: [text('Provide test_id or test_name.')],
+          isError: true,
+        };
+      }
+
+      // Natural language time for before/after via parseTimeRange
+      const { fromMs, toMs } = parseTimeRange(
+        (args.after as string | undefined) ?? undefined,
+        (args.before as string | undefined) ?? undefined
+      );
+      const beforeStr = toMs !== undefined ? String(toMs) : undefined;
+      const afterStr = fromMs !== undefined ? String(fromMs) : undefined;
+
+      const filterStr =
+        typeof args.filter === 'string'
+          ? (args.filter as string)
+          : args.filter && typeof args.filter === 'object'
+            ? JSON.stringify(args.filter)
+            : '{}';
+
+      const res = await TestService.testServiceGetTestLabelValues({
+        id: resolvedTestId,
+        ...(args.filtering !== undefined
+          ? { filtering: args.filtering as boolean }
+          : {}),
+        ...(args.metrics !== undefined ? { metrics: args.metrics as boolean } : {}),
+        filter: filterStr,
+        ...(beforeStr ? { before: beforeStr } : {}),
+        ...(afterStr ? { after: afterStr } : {}),
+        ...(args.sort ? { sort: args.sort as string } : {}),
+        ...(args.direction ? { direction: args.direction as unknown as string } : {}),
+        ...(args.limit !== undefined ? { limit: args.limit as number } : {}),
+        ...(args.page !== undefined ? { page: args.page as number } : {}),
+        ...(args.include ? { include: args.include as string[] } : {}),
+        ...(args.exclude ? { exclude: args.exclude as string[] } : {}),
+        ...(args.multiFilter !== undefined
+          ? { multiFilter: args.multiFilter as boolean }
+          : {}),
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
+    }
+  );
+
+  // get_dataset_label_values - Label values for a specific dataset
+  withTool(
+    'get_dataset_label_values',
+    'Get label values for a specific dataset.',
+    {
+      dataset_id: z.number().int().positive().describe('Dataset ID'),
+    },
+    async (args) => {
+      const res = await DatasetService.datasetServiceGetDatasetLabelValues({
+        datasetId: args.dataset_id as number,
+      });
+      return { content: [text(JSON.stringify(res, null, 2))] };
     }
   );
 

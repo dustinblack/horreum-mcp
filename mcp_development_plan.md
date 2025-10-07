@@ -205,7 +205,7 @@ This phase addresses three critical issues discovered during end-to-end testing 
    - Comprehensive documentation in `SSL_CONFIGURATION.md` with production and testing examples
    - Testing-only option to disable SSL verification via `HORREUM_TLS_VERIFY=false`
 
-**Phase 6.6: Label Values API Coverage (IN PROGRESS - 2025-10-07)**
+**Phase 6.6: Label Values API Coverage (COMPLETED - 2025-10-07)**
 
 This phase adds comprehensive support for accessing Horreum's extracted label values
 data, which represents the primary output of Horreum's transformation system. Label
@@ -296,13 +296,14 @@ that represents the actual test metrics and results.
 
 **Success Criteria**:
 
-- [ ] All three MCP tools implemented and registered
-- [ ] All three HTTP endpoints implemented with auth middleware
-- [ ] Comprehensive smoke tests passing for all three endpoints
-- [ ] Natural language time support verified for test endpoint
-- [ ] Filter parameter validation working correctly
-- [ ] Include/exclude arrays handled properly
-- [ ] Documentation complete with examples
+- [x] All three MCP tools implemented and registered
+- [x] All three HTTP endpoints implemented with auth middleware
+- [x] Comprehensive smoke tests passing for all three endpoints
+- [x] Natural language time support verified for test endpoint
+- [x] Filter parameter validation working correctly
+- [x] Include/exclude arrays handled properly
+- [x] Documentation complete with examples
+- [x] multiFilter parameter behavior documented
 
 **Phase 6.7: Comprehensive Run and Dataset GET Endpoint Coverage (PLANNED)**
 
@@ -637,14 +638,15 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      1. ✅ **Schema compliance**: COMPLETE - Added test_id/run_id fields, has_more, snake_case naming
      2. ✅ **Time queries**: COMPLETE - Natural language time parsing integrated into all time-aware endpoints
      3. ✅ **Pagination alignment**: COMPLETE - Aligned to 1-based model (page >= 1)
-   - **Phase 6.6 (Label Values API Coverage) IN PROGRESS (2025-10-07)** - HIGH PRIORITY
-   - **Goal**: Implement comprehensive label values API coverage for accessing transformed test data
-   - Three critical endpoints to implement:
-     1. `get_run_label_values` - **Most important** - filtered access to run-specific metrics
-     2. `get_test_label_values` - Aggregated label values across all runs for a test
-     3. `get_dataset_label_values` - Label values for specific dataset
+   - **Phase 6.6 (Label Values API Coverage) COMPLETED (2025-10-07)** - HIGH PRIORITY
+   - **Goal**: Implement comprehensive label values API coverage for accessing transformed test data ✅
+   - Three critical endpoints implemented:
+     1. `get_run_label_values` - **Most important** - filtered access to run-specific metrics ✅
+     2. `get_test_label_values` - Aggregated label values across all runs for a test ✅
+     3. `get_dataset_label_values` - Label values for specific dataset ✅
    - **Rationale**: Label values are the primary output of Horreum's transformation system and represent
      the actual test metrics and results. This is the most important read endpoint for data analysis.
+   - **Deliverables**: MCP tools, HTTP endpoints, smoke tests, comprehensive filtering documentation
    - **Phase 6.7 (Run and Dataset GET Endpoints) PLANNED** - MEDIUM-HIGH PRIORITY
    - **Goal**: Complete read-only API coverage by implementing all remaining Run and Dataset GET endpoints
    - Eight critical endpoints to implement:
@@ -653,8 +655,8 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      2. Dataset endpoints: get_dataset_summary
    - **Rationale**: Completes the read-first strategy by providing access to raw run data, metadata,
      summaries, and dataset information. Essential for comprehensive data access and analysis.
-   - **AUTHORIZED**: Implement Phase 6.6 and 6.7 endpoints (MCP tools + HTTP endpoints + tests + docs).
-   - **NEXT AFTER 6.6/6.7**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
+   - **AUTHORIZED**: Implement Phase 6.7 endpoints (Run and Dataset GET coverage).
+   - **NEXT AFTER 6.7**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
    - Phase 8 (Architecture Refactoring) and beyond follow after Phase 7 completion.
 
 5. Status checklist
@@ -781,46 +783,48 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
          - [x] Test default behavior (no params → last 30 days)
        - [x] Test edge cases and error handling
 
-- [ip] Phase 6.6 — Label Values API Coverage (IN PROGRESS 2025-10-07)
-  - [ ] Implement get_run_label_values MCP tool
-    - [ ] Add tool registration in src/server/tools.ts with Zod schema
-    - [ ] Support filter parameter (JSON sub-document or path expression)
-    - [ ] Support include/exclude label name arrays
-    - [ ] Support multiFilter boolean for array value filtering
-    - [ ] Support sort/direction for result ordering
-    - [ ] Support limit/page for pagination (1-based)
-    - [ ] Return ExportedLabelValues array with values/runId/datasetId/start/stop
-  - [ ] Implement get_test_label_values MCP tool
-    - [ ] Add tool registration in src/server/tools.ts with Zod schema
-    - [ ] Support all filtering options from run endpoint
-    - [ ] Support filtering/metrics boolean flags
-    - [ ] Support before/after time boundaries with natural language parsing
-    - [ ] Integrate parseTimeRange utility for time parsing
-    - [ ] Return ExportedLabelValues array
-  - [ ] Implement get_dataset_label_values MCP tool
-    - [ ] Add tool registration in src/server/tools.ts with Zod schema
-    - [ ] Simple implementation - no filtering parameters
-    - [ ] Return LabelValue array with id/name/schema/value
-  - [ ] Add HTTP endpoints for all three tools
-    - [ ] POST /api/tools/horreum_get_run_label_values
-    - [ ] POST /api/tools/horreum_get_test_label_values
-    - [ ] POST /api/tools/horreum_get_dataset_label_values
-    - [ ] Apply auth middleware to all endpoints
-    - [ ] Use sendContractError for consistent error handling
-  - [ ] Create comprehensive smoke tests
-    - [ ] scripts/smoke-get-run-label-values.mjs
-    - [ ] scripts/smoke-get-test-label-values.mjs
-    - [ ] scripts/smoke-get-dataset-label-values.mjs
-    - [ ] Test filter parameter validation
-    - [ ] Test include/exclude arrays
-    - [ ] Test natural language time for test endpoint
-    - [ ] Test pagination with 1-based page numbers
-  - [ ] Update documentation
-    - [ ] Add label values tools to README.md Tools section
-    - [ ] Add filtering pattern examples
-    - [ ] Document filtering vs metric labels distinction
-    - [ ] Explain label value structure and transformer relationship
-    - [ ] Update HTTP API documentation with new endpoints
+- [x] Phase 6.6 — Label Values API Coverage (COMPLETED 2025-10-07)
+  - [x] Implement get_run_label_values MCP tool
+    - [x] Add tool registration in src/server/tools.ts with Zod schema
+    - [x] Support filter parameter (JSON sub-document or path expression)
+    - [x] Support include/exclude label name arrays
+    - [x] Support multiFilter boolean for array value filtering
+    - [x] Support sort/direction for result ordering
+    - [x] Support limit/page for pagination (1-based)
+    - [x] Return ExportedLabelValues array with values/runId/datasetId/start/stop
+  - [x] Implement get_test_label_values MCP tool
+    - [x] Add tool registration in src/server/tools.ts with Zod schema
+    - [x] Support all filtering options from run endpoint
+    - [x] Support filtering/metrics boolean flags
+    - [x] Support before/after time boundaries with natural language parsing
+    - [x] Integrate parseTimeRange utility for time parsing
+    - [x] Return ExportedLabelValues array
+  - [x] Implement get_dataset_label_values MCP tool
+    - [x] Add tool registration in src/server/tools.ts with Zod schema
+    - [x] Simple implementation - no filtering parameters
+    - [x] Return LabelValue array with id/name/schema/value
+  - [x] Add HTTP endpoints for all three tools
+    - [x] POST /api/tools/horreum_get_run_label_values
+    - [x] POST /api/tools/horreum_get_test_label_values
+    - [x] POST /api/tools/horreum_get_dataset_label_values
+    - [x] Apply auth middleware to all endpoints
+    - [x] Use sendContractError for consistent error handling
+  - [x] Create comprehensive smoke tests
+    - [x] scripts/smoke-get-run-label-values.mjs
+    - [x] scripts/smoke-get-test-label-values.mjs
+    - [x] scripts/smoke-get-dataset-label-values.mjs
+    - [x] Test filter parameter validation
+    - [x] Test include/exclude arrays
+    - [x] Test natural language time for test endpoint
+    - [x] Test pagination with 1-based page numbers
+  - [x] Update documentation
+    - [x] Add label values tools to README.md Tools section
+    - [x] Add filtering pattern examples
+    - [x] Document filtering vs metric labels distinction
+    - [x] Explain label value structure and transformer relationship
+    - [x] Update HTTP API documentation with new endpoints
+    - [x] Create comprehensive LABEL_VALUES_FILTERING.md guide
+    - [x] Document multiFilter parameter behavior with examples
 - [ ] Phase 6.7 — Run and Dataset GET Endpoint Coverage (PLANNED)
   - [ ] Implement Run endpoint MCP tools
     - [ ] get_run (convert resource to also be a tool)
@@ -904,6 +908,25 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-07 — **Phase 6.6 Complete - Label Values API Coverage**: Implemented comprehensive
+     label values endpoints for accessing Horreum's transformed test data. Added three critical
+     endpoints: (1) get_run_label_values MCP tool and HTTP endpoint with extensive server-side
+     filtering (filter parameter with JSON sub-documents or path expressions, include/exclude
+     arrays, multiFilter for array value matching, sort/direction, pagination), (2) get_test_label_values
+     MCP tool and HTTP endpoint for aggregated label values across test runs with time boundaries
+     (before/after with natural language parsing via parseTimeRange, filtering/metrics flags),
+     (3) get_dataset_label_values MCP tool and HTTP endpoint for simple dataset label value
+     retrieval. Created three smoke test scripts (smoke-get-run-label-values.mjs,
+     smoke-get-test-label-values.mjs, smoke-get-dataset-label-values.mjs) with comprehensive
+     test coverage. Updated README.md Tools and HTTP API sections with label values documentation.
+     Created comprehensive LABEL_VALUES_FILTERING.md guide documenting filter formats, multiFilter
+     behavior (arrays require multiFilter=true), include/exclude usage, time boundaries, pagination,
+     and complete curl examples. Fixed pre-existing TypeScript linter error in list_runs tool.
+     Enhanced tool descriptions and parameter documentation to explicitly guide users on proper
+     multiFilter usage: when using array values in filters ({"label": ["val1", "val2"]}), must set
+     multiFilter=true. Label values are the primary output of Horreum's transformation system and
+     represent the actual test metrics and results - these are the most important read endpoints
+     for data analysis workflows. All 35+ checklist items completed. Agent: Claude Sonnet 4.5.
    - 2025-10-07 — **Phase 6.7 Added - Run and Dataset GET Endpoint Coverage**: Extended development
      plan with Phase 6.7 to implement all remaining Run and Dataset GET endpoints, completing the
      read-only API coverage. Added specifications for 8 critical endpoints: (1) Run endpoints -
