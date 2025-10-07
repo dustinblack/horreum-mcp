@@ -226,9 +226,10 @@ export async function startHttpServer(server: McpServer, env: Env) {
         );
       }
 
-      // Accept testId or test (name or ID string)
-      const testIdRaw = body.testId;
-      const testRaw = body.test;
+      // Accept test_id (preferred) or testId (backward compat), or test (name or ID string)
+      const testIdSnake = body.test_id as number | string | undefined;
+      const testIdCamel = body.testId as number | string | undefined;
+      const testRaw = body.test as string | undefined;
       const trashed = body.trashed as boolean | undefined;
       const sort = body.sort as string | undefined;
       const direction = body.direction as SortDirection | undefined;
@@ -267,9 +268,24 @@ export async function startHttpServer(server: McpServer, env: Env) {
       }
 
       let resolvedTestId: number | undefined = undefined;
-      if (typeof testIdRaw === 'number' && Number.isFinite(testIdRaw)) {
-        resolvedTestId = testIdRaw;
-      } else if (typeof testRaw === 'string' && testRaw.length > 0) {
+      // Prefer snake_case, allow numeric strings
+      if (typeof testIdSnake === 'number' && Number.isFinite(testIdSnake)) {
+        resolvedTestId = testIdSnake;
+      } else if (typeof testIdSnake === 'string' && testIdSnake.trim().length > 0) {
+        const maybe = Number(testIdSnake);
+        if (Number.isFinite(maybe)) resolvedTestId = maybe;
+      }
+      // Fallback to camelCase for backward compatibility
+      if (!resolvedTestId) {
+        if (typeof testIdCamel === 'number' && Number.isFinite(testIdCamel)) {
+          resolvedTestId = testIdCamel;
+        } else if (typeof testIdCamel === 'string' && testIdCamel.trim().length > 0) {
+          const maybe = Number(testIdCamel);
+          if (Number.isFinite(maybe)) resolvedTestId = maybe;
+        }
+      }
+      // Finally support test name or ID string via 'test'
+      if (!resolvedTestId && typeof testRaw === 'string' && testRaw.length > 0) {
         const maybeId = Number(testRaw);
         if (Number.isFinite(maybeId)) {
           resolvedTestId = maybeId;
@@ -284,7 +300,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
           res,
           400,
           'INVALID_REQUEST',
-          "Provide 'testId' or 'test' (name or ID)."
+          "Provide 'test_id' or 'test' (name or ID)."
         );
       }
 

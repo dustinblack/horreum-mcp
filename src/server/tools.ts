@@ -405,7 +405,7 @@ export async function registerTools(
       'Defaults to last 30 days when no time parameters are specified. ' +
       'Pagination uses 1-based indexing (first page is page=1).',
     {
-      testId: z.number().int().positive().optional(),
+      test_id: z.number().int().positive().optional(),
       test: z.string().optional().describe('Test name or ID'),
       trashed: z.boolean().optional(),
       limit: z.number().int().positive().max(1000).optional(),
@@ -432,7 +432,7 @@ export async function registerTools(
     },
     async (args) => {
       // Resolve testId from name if needed
-      let resolvedTestId: number | undefined = args.testId as number | undefined;
+      let resolvedTestId: number | undefined = args.test_id as number | undefined;
       if (!resolvedTestId && args.test) {
         const maybeId = Number(args.test as string);
         if (Number.isFinite(maybeId)) {
@@ -446,7 +446,7 @@ export async function registerTools(
       }
       if (!resolvedTestId) {
         return {
-          content: [text('Provide testId or test (name or ID).')],
+          content: [text('Provide test_id or test (name or ID).')],
           isError: true,
         };
       }
