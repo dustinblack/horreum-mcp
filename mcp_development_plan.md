@@ -205,6 +205,231 @@ This phase addresses three critical issues discovered during end-to-end testing 
    - Comprehensive documentation in `SSL_CONFIGURATION.md` with production and testing examples
    - Testing-only option to disable SSL verification via `HORREUM_TLS_VERIFY=false`
 
+**Phase 6.6: Label Values API Coverage (IN PROGRESS - 2025-10-07)**
+
+This phase adds comprehensive support for accessing Horreum's extracted label values
+data, which represents the primary output of Horreum's transformation system. Label
+values are the extracted metrics and metadata from test runs after being processed by
+Horreum's transformer definitions.
+
+**Priority**: HIGH - Label values are the most important read endpoints for data
+analysis and visualization. They provide access to the transformed/extracted data
+that represents the actual test metrics and results.
+
+**Endpoints to Implement**:
+
+1. **`GET /api/run/{id}/labelValues`** - Get label values for a specific run
+   - Tool name: `get_run_label_values`
+   - HTTP endpoint: `POST /api/tools/horreum_get_run_label_values`
+   - **Most important endpoint** - provides filtered access to run-specific metrics
+   - Extensive server-side filtering capabilities:
+     - `filter`: JSON sub-document or path expression (default: `{}`)
+     - `include`: Array of label names to include
+     - `exclude`: Array of label names to exclude
+     - `multiFilter`: Enable filtering for multiple values with arrays
+     - `sort`: Label name for sorting results
+     - `direction`: Ascending or Descending
+     - `limit`: Maximum number of results (default: 2147483647)
+     - `page`: Page number for pagination (1-based)
+   - Returns: `Array<ExportedLabelValues>` with structure:
+     - `values`: Map of label names to values (LabelValueMap)
+     - `runId`: Associated run ID
+     - `datasetId`: Associated dataset ID
+     - `start`: Start timestamp
+     - `stop`: Stop timestamp
+
+2. **`GET /api/test/{id}/labelValues`** - Get aggregated label values across all
+   runs for a test
+   - Tool name: `get_test_label_values`
+   - HTTP endpoint: `POST /api/tools/horreum_get_test_label_values`
+   - Supports all filtering options from run endpoint plus:
+     - `filtering`: Include filtering labels (default: true)
+     - `metrics`: Include metric labels (default: true)
+     - `before`: Time boundary - ISO timestamp or epoch millis
+     - `after`: Time boundary - ISO timestamp or epoch millis
+   - Natural language time support for `before`/`after` (reuse parseTimeRange)
+   - Returns: `Array<ExportedLabelValues>` same structure as run endpoint
+
+3. **`GET /api/dataset/{datasetId}/labelValues`** - Get label values for specific
+   dataset
+   - Tool name: `get_dataset_label_values`
+   - HTTP endpoint: `POST /api/tools/horreum_get_dataset_label_values`
+   - Simpler endpoint - no filtering, returns all label values for dataset
+   - Returns: `Array<LabelValue>` with structure:
+     - `id`: Label value ID
+     - `name`: Label name
+     - `schema`: Schema descriptor with id, uri, name
+     - `value`: Extracted value (can be scalar, array, or JSON object)
+
+**Implementation Requirements**:
+
+- All three tools implemented in `src/server/tools.ts`
+- All three HTTP endpoints implemented in `src/server/http.ts`
+- Consistent error handling with Source MCP Contract error format
+- Comprehensive parameter validation using Zod schemas
+- Integration with existing observability (logging, metrics, tracing)
+- Reuse parseTimeRange utility for natural language time support (test endpoint)
+- Proper typing using generated TypeScript models:
+  - `ExportedLabelValues` from `src/horreum/generated/models/`
+  - `LabelValue` from `src/horreum/generated/models/`
+  - `LabelValueMap` from `src/horreum/generated/models/`
+
+**Testing Strategy**:
+
+- Smoke test script: `scripts/smoke-get-run-label-values.mjs`
+- Smoke test script: `scripts/smoke-get-test-label-values.mjs`
+- Smoke test script: `scripts/smoke-get-dataset-label-values.mjs`
+- Verify filter parameter handling (JSON sub-document and path expressions)
+- Verify include/exclude parameter arrays
+- Verify multiFilter boolean handling
+- Verify natural language time queries for test endpoint (before/after)
+- Verify pagination with 1-based page numbers
+- Integration test against real Horreum instance with actual label values
+
+**Documentation Updates**:
+
+- Update README.md with label values tools in Tools section
+- Add examples showing common filtering patterns
+- Document the difference between filtering/metric labels
+- Explain label value data structure and transformer relationship
+- Update HTTP API documentation with new endpoints
+
+**Success Criteria**:
+
+- [ ] All three MCP tools implemented and registered
+- [ ] All three HTTP endpoints implemented with auth middleware
+- [ ] Comprehensive smoke tests passing for all three endpoints
+- [ ] Natural language time support verified for test endpoint
+- [ ] Filter parameter validation working correctly
+- [ ] Include/exclude arrays handled properly
+- [ ] Documentation complete with examples
+
+**Phase 6.7: Comprehensive Run and Dataset GET Endpoint Coverage (PLANNED)**
+
+This phase completes the read-only API coverage by implementing all remaining GET
+endpoints for Runs and Datasets. These endpoints provide access to run metadata,
+raw data, summaries, and dataset information that complement the label values
+endpoints from Phase 6.6.
+
+**Priority**: MEDIUM-HIGH - These endpoints provide essential read access to raw
+run data, metadata, and dataset summaries. They complete the read-first strategy
+before moving to write operations.
+
+**Run Endpoints to Implement**:
+
+1. **`GET /api/run/{id}`** - Get complete run details (already via resource, needs tool)
+   - Tool name: `get_run`
+   - HTTP endpoint: `POST /api/tools/horreum_get_run` (already exists ✅)
+   - Returns: `RunExtended` with full run details including metadata
+   - Note: Currently only available as MCP resource, should also be a tool
+
+2. **`GET /api/run/{id}/data`** - Get raw run data payload
+   - Tool name: `get_run_data`
+   - HTTP endpoint: `POST /api/tools/horreum_get_run_data`
+   - Optional schema URI filter to get data for specific schema
+   - Returns: Raw JSON data (Record<string, any>)
+   - Use case: Access original uploaded run data
+
+3. **`GET /api/run/{id}/metadata`** - Get run metadata
+   - Tool name: `get_run_metadata`
+   - HTTP endpoint: `POST /api/tools/horreum_get_run_metadata`
+   - Optional schema URI filter
+   - Returns: Metadata JSON (Record<string, any>)
+   - Use case: Access run metadata without full payload
+
+4. **`GET /api/run/{id}/summary`** - Get run summary
+   - Tool name: `get_run_summary`
+   - HTTP endpoint: `POST /api/tools/horreum_get_run_summary`
+   - Returns: `RunSummary` with condensed run information
+   - Use case: Lightweight run overview without full details
+
+5. **`GET /api/run/bySchema`** - List runs by schema URI
+   - Tool name: `list_runs_by_schema`
+   - HTTP endpoint: `POST /api/tools/horreum_list_runs_by_schema`
+   - Parameters: schema URI, pagination, sorting
+   - Returns: `RunsSummary` with paginated results
+   - Use case: Find all runs using a specific schema
+
+6. **`GET /api/run/count`** - Get run count for test
+   - Tool name: `get_run_count`
+   - HTTP endpoint: `POST /api/tools/horreum_get_run_count`
+   - Parameter: test ID
+   - Returns: `RunCount` with total/trashed counts
+   - Use case: Quick statistics without fetching all runs
+
+7. **`GET /api/run/list`** - List all runs across all tests
+   - Tool name: `list_all_runs`
+   - HTTP endpoint: `POST /api/tools/horreum_list_all_runs`
+   - Parameters: pagination, sorting, time filters
+   - Natural language time support (reuse parseTimeRange)
+   - Returns: `RunsSummary` with paginated results
+   - Use case: Global run search across entire Horreum instance
+
+**Dataset Endpoints to Implement**:
+
+1. **`GET /api/dataset/{id}`** - Get dataset details (already exists ✅)
+   - Tool name: `get_dataset` (already implemented ✅)
+   - HTTP endpoint: `POST /api/tools/horreum_get_dataset` (already exists ✅)
+   - Returns: Full dataset with data content
+
+2. **`GET /api/dataset/{datasetId}/summary`** - Get dataset summary
+   - Tool name: `get_dataset_summary`
+   - HTTP endpoint: `POST /api/tools/horreum_get_dataset_summary`
+   - Optional view ID parameter
+   - Returns: `DatasetSummary` with metadata and view information
+   - Use case: Lightweight dataset overview without full data payload
+
+3. **`GET /api/dataset/list/{testId}`** - List datasets by test (already exists ✅)
+   - Tool name: `list_datasets` (already implemented ✅)
+   - HTTP endpoint: `POST /api/tools/horreum_list_datasets` (already exists ✅)
+
+4. **`GET /api/dataset/byschema`** - List datasets by schema (already exists ✅)
+   - Tool name: `list_datasets` with schema_uri (already implemented ✅)
+
+**Implementation Requirements**:
+
+- All tools implemented in `src/server/tools.ts`
+- All HTTP endpoints implemented in `src/server/http.ts`
+- Consistent error handling with Source MCP Contract format
+- Comprehensive parameter validation using Zod schemas
+- Integration with existing observability (logging, metrics, tracing)
+- Reuse parseTimeRange for time-aware endpoints (list_all_runs)
+- Proper typing using generated TypeScript models
+- 1-based pagination alignment for all list endpoints
+
+**Testing Strategy**:
+
+- Individual smoke tests for each new endpoint
+- Comprehensive smoke test script: `scripts/smoke-run-dataset-endpoints.mjs`
+- Verify schema URI filtering where applicable
+- Verify natural language time support for list_all_runs
+- Verify pagination with 1-based page numbers
+- Test optional parameters (schemaUri, viewId)
+- Integration tests against real Horreum instance
+
+**Documentation Updates**:
+
+- Update README.md with all new tools
+- Add examples for common use cases:
+  - Getting raw run data vs metadata
+  - Using schema URI filters
+  - Global run searches
+  - Dataset summaries for quick overviews
+- Document the difference between run extended vs summary
+- Update HTTP API documentation with new endpoints
+
+**Success Criteria**:
+
+- [ ] 7 new Run tools implemented (get_run as tool, get_run_data, get_run_metadata,
+      get_run_summary, list_runs_by_schema, get_run_count, list_all_runs)
+- [ ] 1 new Dataset tool implemented (get_dataset_summary)
+- [ ] All HTTP endpoints implemented with auth middleware
+- [ ] Comprehensive smoke tests passing
+- [ ] Natural language time support verified for list_all_runs
+- [ ] Schema URI filtering working for applicable endpoints
+- [ ] Documentation complete with examples
+- [ ] All tests passing with 1-based pagination
+
 **Phase 7: Enhanced CI/CD Pipeline**
 
 - Multi-stage testing pipeline with parallel execution and performance regression testing
@@ -407,16 +632,29 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
 
 4. Current execution directive
    - **Phase 6 (Direct HTTP API for Server-to-Server Integration) COMPLETED (2025-09-30)**.
-   - **Phase 6.5 (End-to-End Integration Fixes) IN PROGRESS (2025-10-01)** - BLOCKING ISSUES
+   - **Phase 6.5 (End-to-End Integration Fixes) COMPLETED (2025-10-01)** - All blocking issues resolved!
    - Three critical issues discovered during RHIVOS PerfScale Domain MCP end-to-end testing:
      1. ✅ **Schema compliance**: COMPLETE - Added test_id/run_id fields, has_more, snake_case naming
      2. ✅ **Time queries**: COMPLETE - Natural language time parsing integrated into all time-aware endpoints
      3. ✅ **Pagination alignment**: COMPLETE - Aligned to 1-based model (page >= 1)
-   - **Current status**: ALL 3 ISSUES COMPLETE ✅ Phase 6.5 blocking issues resolved!
-   - **Next**: Phase 7 (Enhanced CI/CD Pipeline)
-   - These issues are **BLOCKING full end-to-end integration** and must be resolved immediately.
-   - **AUTHORIZED**: Continue Phase 6.5 implementation.
-   - **NEXT AFTER 6.5**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
+   - **Phase 6.6 (Label Values API Coverage) IN PROGRESS (2025-10-07)** - HIGH PRIORITY
+   - **Goal**: Implement comprehensive label values API coverage for accessing transformed test data
+   - Three critical endpoints to implement:
+     1. `get_run_label_values` - **Most important** - filtered access to run-specific metrics
+     2. `get_test_label_values` - Aggregated label values across all runs for a test
+     3. `get_dataset_label_values` - Label values for specific dataset
+   - **Rationale**: Label values are the primary output of Horreum's transformation system and represent
+     the actual test metrics and results. This is the most important read endpoint for data analysis.
+   - **Phase 6.7 (Run and Dataset GET Endpoints) PLANNED** - MEDIUM-HIGH PRIORITY
+   - **Goal**: Complete read-only API coverage by implementing all remaining Run and Dataset GET endpoints
+   - Eight critical endpoints to implement:
+     1. Run endpoints: get_run (as tool), get_run_data, get_run_metadata, get_run_summary,
+        list_runs_by_schema, get_run_count, list_all_runs
+     2. Dataset endpoints: get_dataset_summary
+   - **Rationale**: Completes the read-first strategy by providing access to raw run data, metadata,
+     summaries, and dataset information. Essential for comprehensive data access and analysis.
+   - **AUTHORIZED**: Implement Phase 6.6 and 6.7 endpoints (MCP tools + HTTP endpoints + tests + docs).
+   - **NEXT AFTER 6.6/6.7**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
    - Phase 8 (Architecture Refactoring) and beyond follow after Phase 7 completion.
 
 5. Status checklist
@@ -541,47 +779,123 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
          - [x] Test ISO 8601 backward compatibility
          - [x] Test epoch millis backward compatibility
          - [x] Test default behavior (no params → last 30 days)
-         - [x] Test edge cases and error handling
-   - Phase 7 — Enhanced CI/CD Pipeline
-     - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
-     - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
-     - [ ] Implement performance optimizations (caching, job interruption, parallel execution)
-     - [ ] Set up release automation (semantic versioning, release notes, publishing)
-     - [ ] Add quality gates and code coverage requirements
-     - [ ] Implement deployment pipeline with rollback capabilities
-   - Phase 8 — Architecture Refactoring & Modularity
-     - [ ] Extract shared logic into reusable modules
-     - [ ] Implement plugin architecture for optional features
-     - [ ] Add dependency injection for better testability
-     - [ ] Make observability features truly optional
-     - [ ] Implement centralized error handling with proper error types
-     - [ ] Add hierarchical configuration system with validation
-   - Phase 9 — Alternative REST API Mode
-     - [ ] Implement REST API endpoints (`GET /api/v1/tests`, etc.)
-     - [ ] Create OpenAPI 3.0 specification and documentation
-     - [ ] Ensure Pydantic-compatible response shapes
-     - [ ] Add API versioning strategy and backward compatibility
-     - [ ] Implement rate limiting and throttling for REST endpoints
-   - Phase 10 — Build System Enhancement
-     - [x] Add multi-architecture build support (2025-09-26)
-     - [ ] Add cross-compilation support
-     - [ ] Implement advanced dependency management with automated updates
-     - [ip] Add build performance optimization: caching & context filtering in place
-       (.dockerignore/.containerignore, cache mounts in Containerfile) (2025-09-26)
-     - [ ] Implement incremental builds and CI caching
-     - [ ] Create bundle size optimization and analysis tools
-     - [ ] Implement development vs production build profiles
-   - Phase 11 — Testing & Security Hardening
-     - [ ] Set up comprehensive testing framework with high coverage requirements
-     - [ ] Add integration testing with real external services
-     - [ ] Implement contract testing for API endpoints
-     - [ ] Add performance and load testing capabilities
-     - [ ] Implement runtime security monitoring and secrets management
-     - [ ] Add health check endpoints for all deployment modes
-   - Phase 12 — Data Analysis
-     - [ ] Design `analyze_run_data` tool for server-side statistical analysis
-     - [ ] Implement analysis tool with suitable statistics library
-     - [ ] Add unit and integration tests for analysis capabilities
+       - [x] Test edge cases and error handling
+
+- [ip] Phase 6.6 — Label Values API Coverage (IN PROGRESS 2025-10-07)
+  - [ ] Implement get_run_label_values MCP tool
+    - [ ] Add tool registration in src/server/tools.ts with Zod schema
+    - [ ] Support filter parameter (JSON sub-document or path expression)
+    - [ ] Support include/exclude label name arrays
+    - [ ] Support multiFilter boolean for array value filtering
+    - [ ] Support sort/direction for result ordering
+    - [ ] Support limit/page for pagination (1-based)
+    - [ ] Return ExportedLabelValues array with values/runId/datasetId/start/stop
+  - [ ] Implement get_test_label_values MCP tool
+    - [ ] Add tool registration in src/server/tools.ts with Zod schema
+    - [ ] Support all filtering options from run endpoint
+    - [ ] Support filtering/metrics boolean flags
+    - [ ] Support before/after time boundaries with natural language parsing
+    - [ ] Integrate parseTimeRange utility for time parsing
+    - [ ] Return ExportedLabelValues array
+  - [ ] Implement get_dataset_label_values MCP tool
+    - [ ] Add tool registration in src/server/tools.ts with Zod schema
+    - [ ] Simple implementation - no filtering parameters
+    - [ ] Return LabelValue array with id/name/schema/value
+  - [ ] Add HTTP endpoints for all three tools
+    - [ ] POST /api/tools/horreum_get_run_label_values
+    - [ ] POST /api/tools/horreum_get_test_label_values
+    - [ ] POST /api/tools/horreum_get_dataset_label_values
+    - [ ] Apply auth middleware to all endpoints
+    - [ ] Use sendContractError for consistent error handling
+  - [ ] Create comprehensive smoke tests
+    - [ ] scripts/smoke-get-run-label-values.mjs
+    - [ ] scripts/smoke-get-test-label-values.mjs
+    - [ ] scripts/smoke-get-dataset-label-values.mjs
+    - [ ] Test filter parameter validation
+    - [ ] Test include/exclude arrays
+    - [ ] Test natural language time for test endpoint
+    - [ ] Test pagination with 1-based page numbers
+  - [ ] Update documentation
+    - [ ] Add label values tools to README.md Tools section
+    - [ ] Add filtering pattern examples
+    - [ ] Document filtering vs metric labels distinction
+    - [ ] Explain label value structure and transformer relationship
+    - [ ] Update HTTP API documentation with new endpoints
+- [ ] Phase 6.7 — Run and Dataset GET Endpoint Coverage (PLANNED)
+  - [ ] Implement Run endpoint MCP tools
+    - [ ] get_run (convert resource to also be a tool)
+    - [ ] get_run_data with optional schemaUri parameter
+    - [ ] get_run_metadata with optional schemaUri parameter
+    - [ ] get_run_summary for lightweight run overview
+    - [ ] list_runs_by_schema with pagination and sorting
+    - [ ] get_run_count for test statistics
+    - [ ] list_all_runs with time filters and natural language support
+  - [ ] Implement Dataset endpoint MCP tools
+    - [ ] get_dataset_summary with optional viewId parameter
+  - [ ] Add HTTP endpoints for all new tools
+    - [ ] POST /api/tools/horreum_get_run (may already exist)
+    - [ ] POST /api/tools/horreum_get_run_data
+    - [ ] POST /api/tools/horreum_get_run_metadata
+    - [ ] POST /api/tools/horreum_get_run_summary
+    - [ ] POST /api/tools/horreum_list_runs_by_schema
+    - [ ] POST /api/tools/horreum_get_run_count
+    - [ ] POST /api/tools/horreum_list_all_runs
+    - [ ] POST /api/tools/horreum_get_dataset_summary
+    - [ ] Apply auth middleware to all endpoints
+    - [ ] Use sendContractError for consistent error handling
+  - [ ] Create comprehensive smoke tests
+    - [ ] Individual tests for each new endpoint
+    - [ ] scripts/smoke-run-dataset-endpoints.mjs comprehensive test
+    - [ ] Test schema URI filtering where applicable
+    - [ ] Test natural language time for list_all_runs
+    - [ ] Test optional parameters (schemaUri, viewId)
+    - [ ] Test pagination with 1-based page numbers
+  - [ ] Update documentation
+    - [ ] Add all new tools to README.md Tools section
+    - [ ] Add use case examples (raw data vs metadata, summaries, global search)
+    - [ ] Document schema URI filtering
+    - [ ] Document run extended vs summary differences
+    - [ ] Update HTTP API documentation with new endpoints
+- Phase 7 — Enhanced CI/CD Pipeline
+  - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
+  - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
+  - [ ] Implement performance optimizations (caching, job interruption, parallel execution)
+  - [ ] Set up release automation (semantic versioning, release notes, publishing)
+  - [ ] Add quality gates and code coverage requirements
+  - [ ] Implement deployment pipeline with rollback capabilities
+- Phase 8 — Architecture Refactoring & Modularity
+  - [ ] Extract shared logic into reusable modules
+  - [ ] Implement plugin architecture for optional features
+  - [ ] Add dependency injection for better testability
+  - [ ] Make observability features truly optional
+  - [ ] Implement centralized error handling with proper error types
+  - [ ] Add hierarchical configuration system with validation
+- Phase 9 — Alternative REST API Mode
+  - [ ] Implement REST API endpoints (`GET /api/v1/tests`, etc.)
+  - [ ] Create OpenAPI 3.0 specification and documentation
+  - [ ] Ensure Pydantic-compatible response shapes
+  - [ ] Add API versioning strategy and backward compatibility
+  - [ ] Implement rate limiting and throttling for REST endpoints
+- Phase 10 — Build System Enhancement
+  - [x] Add multi-architecture build support (2025-09-26)
+  - [ ] Add cross-compilation support
+  - [ ] Implement advanced dependency management with automated updates
+  - [ip] Add build performance optimization: caching & context filtering in place
+    (.dockerignore/.containerignore, cache mounts in Containerfile) (2025-09-26)
+  - [ ] Implement incremental builds and CI caching
+  - [ ] Create bundle size optimization and analysis tools
+  - [ ] Implement development vs production build profiles
+- Phase 11 — Testing & Security Hardening
+  - [ ] Set up comprehensive testing framework with high coverage requirements
+  - [ ] Add integration testing with real external services
+  - [ ] Implement contract testing for API endpoints
+  - [ ] Add performance and load testing capabilities
+  - [ ] Implement runtime security monitoring and secrets management
+  - [ ] Add health check endpoints for all deployment modes
+- Phase 12 — Data Analysis
+  - [ ] Design `analyze_run_data` tool for server-side statistical analysis
+  - [ ] Implement analysis tool with suitable statistics library
+  - [ ] Add unit and integration tests for analysis capabilities
 
 6. How to update this document
    1. Review open tasks and repository state (commits, CI, issues).
@@ -590,6 +904,35 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-07 — **Phase 6.7 Added - Run and Dataset GET Endpoint Coverage**: Extended development
+     plan with Phase 6.7 to implement all remaining Run and Dataset GET endpoints, completing the
+     read-only API coverage. Added specifications for 8 critical endpoints: (1) Run endpoints -
+     get_run (convert resource to tool), get_run_data (raw run payload with optional schema filter),
+     get_run_metadata (metadata only), get_run_summary (lightweight overview), list_runs_by_schema
+     (find runs using specific schema), get_run_count (quick test statistics), list_all_runs
+     (global search with natural language time support), (2) Dataset endpoints - get_dataset_summary
+     (lightweight dataset overview with optional view ID). These endpoints complement Phase 6.6
+     label values by providing access to raw data, metadata, and summaries. Completes read-first
+     strategy before moving to write operations. Created detailed status checklist with 30+ sub-items.
+     Updated execution directive to authorize both Phase 6.6 and 6.7 implementation. Priority:
+     MEDIUM-HIGH as these endpoints are essential for comprehensive data access and analysis but
+     secondary to label values (the transformed metrics). Agent: Claude Sonnet 4.5.
+   - 2025-10-07 — **Phase 6.6 Started - Label Values API Coverage**: Initiated implementation of
+     comprehensive label values endpoints, the most important read endpoints for accessing Horreum's
+     transformed test data. Added Phase 6.6 to development plan with detailed specifications for
+     three critical endpoints: (1) get_run_label_values - filtered access to run-specific metrics
+     with extensive server-side filtering (filter, include/exclude, multiFilter, sort/direction,
+     pagination), (2) get_test_label_values - aggregated label values across all runs for a test
+     with time boundary support (before/after with natural language parsing) and filtering/metrics
+     flags, (3) get_dataset_label_values - simple endpoint returning all label values for a
+     specific dataset. Each endpoint will have both MCP tool and HTTP POST implementations. Label
+     values represent the primary output of Horreum's transformation system - the extracted metrics
+     and metadata from test runs after processing by transformer definitions. Implementation plan
+     includes comprehensive smoke tests, proper error handling, pagination alignment (1-based), and
+     documentation updates. Updated current execution directive to Phase 6.6 IN PROGRESS. Created
+     detailed status checklist with 35+ sub-items tracking implementation progress. This phase is
+     HIGH PRIORITY as label values are essential for data analysis and visualization workflows.
+     Agent: Claude Sonnet 4.5.
    - 2025-10-01 — **Gemini CLI Support via HTTP Proxy Bridge**: Implemented stdio-to-HTTP proxy
      bridge (scripts/mcp-http-proxy.mjs) that enables Gemini CLI to connect to HTTP-based MCP
      servers. Background: MCP SDK's StreamableHTTPServerTransport uses POST-based JSON-RPC, but
