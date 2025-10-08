@@ -1,4 +1,5 @@
 import { logger } from '../observability/logging.js';
+import { getRequestId } from '../observability/correlation.js';
 import { setTimeout as delayMs } from 'node:timers/promises';
 
 export type BaseFetch = (
@@ -86,7 +87,11 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
     for (let attempt = 1; attempt <= 1 + maxRetries; attempt += 1) {
       // Combine the caller's signal with our timeout using AbortSignal.any
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      let didTimeout = false;
+      const timeout = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, timeoutMs);
       let removeOriginalAbort: (() => void) | undefined;
       if (originalSignal) {
         if (originalSignal.aborted) {
@@ -100,17 +105,43 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
       }
 
       try {
+        const reqId = getRequestId();
         if (attempt > 1) {
           logger.debug({ attempt }, 'Retrying fetch attempt');
         }
         const response = await baseFetch(input, {
           ...(init ?? {}),
           signal: controller.signal,
+          headers: {
+            ...(init?.headers || {}),
+            ...(reqId ? { 'X-Correlation-Id': reqId } : {}),
+          },
         });
         clearTimeout(timeout);
         if (removeOriginalAbort) removeOriginalAbort();
 
         if (!shouldRetryResponse(response) || attempt > maxRetries) {
+          if (response.status >= 400) {
+            // One-time visibility for non-retryable upstream errors
+            let bodyPreview: string | undefined;
+            try {
+              const clone = response.clone();
+              const text = await clone.text();
+              bodyPreview = text && text.length > 500 ? text.slice(0, 500) + '…' : text;
+            } catch {
+              // ignore
+            }
+            logger.error(
+              {
+                event: 'upstream.http_status',
+                path:
+                  typeof input === 'string' ? input : String((input as URL).toString()),
+                status: response.status,
+                body_preview: bodyPreview,
+              },
+              'Upstream HTTP error'
+            );
+          }
           return response;
         }
 
@@ -120,8 +151,24 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
           backoffMaxMs,
           jitterRatio
         );
-        logger.debug(
-          { status: response.status, attempt, delay },
+        // Read a small preview without consuming body for caller; OK on retry path
+        let bodyPreview: string | undefined;
+        try {
+          const clone = response.clone();
+          const text = await clone.text();
+          bodyPreview = text && text.length > 500 ? text.slice(0, 500) + '…' : text;
+        } catch {
+          // ignore
+        }
+        logger.warn(
+          {
+            event: 'upstream.http_status',
+            path: typeof input === 'string' ? input : String((input as URL).toString()),
+            status: response.status,
+            attempt,
+            delay,
+            body_preview: bodyPreview,
+          },
           'Retrying on retryable status'
         );
         await delayMs(delay);
@@ -129,14 +176,38 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
       } catch (error) {
         clearTimeout(timeout);
         if (removeOriginalAbort) removeOriginalAbort();
-        // If aborted, do not retry
-        if (
-          (error as Error & { name?: string }).name === 'AbortError' ||
-          (originalSignal && originalSignal.aborted)
-        ) {
+        // If aborted, classify as timeout vs external abort and do not retry
+        if ((error as Error & { name?: string }).name === 'AbortError') {
+          if (didTimeout) {
+            logger.error(
+              {
+                event: 'upstream.timeout',
+                path:
+                  typeof input === 'string' ? input : String((input as URL).toString()),
+                attempt,
+                timeout_seconds: Math.round(timeoutMs / 1000),
+                hint: 'Consider raising adapter timeout to 300s for complex queries',
+              },
+              'Upstream request timed out'
+            );
+          }
+          throw error;
+        }
+        if (originalSignal && originalSignal.aborted) {
           throw error;
         }
         if (attempt > maxRetries) {
+          logger.error(
+            {
+              event: 'upstream.connect_error',
+              path:
+                typeof input === 'string' ? input : String((input as URL).toString()),
+              attempt,
+              timeout_seconds: Math.round(timeoutMs / 1000),
+              hint: 'Consider raising adapter timeout to 300s for complex queries',
+            },
+            'Network error after retries'
+          );
           throw error;
         }
         const delay = computeBackoffDelay(
@@ -145,7 +216,16 @@ export function createRateLimitedFetch(options: RateLimitedFetchOptions): BaseFe
           backoffMaxMs,
           jitterRatio
         );
-        logger.debug({ attempt, delay }, 'Retrying after network error');
+        logger.warn(
+          {
+            event: 'upstream.connect_error',
+            path: typeof input === 'string' ? input : String((input as URL).toString()),
+            attempt,
+            timeout_seconds: Math.round(timeoutMs / 1000),
+            delay,
+          },
+          'Retrying after network error'
+        );
         await delayMs(delay);
         continue;
       }

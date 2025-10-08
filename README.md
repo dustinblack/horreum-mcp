@@ -697,6 +697,56 @@ npm run smoke:runs   # Query test runs
 npm start -- --log-level debug
 ```
 
+### Logging and Diagnostics
+
+The server provides comprehensive logging and diagnostics designed to make
+failures fast to diagnose in production:
+
+```bash
+# Set log level (trace|debug|info|warn|error|fatal|silent)
+export LOG_LEVEL=info  # Default
+npm start
+
+# Or use CLI flags
+npm start -- --log-level debug
+npm start -- --debug  # Shorthand
+
+# Enable JSON format for production
+export LOG_FORMAT=json
+npm start
+```
+
+**Key features:**
+
+- **Correlation IDs**: Every request gets a unique `req_id` that appears in all
+  related logs, propagated to upstream Horreum calls, and echoed in response
+  headers
+- **Upstream Error Capture**: HTTP error bodies (with preview), timeout
+  detection, and connection errors logged with retry hints
+- **SSE-Safe Middleware**: Request logging that doesn't break streaming
+  responses
+- **Structured Events**: Consistent event naming (`mcp.request.*`,
+  `mcp.tools.*`, `query.*`, `upstream.*`, `normalize.hint`)
+- **Tool Instrumentation**: Track tool calls, query durations, and result
+  counts
+- **Structured Errors**: Machine-parseable error responses with correlation IDs
+
+**Recommended timeout configuration:**
+
+```bash
+HORREUM_TIMEOUT=30000   # Default: 30s for simple queries
+# For complex queries (label values with heavy filtering):
+HORREUM_TIMEOUT=300000  # 300s (5 minutes)
+```
+
+See [Logging and Diagnostics Guide](docs/LOGGING_AND_DIAGNOSTICS.md) for:
+
+- Correlation ID workflows and tracing requests end-to-end
+- Complete log event taxonomy and field reference
+- Timeout configuration and retry strategy
+- Debugging workflows and common troubleshooting
+- Integration with log aggregation and monitoring systems
+
 ### Observability Features
 
 Enable comprehensive monitoring and debugging:
@@ -713,18 +763,15 @@ export TRACING_ENABLED=true
 # Configure OTLP endpoint via standard envs
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 npm start
-
-# Enable structured JSON logging
-export LOG_FORMAT=json
-npm start -- --log-level trace
 ```
 
 Features include:
 
-- **Correlation IDs**: Track requests across all components
-- **Distributed Tracing**: Full request spans including HTTP calls
-- **Prometheus Metrics**: Request rates, durations, error counts
-- **Structured Logging**: JSON output with contextual metadata
+- **Distributed Tracing**: Full request spans including HTTP calls with
+  correlation IDs
+- **Prometheus Metrics**: Request rates, durations, error counts by endpoint
+- **Structured Logging**: JSON output with contextual metadata and correlation
+  IDs
 
 ## Connecting to Other MCP Servers
 

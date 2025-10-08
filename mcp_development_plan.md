@@ -656,6 +656,22 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    - **Rationale**: Completes the read-first strategy by providing access to raw run data, metadata,
      summaries, and dataset information. Essential for comprehensive data access and analysis.
    - **Deliverables**: MCP tools, HTTP endpoints, comprehensive smoke test script, README updates
+   - **Phase 6.8 (Logging and Diagnostics Enhancement) COMPLETED (2025-10-08)** - HIGH PRIORITY
+   - **Goal**: Improve logging and diagnostics to make failures from downstream clients fast to diagnose ✅
+   - **Key features implemented:**
+     1. Correlation IDs via AsyncLocalStorage with automatic propagation to all logs and upstream requests ✅
+     2. SSE-safe request logging middleware with event-based completion tracking ✅
+     3. Upstream error visibility (HTTP status with body preview, timeout detection, connection errors) ✅
+     4. Tool and query instrumentation (mcp.tools._, query._, normalize.hint events) ✅
+     5. Structured error responses with correlation IDs and error types ✅
+     6. LOG_LEVEL configuration (trace|debug|info|warn|error|fatal|silent) ✅
+   - **Log event taxonomy**: mcp.request._, mcp.tools._, query._, upstream._, normalize.hint
+   - **Rationale**: Production diagnostics are critical for operating MCP servers at scale. Correlation IDs
+     enable end-to-end request tracing across distributed systems. Upstream error capture makes Horreum
+     API issues immediately visible. SSE-safe logging ensures streaming clients work reliably.
+   - **Deliverables**: correlation.ts utility, enhanced logging.ts with mixin, middleware in http.ts,
+     enhanced fetch.ts with error capture, instrumented tools.ts, comprehensive LOGGING_AND_DIAGNOSTICS.md,
+     updated README with timeout recommendations
    - **NEXT**: Phase 7 (Enhanced CI/CD Pipeline) - Security scanning, testing improvements, release automation.
    - Phase 8 (Architecture Refactoring) and beyond follow after Phase 7 completion.
 
@@ -859,6 +875,46 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Document schema URI filtering
     - [x] Document run extended vs summary differences
     - [x] Update HTTP API documentation with new endpoints
+- [x] Phase 6.8 — Logging and Diagnostics Enhancement (COMPLETED 2025-10-08)
+  - [x] Add correlation ID utility (src/observability/correlation.ts)
+    - [x] Implement AsyncLocalStorage-based storage
+    - [x] Export enterWithRequestId, runWithRequestId, getRequestId
+  - [x] Integrate correlation IDs into logger
+    - [x] Add pino mixin to inject req_id into all logs
+    - [x] Update logging.ts with mixin configuration
+  - [x] Implement SSE-safe request logging middleware
+    - [x] Generate/reuse correlation ID from X-Correlation-Id header
+    - [x] Log mcp.request.received with body preview (<=500 chars)
+    - [x] Log mcp.request.completed with status and duration
+    - [x] Log mcp.request.failed for errors/premature close
+    - [x] Echo X-Correlation-Id in response headers
+    - [x] Use event listeners (finish/close/error) for non-blocking logging
+  - [x] Enhance fetch wrapper for upstream error capture
+    - [x] Propagate X-Correlation-Id header to upstream requests
+    - [x] Log upstream.http_status with body_preview for errors
+    - [x] Detect and log upstream.timeout with hints
+    - [x] Log upstream.connect_error with retry details
+  - [x] Instrument MCP tools and queries
+    - [x] Create tool registry (src/server/registry.ts) for counts
+    - [x] Log mcp.tools.call.start/complete for all tool calls
+    - [x] Log mcp.tools.list.start/complete with tool counts
+    - [x] Log query.start/complete with duration and result counts
+    - [x] Log normalize.hint for input transformations
+  - [x] Update error responses to structured format
+    - [x] Include correlation_id in error detail objects
+    - [x] Add error_type classification
+  - [x] Add LOG_LEVEL configuration
+    - [x] Add to env.ts schema (trace|debug|info|warn|error|fatal|silent)
+    - [x] Apply in index.ts when CLI flag not used
+  - [x] Create comprehensive documentation
+    - [x] Write docs/LOGGING_AND_DIAGNOSTICS.md guide
+    - [x] Document correlation ID workflows
+    - [x] Document log event taxonomy
+    - [x] Document timeout configuration and retry strategy
+    - [x] Document debugging workflows
+    - [x] Add integration examples (log aggregation, monitoring)
+    - [x] Update README with Logging and Diagnostics section
+    - [x] Add timeout recommendations (30s default, 300s for complex queries)
 - Phase 7 — Enhanced CI/CD Pipeline
   - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
   - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -907,6 +963,30 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-08 — **Phase 6.8 Complete - Logging and Diagnostics Enhancement**: Implemented
+     comprehensive logging and diagnostics to make failures from downstream clients fast to diagnose.
+     Added correlation ID utility (src/observability/correlation.ts) using AsyncLocalStorage for
+     per-request context propagation. Integrated correlation IDs into pino logger via mixin so all
+     logs automatically include req_id field. Implemented SSE-safe request logging middleware in
+     http.ts that generates/reuses X-Correlation-Id headers, logs mcp.request.received/completed/
+     failed events with body preview (<=500 chars), echoes correlation ID in response headers, and
+     uses event listeners (finish/close/error) for non-blocking completion tracking. Enhanced fetch
+     wrapper (fetch.ts) to propagate X-Correlation-Id to upstream requests, log upstream.http_status
+     with body_preview for errors, detect and log upstream.timeout with hints to raise timeouts,
+     and log upstream.connect_error with retry details. Instrumented MCP tools (tools.ts) to log
+     mcp.tools.call.start/complete with tool name and arguments_keys, mcp.tools.list.start/complete
+     with counts via new registry.ts utility, query.start/complete with duration_sec and result
+     points, and normalize.hint for input transformations (e.g., test_name→test_id). Updated error
+     responses to include correlation_id and error_type in detail object. Added LOG_LEVEL to env.ts
+     schema (trace|debug|info|warn|error|fatal|silent) and applied in index.ts when CLI flag not used.
+     Created comprehensive docs/LOGGING_AND_DIAGNOSTICS.md documenting correlation ID workflows,
+     complete log event taxonomy, timeout configuration (30s default, 300s for complex queries),
+     retry strategy, debugging workflows, and integration with log aggregation systems. Updated
+     README.md with Logging and Diagnostics section highlighting correlation IDs, upstream error
+     capture, SSE-safe middleware, structured events, and timeout recommendations. All 30+ checklist
+     items completed. This phase delivers production-grade diagnostics essential for operating MCP
+     servers at scale, enabling end-to-end request tracing and fast failure diagnosis. Agent: Claude
+     Sonnet 4.5.
    - 2025-10-07 — **Phase 6.7 Complete - Run and Dataset GET Endpoint Coverage**: Completed read-only
      API coverage by implementing all remaining Run and Dataset GET endpoints. Added 7 new Run MCP
      tools: (1) get_run (exposed run resource as tool for programmatic access), (2) get_run_data

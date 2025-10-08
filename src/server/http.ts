@@ -9,6 +9,11 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import type { Env } from '../config/env.js';
 import { logger } from '../observability/logging.js';
+import {
+  enterWithRequestId,
+  runWithRequestId,
+  getRequestId,
+} from '../observability/correlation.js';
 import { TestService } from '../horreum/generated/services/TestService.js';
 import { RunService } from '../horreum/generated/services/RunService.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
@@ -36,6 +41,91 @@ export async function startHttpServer(server: McpServer, env: Env) {
   );
 
   app.use(express.json());
+
+  // Correlation ID + request logging middleware (SSE-safe by route ordering)
+  app.use((req, res, next) => {
+    // Reuse incoming header or generate
+    const incoming = (req.headers['x-correlation-id'] ||
+      req.headers['x-request-id']) as string | undefined;
+    const reqId =
+      incoming && String(incoming).trim().length > 0 ? String(incoming) : randomUUID();
+    // Enter ALS context early so all downstream logs include req_id via pino mixin
+    enterWithRequestId(reqId);
+
+    const started = Date.now();
+    // Minimal safe preview for debugging; avoid consuming streams (express.json already parsed)
+    const bodyPreview = (() => {
+      try {
+        const s = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+        return s && s.length > 500 ? s.slice(0, 500) + '…' : s;
+      } catch {
+        return undefined;
+      }
+    })();
+    logger.info(
+      {
+        event: 'mcp.request.received',
+        req_id: reqId,
+        method: req.method,
+        path: req.path,
+        accept: req.headers['accept'],
+        content_type: req.headers['content-type'],
+        body_preview: bodyPreview,
+      },
+      'Request received'
+    );
+
+    // Echo header for clients
+    res.setHeader('X-Correlation-Id', reqId);
+
+    // Completion/failure logging
+    const onFinish = () => {
+      const duration = Date.now() - started;
+      logger.info(
+        {
+          event: 'mcp.request.completed',
+          req_id: reqId,
+          status: res.statusCode,
+          duration_ms: duration,
+        },
+        'Request completed'
+      );
+      res.removeListener('finish', onFinish);
+      res.removeListener('close', onClose);
+      res.removeListener('error', onError);
+    };
+    const onClose = () => {
+      const duration = Date.now() - started;
+      logger.warn(
+        {
+          event: 'mcp.request.failed',
+          req_id: reqId,
+          error_type: 'connection_closed',
+          duration_ms: duration,
+        },
+        'Request closed prematurely'
+      );
+    };
+    const onError = (err: unknown) => {
+      const duration = Date.now() - started;
+      logger.error(
+        {
+          event: 'mcp.request.failed',
+          req_id: reqId,
+          error_type: 'handler_error',
+          error: err,
+          duration_ms: duration,
+        },
+        'Request error'
+      );
+    };
+    res.on('finish', onFinish);
+    res.on('close', onClose);
+    res.on('error', onError);
+
+    // Run downstream inside ALS context to propagate req_id
+    return runWithRequestId(reqId, next);
+  });
 
   // Liveness and readiness endpoints
   app.get('/health', (_req, res) => {
@@ -118,11 +208,16 @@ export async function startHttpServer(server: McpServer, env: Env) {
     } catch (error) {
       logger.error({ err: error }, 'Error handling MCP request');
       if (!res.headersSent) {
+        const reqId = getRequestId();
         res.status(500).json({
           jsonrpc: '2.0',
           error: {
             code: -32603,
             message: 'Internal server error',
+            detail: {
+              error_type: 'internal_error',
+              correlation_id: reqId ?? undefined,
+            },
           },
           id: null,
         });
@@ -177,7 +272,19 @@ export async function startHttpServer(server: McpServer, env: Env) {
         details,
         retryable,
       },
+      detail: {
+        error_type:
+          httpStatus === 504
+            ? 'timeout'
+            : httpStatus >= 400 && httpStatus < 500
+              ? 'validation_error'
+              : 'upstream_http_error',
+      },
     };
+    const reqId = getRequestId();
+    if (reqId) {
+      (payload.detail as Record<string, unknown>).correlation_id = reqId;
+    }
     if (typeof retryAfterSeconds === 'number') {
       (payload.error as { retryAfter?: number }).retryAfter = retryAfterSeconds;
       res.setHeader('Retry-After', String(retryAfterSeconds));

@@ -2,6 +2,7 @@
  * Structured logging configuration.
  */
 import pino from 'pino';
+import { getRequestId } from './correlation.js';
 
 const DEFAULT_LEVEL = process.env.LOG_LEVEL ?? 'info';
 
@@ -13,6 +14,15 @@ function createLogger() {
     (logFormat !== 'json' && logPrettyEnv !== 'false') ||
     logPrettyEnv === 'true' ||
     logFormat === 'pretty';
+
+  const baseOptions: pino.LoggerOptions = {
+    level: DEFAULT_LEVEL,
+    // Attach req_id from AsyncLocalStorage to every log record
+    mixin() {
+      const reqId = getRequestId();
+      return reqId ? { req_id: reqId } : {};
+    },
+  };
 
   if (wantPretty) {
     try {
@@ -26,13 +36,13 @@ function createLogger() {
           ignore: 'pid,hostname',
         },
       });
-      return pino({ level: DEFAULT_LEVEL }, transport);
+      return pino(baseOptions, transport);
     } catch {
       // Fallback to JSON when pino-pretty is not available
-      return pino({ level: DEFAULT_LEVEL });
+      return pino(baseOptions);
     }
   }
-  return pino({ level: DEFAULT_LEVEL });
+  return pino(baseOptions);
 }
 
 export const logger = createLogger();

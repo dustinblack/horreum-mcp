@@ -10,6 +10,10 @@ const EnvSchema = z.object({
   METRICS_PORT: z.coerce.number().int().positive().max(65535).optional().default(9464),
   METRICS_PATH: z.string().optional().default('/metrics'),
   TRACING_ENABLED: z.coerce.boolean().optional().default(false),
+  LOG_LEVEL: z
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+    .optional()
+    .default('info'),
 
   // Phase 4: HTTP Standalone Mode
   HTTP_MODE_ENABLED: z.coerce.boolean().optional().default(false),

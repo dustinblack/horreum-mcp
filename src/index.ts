@@ -49,6 +49,10 @@ async function main() {
   }
 
   const env = await loadEnv();
+  if (!cliLevel && env.LOG_LEVEL) {
+    setLogLevel(env.LOG_LEVEL);
+    logger.info({ level: env.LOG_LEVEL }, 'Log level set via ENV');
+  }
 
   // Apply SSL/TLS configuration from environment
   logger.info(

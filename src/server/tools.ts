@@ -1,6 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { logger } from '../observability/logging.js';
+import { getRequestId } from '../observability/correlation.js';
+import { registerToolName, getRegisteredToolsCount } from './registry.js';
 import { startSpan } from '../observability/tracing.js';
 import { OpenAPI } from '../horreum/generated/index.js';
 import { SchemaService } from '../horreum/generated/services/SchemaService.js';
@@ -251,18 +253,29 @@ export async function registerTools(
     shape: z.ZodRawShape,
     handler: (args: ToolArgs) => Promise<ToolResult>
   ) => {
+    registerToolName(toolName);
     server.tool(
       toolName,
       description,
       shape,
       async (args: ToolArgs): Promise<ToolResult> => {
-        const cid = genCid();
+        const cid = getRequestId() || genCid();
         const started = Date.now();
-        log('info', { event: 'tool.start', tool: toolName, cid, args });
+        logger.info({
+          event: 'mcp.tools.call.start',
+          req_id: cid,
+          tool: toolName,
+          arguments_keys: Object.keys(args || {}),
+        });
         try {
           const res = await startSpan(`tool.${toolName}`, async () => handler(args));
           const duration = Date.now() - started;
-          log('info', { event: 'tool.end', tool: toolName, cid, durationMs: duration });
+          logger.info({
+            event: 'mcp.tools.call.complete',
+            req_id: cid,
+            tool: toolName,
+            duration_ms: duration,
+          });
           metrics?.recordTool(
             toolName,
             duration,
@@ -272,12 +285,12 @@ export async function registerTools(
         } catch (err) {
           const errObj = errorToObject(err, cid);
           const duration = Date.now() - started;
-          log('error', {
-            event: 'tool.error',
-            tool: toolName,
-            cid,
-            durationMs: duration,
+          logger.error({
+            event: 'mcp.request.failed',
+            req_id: cid,
+            error_type: 'tool_error',
             error: errObj,
+            duration_ms: duration,
           });
           metrics?.recordTool(toolName, duration, false);
           return {
@@ -451,6 +464,15 @@ export async function registerTools(
         };
       }
 
+      const reqId = getRequestId();
+      const qStart = Date.now();
+      logger.info({
+        event: 'query.start',
+        req_id: reqId,
+        path: 'runs',
+        tool: 'list_runs',
+      });
+
       // Parse time range with natural language support
       const { fromMs, toMs } = parseTimeRange(
         args.from as string | undefined,
@@ -484,6 +506,17 @@ export async function registerTools(
           runs: runsWithId,
         };
 
+        const duration = (Date.now() - qStart) / 1000;
+        const points = Array.isArray((transformed as { runs?: unknown }).runs)
+          ? ((transformed as { runs: unknown[] }).runs as unknown[]).length
+          : 0;
+        logger.info({
+          event: 'query.complete',
+          req_id: reqId,
+          duration_sec: duration,
+          points,
+          path: 'runs',
+        });
         return { content: [text(JSON.stringify(transformed, null, 2))] };
       }
 
@@ -549,6 +582,14 @@ export async function registerTools(
         total: withinRange.length,
         runs: runsWithId as unknown as typeof finalRuns,
       };
+      const duration = (Date.now() - qStart) / 1000;
+      logger.info({
+        event: 'query.complete',
+        req_id: reqId,
+        duration_sec: duration,
+        points: runsWithId.length,
+        path: 'runs',
+      });
       return { content: [text(JSON.stringify(result, null, 2))] };
     }
   );
@@ -632,6 +673,15 @@ export async function registerTools(
         });
         resolvedTestId = t.id;
       }
+      if (!args.test_id && args.test_name && resolvedTestId) {
+        logger.info({
+          event: 'normalize.hint',
+          action: 'test_name->test_id',
+          before: args.test_name,
+          after: resolvedTestId,
+          req_id: getRequestId(),
+        });
+      }
 
       // Parse time range with natural language support
       const { fromMs, toMs } = parseTimeRange(
@@ -641,6 +691,14 @@ export async function registerTools(
 
       // Determine which API endpoint to use based on filters
       let datasetList;
+      const reqId = getRequestId();
+      const qStart = Date.now();
+      logger.info({
+        event: 'query.start',
+        req_id: reqId,
+        path: 'datasets',
+        tool: 'list_datasets',
+      });
       if (args.schema_uri) {
         // Use schema-based listing with 1-based pagination
         const pageNum = (args.page as number | undefined) ?? 1;
@@ -702,6 +760,14 @@ export async function registerTools(
         },
       };
 
+      const duration = (Date.now() - qStart) / 1000;
+      logger.info({
+        event: 'query.complete',
+        req_id: reqId,
+        duration_sec: duration,
+        points: response.datasets.length,
+        path: 'datasets',
+      });
       return { content: [text(JSON.stringify(response, null, 2))] };
     }
   );
@@ -1148,6 +1214,7 @@ export async function registerTools(
     {},
     async () => {
       const env = await getEnv();
+      logger.info({ event: 'mcp.tools.list.start' });
       const response = {
         sourceType: 'horreum',
         version: '0.1.0', // From package.json
@@ -1164,6 +1231,10 @@ export async function registerTools(
           rateLimitPerMinute: env.HORREUM_RATE_LIMIT || 60,
         },
       };
+      logger.info({
+        event: 'mcp.tools.list.complete',
+        count: getRegisteredToolsCount(),
+      });
       return { content: [text(JSON.stringify(response, null, 2))] };
     }
   );
