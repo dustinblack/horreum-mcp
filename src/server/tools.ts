@@ -12,6 +12,7 @@ import { DatasetService } from '../horreum/generated/services/DatasetService.js'
 import type { SortDirection } from '../horreum/generated/models/SortDirection.js';
 import type { TestListing } from '../horreum/generated/models/TestListing.js';
 import type { TestSummary } from '../horreum/generated/models/TestSummary.js';
+import type { ExportedLabelValues } from '../horreum/generated/models/ExportedLabelValues.js';
 import { createRateLimitedFetch } from '../horreum/fetch.js';
 import { fetch as undiciFetch } from 'undici';
 import type { Env } from '../config/env.js';
@@ -28,6 +29,59 @@ type RegisterOptions = {
   fetchImpl?: FetchLike | undefined;
   metrics?: Metrics | undefined;
 };
+
+/**
+ * Transform Horreum's ExportedLabelValues to Source MCP Contract format.
+ *
+ * Converts:
+ * - values: Record<string, any> → Array<{name: string, value: any}>
+ * - runId → run_id (string)
+ * - datasetId → dataset_id (string)
+ * - start/stop: epoch millis (number | string) → ISO 8601 datetime (string)
+ */
+function transformLabelValues(horreumValues: ExportedLabelValues[]): Array<{
+  values: Array<{ name: string; value: unknown }>;
+  run_id?: string;
+  dataset_id?: string;
+  start: string;
+  stop: string;
+}> {
+  return horreumValues.map((item) => {
+    // Transform values from object to array of {name, value} pairs
+    const valuesArray: Array<{ name: string; value: unknown }> = [];
+    if (item.values && typeof item.values === 'object') {
+      for (const [name, value] of Object.entries(item.values)) {
+        valuesArray.push({ name, value });
+      }
+    }
+
+    // Convert timestamps: handle both number and string (ISO or epoch millis)
+    const toIsoString = (ts: string | number | undefined): string => {
+      if (ts === undefined) return new Date(0).toISOString();
+
+      // If already a string, check if it's ISO format or epoch millis
+      if (typeof ts === 'string') {
+        // Check if it's a numeric string (epoch millis)
+        if (/^\d+$/.test(ts)) {
+          return new Date(parseInt(ts, 10)).toISOString();
+        }
+        // Assume it's already ISO format
+        return ts;
+      }
+
+      // It's a number, treat as epoch millis
+      return new Date(ts).toISOString();
+    };
+
+    return {
+      values: valuesArray,
+      ...(item.runId !== undefined ? { run_id: String(item.runId) } : {}),
+      ...(item.datasetId !== undefined ? { dataset_id: String(item.datasetId) } : {}),
+      start: toIsoString(item.start),
+      stop: toIsoString(item.stop),
+    };
+  });
+}
 
 export async function registerTools(
   server: McpServer,
@@ -862,7 +916,10 @@ export async function registerTools(
           ? { multiFilter: args.multiFilter as boolean }
           : {}),
       });
-      return { content: [text(JSON.stringify(res, null, 2))] };
+
+      // Transform to Source MCP Contract format
+      const transformed = transformLabelValues(Array.isArray(res) ? res : [res]);
+      return { content: [text(JSON.stringify(transformed, null, 2))] };
     }
   );
 
@@ -947,7 +1004,10 @@ export async function registerTools(
           ? { multiFilter: args.multiFilter as boolean }
           : {}),
       });
-      return { content: [text(JSON.stringify(res, null, 2))] };
+
+      // Transform to Source MCP Contract format
+      const transformed = transformLabelValues(Array.isArray(res) ? res : [res]);
+      return { content: [text(JSON.stringify(transformed, null, 2))] };
     }
   );
 

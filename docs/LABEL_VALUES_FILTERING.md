@@ -253,23 +253,63 @@ Supported formats:
 
 ## Response Format
 
-All label values endpoints return `ExportedLabelValues` or `LabelValue` arrays:
+### Run and Test Label Values Format
+
+The `get_run_label_values` and `get_test_label_values` endpoints return
+transformed data matching the Source MCP Contract format:
 
 ```json
 [
   {
-    "values": {
-      "boot_time_ms": 523,
-      "kernel_version": "6.1.0",
-      "memory_usage": 2048
-    },
-    "runId": 12345,
-    "datasetId": 98765,
-    "start": "2025-09-24T10:00:00Z",
-    "stop": "2025-09-24T10:05:00Z"
+    "values": [
+      { "name": "boot_time_ms", "value": 523 },
+      { "name": "kernel_version", "value": "6.1.0" },
+      { "name": "memory_usage", "value": 2048 }
+    ],
+    "run_id": "12345",
+    "dataset_id": "98765",
+    "start": "2025-09-24T10:00:00.000Z",
+    "stop": "2025-09-24T10:05:00.000Z"
   }
 ]
 ```
+
+**Format Details:**
+
+- `values`: Array of `{name, value}` objects (not a dictionary)
+- `run_id`: String representation of run ID (snake_case)
+- `dataset_id`: String representation of dataset ID (snake_case)
+- `start`/`stop`: ISO 8601 datetime strings with millisecond precision
+
+### Dataset Label Values Format
+
+The `get_dataset_label_values` endpoint returns a simpler format (array of
+label value objects):
+
+```json
+[
+  {
+    "id": 12345,
+    "name": "boot_time_ms",
+    "schema": {
+      "id": 42,
+      "uri": "urn:boot-time:01",
+      "name": "Boot Time Schema"
+    },
+    "value": "523"
+  },
+  {
+    "id": 12346,
+    "name": "kernel_version",
+    "schema": {...},
+    "value": "6.1.0"
+  }
+]
+```
+
+**Note:** The dataset endpoint returns individual label-value pairs, not
+aggregated by run/dataset. Each item includes the label ID and schema
+information.
 
 ## Further Reading
 

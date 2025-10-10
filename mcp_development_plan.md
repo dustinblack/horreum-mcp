@@ -305,6 +305,57 @@ that represents the actual test metrics and results.
 - [x] Documentation complete with examples
 - [x] multiFilter parameter behavior documented
 
+**Phase 6.9: Label Values Format Compliance (COMPLETED - 2025-10-10)**
+
+This phase fixes the label values response format to comply with the Source MCP
+Contract specification, resolving Pydantic validation errors in the Domain MCP.
+
+**Priority**: CRITICAL - Domain MCP cannot parse label values responses without
+this fix.
+
+**Problem**: The `get_run_label_values` and `get_test_label_values` endpoints
+were returning Horreum's native API format instead of transforming it to match
+the Source MCP Contract, causing validation failures.
+
+**Changes Implemented**:
+
+1. **Transformation Function** (`transformLabelValues`)
+   - Location: `src/server/tools.ts` and `src/server/http.ts`
+   - Converts `values` from `Record<string, any>` to `Array<{name, value}>`
+   - Converts `runId` → `run_id` (string, snake_case)
+   - Converts `datasetId` → `dataset_id` (string, snake_case)
+   - Converts timestamps from epoch milliseconds to ISO 8601 strings
+2. **Applied to Endpoints**:
+   - ✅ MCP tool: `get_run_label_values`
+   - ✅ MCP tool: `get_test_label_values`
+   - ✅ HTTP: `POST /api/tools/horreum_get_run_label_values`
+   - ✅ HTTP: `POST /api/tools/horreum_get_test_label_values`
+   - ℹ️ `get_dataset_label_values` - No change needed (different format)
+
+3. **Documentation Updates**:
+   - Updated `docs/LABEL_VALUES_FILTERING.md` with correct response formats
+   - Created `LABEL_VALUES_FORMAT_FIX.md` - comprehensive change documentation
+   - Created `VALIDATION_RESULTS.md` - production validation results
+
+4. **Validation Testing**:
+   - Created `scripts/smoke-label-values-format.mjs` validation script
+   - Tested with production data (runs 120214, 116572)
+   - All format requirements verified with real Horreum data
+
+**Success Criteria**:
+
+- [x] Transformation function implemented and tested
+- [x] Applied to run and test label values endpoints (4 total)
+- [x] Documentation updated with correct format examples
+- [x] Validation script created and passing
+- [x] Tested with production Horreum data
+- [x] Build, lint, and format checks passing
+- [x] All format requirements verified:
+  - [x] values: Array of {name, value} objects
+  - [x] run_id/dataset_id: strings in snake_case
+  - [x] Timestamps: ISO 8601 format
+  - [x] No camelCase fields (runId, datasetId)
+
 **Phase 6.7: Comprehensive Run and Dataset GET Endpoint Coverage (COMPLETED - 2025-10-07)**
 
 This phase completes the read-only API coverage by implementing all remaining GET
@@ -915,6 +966,35 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
     - [x] Add integration examples (log aggregation, monitoring)
     - [x] Update README with Logging and Diagnostics section
     - [x] Add timeout recommendations (30s default, 300s for complex queries)
+- [x] Phase 6.9 — Label Values Format Compliance (COMPLETED 2025-10-10)
+  - [x] Implement transformLabelValues() function
+    - [x] Add to src/server/tools.ts
+    - [x] Add to src/server/http.ts
+    - [x] Transform values from Record<string,any> to Array<{name,value}>
+    - [x] Convert runId → run_id (string, snake_case)
+    - [x] Convert datasetId → dataset_id (string, snake_case)
+    - [x] Convert timestamps from epoch millis to ISO 8601 strings
+  - [x] Apply transformation to endpoints
+    - [x] get_run_label_values MCP tool
+    - [x] get_test_label_values MCP tool
+    - [x] POST /api/tools/horreum_get_run_label_values HTTP endpoint
+    - [x] POST /api/tools/horreum_get_test_label_values HTTP endpoint
+    - [x] Verify get_dataset_label_values doesn't need transformation
+  - [x] Create validation testing
+    - [x] Create scripts/smoke-label-values-format.mjs
+    - [x] Test format compliance checks
+    - [x] Test with production data (runs 120214, 116572)
+    - [x] Verify all format requirements
+  - [x] Update documentation
+    - [x] Update docs/LABEL_VALUES_FILTERING.md with correct formats
+    - [x] Add examples for run/test vs dataset formats
+    - [x] Create LABEL_VALUES_FORMAT_FIX.md
+    - [x] Create VALIDATION_RESULTS.md
+  - [x] Quality checks
+    - [x] Build passing
+    - [x] Lint passing
+    - [x] Format passing
+    - [x] Production validation successful
 - Phase 7 — Enhanced CI/CD Pipeline
   - [ ] Implement multi-stage testing pipeline (unit, integration, e2e, performance)
   - [ ] Add comprehensive security scanning (`osv-scanner`, SAST, license compliance)
@@ -963,6 +1043,20 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-10 — **Phase 6.9 Completed - Label Values Format Compliance**: Fixed critical
+     Source MCP Contract compliance issue in label values endpoints. The get_run_label_values and
+     get_test_label_values endpoints were returning Horreum's native format causing Pydantic
+     validation errors in Domain MCP. Implemented transformLabelValues() function in both
+     src/server/tools.ts and src/server/http.ts to transform responses: (1) values from
+     Record<string,any> to Array<{name,value}>, (2) runId→run_id and datasetId→dataset_id
+     (snake_case strings), (3) timestamps from epoch milliseconds to ISO 8601 datetime strings.
+     Applied transformation to 4 endpoints (2 MCP tools, 2 HTTP endpoints). Created validation
+     script scripts/smoke-label-values-format.mjs and tested with production data (runs 120214,
+     116572). All format requirements verified: values as array, fields in snake_case, ISO
+     timestamps, no camelCase fields. Updated docs/LABEL_VALUES_FILTERING.md with correct format
+     examples. Created comprehensive documentation in LABEL_VALUES_FORMAT_FIX.md and
+     VALIDATION_RESULTS.md. This fix unblocks Domain MCP's label values extraction path for boot
+     phase metrics. Build, lint, format checks passing. Agent: Claude Sonnet 4.5.
    - 2025-10-08 — **Phase 6.8 Complete - Logging and Diagnostics Enhancement**: Implemented
      comprehensive logging and diagnostics to make failures from downstream clients fast to diagnose.
      Added correlation ID utility (src/observability/correlation.ts) using AsyncLocalStorage for
@@ -1041,302 +1135,303 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
      Updated execution directive to authorize both Phase 6.6 and 6.7 implementation. Priority:
      MEDIUM-HIGH as these endpoints are essential for comprehensive data access and analysis but
      secondary to label values (the transformed metrics). Agent: Claude Sonnet 4.5.
-   - 2025-10-07 — **Phase 6.6 Started - Label Values API Coverage**: Initiated implementation of
-     comprehensive label values endpoints, the most important read endpoints for accessing Horreum's
-     transformed test data. Added Phase 6.6 to development plan with detailed specifications for
-     three critical endpoints: (1) get_run_label_values - filtered access to run-specific metrics
-     with extensive server-side filtering (filter, include/exclude, multiFilter, sort/direction,
-     pagination), (2) get_test_label_values - aggregated label values across all runs for a test
-     with time boundary support (before/after with natural language parsing) and filtering/metrics
-     flags, (3) get_dataset_label_values - simple endpoint returning all label values for a
-     specific dataset. Each endpoint will have both MCP tool and HTTP POST implementations. Label
-     values represent the primary output of Horreum's transformation system - the extracted metrics
-     and metadata from test runs after processing by transformer definitions. Implementation plan
-     includes comprehensive smoke tests, proper error handling, pagination alignment (1-based), and
-     documentation updates. Updated current execution directive to Phase 6.6 IN PROGRESS. Created
-     detailed status checklist with 35+ sub-items tracking implementation progress. This phase is
-     HIGH PRIORITY as label values are essential for data analysis and visualization workflows.
-     Agent: Claude Sonnet 4.5.
-   - 2025-10-01 — **Gemini CLI Support via HTTP Proxy Bridge**: Implemented stdio-to-HTTP proxy
-     bridge (scripts/mcp-http-proxy.mjs) that enables Gemini CLI to connect to HTTP-based MCP
-     servers. Background: MCP SDK's StreamableHTTPServerTransport uses POST-based JSON-RPC, but
-     Gemini CLI expects pure SSE (Server-Sent Events) streaming initiated via GET requests. The
-     proxy accepts stdio input from Gemini, forwards JSON-RPC messages to HTTP server via POST,
-     manages session IDs automatically, and returns responses via stdout. This pattern is similar
-     to how Claude Desktop connects to remote servers. Updated src/server/http.ts GET /mcp
-     endpoint to return clear 405 Method Not Allowed error (replacing confusing 400 "Invalid
-     session ID" error) with helpful message directing clients to use POST for initialization.
-     Added comprehensive Gemini CLI documentation to README.md with configuration examples for
-     both CLI command and manual settings.json editing, verification steps, and authentication
-     support. Proxy script includes detailed header comments with usage examples for both Gemini
-     and Claude Desktop. Connection verified: gemini mcp list shows horreum-mcp as Connected.
-     This enables Gemini CLI users to connect to containerized Horreum MCP servers without
-     requiring native SSE streaming support in the MCP SDK.
-   - 2025-10-01 — **Phase 6.5 COMPLETE AND VERIFIED**: All three blocking issues resolved and
-     verified with live integration tests against production Horreum API. Created comprehensive
-     integration status report (INTEGRATION_STATUS_REPORT.md) documenting all working features
-     and debunking Domain MCP team's "BLOCKED on Horreum MCP" claims. Natural language time
-     queries VERIFIED WORKING with actual HTTP endpoint tests (tested "last week", "yesterday"
-     with real data from test ID 262). All smoke tests passing. All unit tests passing. Schema
-     compliance verified. 1-based pagination aligned. READY FOR FULL INTEGRATION with Domain
-     MCP. The blocking claim in the Domain MCP integration report is OUTDATED information.
-   - 2025-10-01 — **Phase 6.5 COMPLETE - Pagination Alignment**: Aligned all endpoints to Horreum's
-     1-based pagination model. Updated schema validators across all list endpoints (list_tests,
-     list_runs, list_datasets) to require `page >= 1` instead of `page >= 0`. Removed all `page=0`
-     special handling that returned "all results" semantics - this was semantically confusing and
-     inconsistent with Horreum's model. Eliminated workaround for Horreum bug #2525 by always
-     sending `page >= 1` to Horreum APIs (defaulting to 1 if not specified). Updated tool
-     descriptions to document 1-based pagination. Changed MCP tools: list_tests, list_runs,
-     list_datasets schemas to min(1). Changed HTTP endpoints: list_tests aggregation (page: 1),
-     list_datasets (always send page >= 1). All 43 tests passing. Phase 6.5 now COMPLETE - all 3
-     blocking issues resolved: ✅ Schema compliance, ✅ Natural language time queries, ✅ Pagination
-     alignment. Ready for Phase 7.
-   - 2025-10-01 — **Phase 6.5 Milestone - Schema Compliance Complete**: Fixed all Source MCP
-     Contract schema compliance issues in BOTH HTTP API and MCP tool endpoints. Added required
-     duplicate ID fields: test_id to test objects (list_tests), run_id to run objects
-     (list_runs). Verified dataset_id already present in dataset objects (list_datasets -
-     already correct). Standardized all pagination objects to snake_case naming: nextPageToken
-     → next_page_token, hasMore → has_more, totalCount → total_count. Applied changes to
-     list_runs (4 response paths: 2 HTTP + 2 MCP), list_tests (4 response paths: 2 HTTP + 2
-     MCP), list_datasets (already compliant in both HTTP and MCP). Created comprehensive smoke
-     test script (scripts/smoke-schema-compliance.mjs) to validate contract compliance - 5
-     validation checks, all passing. All 43 unit tests passing. Both HTTP API and MCP tool
-     responses now fully compliant with Source MCP Contract schema. Schema compliance
-     requirement (#1) for Phase 6.5 now COMPLETE. Updated execution directive: 2 of 3 issues
-     resolved. Next: Pagination alignment.
-   - 2025-10-01 — **Phase 6.5 Milestone - Natural Language Time Queries Complete**: Fully
-     integrated time parsing utility into list_runs and list_datasets endpoints (both HTTP
-     and MCP). Replaced old parseTime helpers with parseTimeRange() which supports natural
-     language ("last week", "yesterday", "last 30 days"), ISO 8601, epoch millis, and
-     intelligent "last 30 days" default. Updated tool descriptions to document natural language
-     support. Removed two redundant parseTime helper functions from http.ts. All 43 tests
-     passing (23 for time parsing, 19 for SSL config, 1 placeholder). Natural language time
-     query requirement (#2) for Phase 6.5 now COMPLETE. Updated execution directive to reflect
-     completion status. Next: Schema compliance fixes (test_id, run_id, has_more, snake_case)
-     and pagination alignment.
-   - 2025-10-01 — **Phase 6.5 Progress - Time Parsing Utility Complete**: Implemented
-     comprehensive time parsing utility (src/utils/time.ts) with chrono-node integration.
-     Created parseTimeString() with multi-strategy parsing (epoch, ISO 8601, natural language),
-     parseTimeRange() with intelligent "last 30 days" default, and formatTimeRange() for
-     logging. Supports natural language expressions: "last week", "yesterday", "last 7 days",
-     "last month", "now", "today". Maintains backward compatibility with ISO 8601 and epoch
-     milliseconds. Includes 22 comprehensive unit tests (all passing) covering strategies,
-     defaults, edge cases, and error handling. Uses vi.useFakeTimers() for deterministic
-     time-based tests. Added chrono-node dependency (MIT license). Ready for integration into
-     list_runs and list_datasets endpoints. Updated README to highlight natural language time
-     query support.
-   - 2025-10-01 — **Phase 6.5 Initiated - End-to-End Integration Fixes**: Added new critical
-     priority phase to address two blocking issues discovered during RHIVOS PerfScale Domain
-     MCP end-to-end testing. (1) Source MCP Contract schema compliance: Response schemas
-     missing required `test_id`, `run_id` fields and `has_more` boolean in pagination
-     objects, plus inconsistent camelCase vs snake_case naming, causing Pydantic validation
-     errors in Domain MCP. All list endpoints (tests, runs, datasets) affected. Solution:
-     Add duplicate ID fields, standardize all responses to snake_case (`next_page_token`,
-     `has_more`, `total_count`). (2) Natural language time query support: Endpoints reject
-     natural language time expressions like "last week" or "yesterday", forcing AI clients
-     to calculate dates instead of passing through user intent. Solution: Integrate
-     chrono-node library for time parsing with fallback chain, add intelligent "last 30 days"
-     default when no time params provided. Affected endpoints: list_runs, list_datasets
-     (both HTTP and MCP). Both issues are CRITICAL and BLOCKING full integration.
-     References: horreum-mcp-schema-fixes.md and horreum-mcp-time-query-requirements.md
-     from Domain MCP repository. Expanded scope based on codebase analysis to include
-     snake_case standardization and default time range behavior. Execution directive
-     updated to authorize immediate Phase 6.5 implementation before proceeding to Phase 7.
-   - 2025-10-01 — **CI Build Fix - Native GitHub Paths Filtering**: Resolved persistent CI
-     container build detection issues by replacing workflow_run + dorny/paths-filter approach
-     with GitHub's native on.push.paths filtering. Root cause: workflow_run uses workflow
-     file from default branch (not triggering commit), making it impossible for paths-filter
-     to determine correct base commit for comparison. Result was comparing commit X to itself
-     (0 changes). Solution: Direct push trigger with paths filter handles multi-commit pushes
-     correctly out of the box. Removed complex base commit calculation logic and changes job.
-     Workflow now triggers directly on push to main when relevant files change. Much simpler
-     and more reliable.
-   - 2025-09-30 — **Phase 6 Dataset Endpoints Added**: Implemented missing dataset endpoints
-     required by RHIVOS PerfScale MCP integration. Added `list_datasets` MCP tool that
-     searches datasets by test*id, test_name, or schema_uri with optional time filtering
-     (from/to). Uses DatasetService.datasetServiceListByTest for test-based filtering and
-     DatasetService.datasetServiceListDatasetsBySchema for schema-based filtering. Added
-     `get_dataset` MCP tool to retrieve raw dataset content by ID. Both tools mapped to
-     HTTP POST endpoints: `/api/tools/horreum_list_datasets` and `/api/tools/horreum*
-     get_dataset`. Applied standardized error handling and included dataset info in
+
+- 2025-10-07 — **Phase 6.6 Started - Label Values API Coverage**: Initiated implementation of
+  comprehensive label values endpoints, the most important read endpoints for accessing Horreum's
+  transformed test data. Added Phase 6.6 to development plan with detailed specifications for
+  three critical endpoints: (1) get_run_label_values - filtered access to run-specific metrics
+  with extensive server-side filtering (filter, include/exclude, multiFilter, sort/direction,
+  pagination), (2) get_test_label_values - aggregated label values across all runs for a test
+  with time boundary support (before/after with natural language parsing) and filtering/metrics
+  flags, (3) get_dataset_label_values - simple endpoint returning all label values for a
+  specific dataset. Each endpoint will have both MCP tool and HTTP POST implementations. Label
+  values represent the primary output of Horreum's transformation system - the extracted metrics
+  and metadata from test runs after processing by transformer definitions. Implementation plan
+  includes comprehensive smoke tests, proper error handling, pagination alignment (1-based), and
+  documentation updates. Updated current execution directive to Phase 6.6 IN PROGRESS. Created
+  detailed status checklist with 35+ sub-items tracking implementation progress. This phase is
+  HIGH PRIORITY as label values are essential for data analysis and visualization workflows.
+  Agent: Claude Sonnet 4.5.
+- 2025-10-01 — **Gemini CLI Support via HTTP Proxy Bridge**: Implemented stdio-to-HTTP proxy
+  bridge (scripts/mcp-http-proxy.mjs) that enables Gemini CLI to connect to HTTP-based MCP
+  servers. Background: MCP SDK's StreamableHTTPServerTransport uses POST-based JSON-RPC, but
+  Gemini CLI expects pure SSE (Server-Sent Events) streaming initiated via GET requests. The
+  proxy accepts stdio input from Gemini, forwards JSON-RPC messages to HTTP server via POST,
+  manages session IDs automatically, and returns responses via stdout. This pattern is similar
+  to how Claude Desktop connects to remote servers. Updated src/server/http.ts GET /mcp
+  endpoint to return clear 405 Method Not Allowed error (replacing confusing 400 "Invalid
+  session ID" error) with helpful message directing clients to use POST for initialization.
+  Added comprehensive Gemini CLI documentation to README.md with configuration examples for
+  both CLI command and manual settings.json editing, verification steps, and authentication
+  support. Proxy script includes detailed header comments with usage examples for both Gemini
+  and Claude Desktop. Connection verified: gemini mcp list shows horreum-mcp as Connected.
+  This enables Gemini CLI users to connect to containerized Horreum MCP servers without
+  requiring native SSE streaming support in the MCP SDK.
+- 2025-10-01 — **Phase 6.5 COMPLETE AND VERIFIED**: All three blocking issues resolved and
+  verified with live integration tests against production Horreum API. Created comprehensive
+  integration status report (INTEGRATION_STATUS_REPORT.md) documenting all working features
+  and debunking Domain MCP team's "BLOCKED on Horreum MCP" claims. Natural language time
+  queries VERIFIED WORKING with actual HTTP endpoint tests (tested "last week", "yesterday"
+  with real data from test ID 262). All smoke tests passing. All unit tests passing. Schema
+  compliance verified. 1-based pagination aligned. READY FOR FULL INTEGRATION with Domain
+  MCP. The blocking claim in the Domain MCP integration report is OUTDATED information.
+- 2025-10-01 — **Phase 6.5 COMPLETE - Pagination Alignment**: Aligned all endpoints to Horreum's
+  1-based pagination model. Updated schema validators across all list endpoints (list_tests,
+  list_runs, list_datasets) to require `page >= 1` instead of `page >= 0`. Removed all `page=0`
+  special handling that returned "all results" semantics - this was semantically confusing and
+  inconsistent with Horreum's model. Eliminated workaround for Horreum bug #2525 by always
+  sending `page >= 1` to Horreum APIs (defaulting to 1 if not specified). Updated tool
+  descriptions to document 1-based pagination. Changed MCP tools: list_tests, list_runs,
+  list_datasets schemas to min(1). Changed HTTP endpoints: list_tests aggregation (page: 1),
+  list_datasets (always send page >= 1). All 43 tests passing. Phase 6.5 now COMPLETE - all 3
+  blocking issues resolved: ✅ Schema compliance, ✅ Natural language time queries, ✅ Pagination
+  alignment. Ready for Phase 7.
+- 2025-10-01 — **Phase 6.5 Milestone - Schema Compliance Complete**: Fixed all Source MCP
+  Contract schema compliance issues in BOTH HTTP API and MCP tool endpoints. Added required
+  duplicate ID fields: test_id to test objects (list_tests), run_id to run objects
+  (list_runs). Verified dataset_id already present in dataset objects (list_datasets -
+  already correct). Standardized all pagination objects to snake_case naming: nextPageToken
+  → next_page_token, hasMore → has_more, totalCount → total_count. Applied changes to
+  list_runs (4 response paths: 2 HTTP + 2 MCP), list_tests (4 response paths: 2 HTTP + 2
+  MCP), list_datasets (already compliant in both HTTP and MCP). Created comprehensive smoke
+  test script (scripts/smoke-schema-compliance.mjs) to validate contract compliance - 5
+  validation checks, all passing. All 43 unit tests passing. Both HTTP API and MCP tool
+  responses now fully compliant with Source MCP Contract schema. Schema compliance
+  requirement (#1) for Phase 6.5 now COMPLETE. Updated execution directive: 2 of 3 issues
+  resolved. Next: Pagination alignment.
+- 2025-10-01 — **Phase 6.5 Milestone - Natural Language Time Queries Complete**: Fully
+  integrated time parsing utility into list_runs and list_datasets endpoints (both HTTP
+  and MCP). Replaced old parseTime helpers with parseTimeRange() which supports natural
+  language ("last week", "yesterday", "last 30 days"), ISO 8601, epoch millis, and
+  intelligent "last 30 days" default. Updated tool descriptions to document natural language
+  support. Removed two redundant parseTime helper functions from http.ts. All 43 tests
+  passing (23 for time parsing, 19 for SSL config, 1 placeholder). Natural language time
+  query requirement (#2) for Phase 6.5 now COMPLETE. Updated execution directive to reflect
+  completion status. Next: Schema compliance fixes (test_id, run_id, has_more, snake_case)
+  and pagination alignment.
+- 2025-10-01 — **Phase 6.5 Progress - Time Parsing Utility Complete**: Implemented
+  comprehensive time parsing utility (src/utils/time.ts) with chrono-node integration.
+  Created parseTimeString() with multi-strategy parsing (epoch, ISO 8601, natural language),
+  parseTimeRange() with intelligent "last 30 days" default, and formatTimeRange() for
+  logging. Supports natural language expressions: "last week", "yesterday", "last 7 days",
+  "last month", "now", "today". Maintains backward compatibility with ISO 8601 and epoch
+  milliseconds. Includes 22 comprehensive unit tests (all passing) covering strategies,
+  defaults, edge cases, and error handling. Uses vi.useFakeTimers() for deterministic
+  time-based tests. Added chrono-node dependency (MIT license). Ready for integration into
+  list_runs and list_datasets endpoints. Updated README to highlight natural language time
+  query support.
+- 2025-10-01 — **Phase 6.5 Initiated - End-to-End Integration Fixes**: Added new critical
+  priority phase to address two blocking issues discovered during RHIVOS PerfScale Domain
+  MCP end-to-end testing. (1) Source MCP Contract schema compliance: Response schemas
+  missing required `test_id`, `run_id` fields and `has_more` boolean in pagination
+  objects, plus inconsistent camelCase vs snake_case naming, causing Pydantic validation
+  errors in Domain MCP. All list endpoints (tests, runs, datasets) affected. Solution:
+  Add duplicate ID fields, standardize all responses to snake_case (`next_page_token`,
+  `has_more`, `total_count`). (2) Natural language time query support: Endpoints reject
+  natural language time expressions like "last week" or "yesterday", forcing AI clients
+  to calculate dates instead of passing through user intent. Solution: Integrate
+  chrono-node library for time parsing with fallback chain, add intelligent "last 30 days"
+  default when no time params provided. Affected endpoints: list_runs, list_datasets
+  (both HTTP and MCP). Both issues are CRITICAL and BLOCKING full integration.
+  References: horreum-mcp-schema-fixes.md and horreum-mcp-time-query-requirements.md
+  from Domain MCP repository. Expanded scope based on codebase analysis to include
+  snake_case standardization and default time range behavior. Execution directive
+  updated to authorize immediate Phase 6.5 implementation before proceeding to Phase 7.
+- 2025-10-01 — **CI Build Fix - Native GitHub Paths Filtering**: Resolved persistent CI
+  container build detection issues by replacing workflow_run + dorny/paths-filter approach
+  with GitHub's native on.push.paths filtering. Root cause: workflow_run uses workflow
+  file from default branch (not triggering commit), making it impossible for paths-filter
+  to determine correct base commit for comparison. Result was comparing commit X to itself
+  (0 changes). Solution: Direct push trigger with paths filter handles multi-commit pushes
+  correctly out of the box. Removed complex base commit calculation logic and changes job.
+  Workflow now triggers directly on push to main when relevant files change. Much simpler
+  and more reliable.
+- 2025-09-30 — **Phase 6 Dataset Endpoints Added**: Implemented missing dataset endpoints
+  required by RHIVOS PerfScale MCP integration. Added `list_datasets` MCP tool that
+  searches datasets by test*id, test_name, or schema_uri with optional time filtering
+  (from/to). Uses DatasetService.datasetServiceListByTest for test-based filtering and
+  DatasetService.datasetServiceListDatasetsBySchema for schema-based filtering. Added
+  `get_dataset` MCP tool to retrieve raw dataset content by ID. Both tools mapped to
+  HTTP POST endpoints: `/api/tools/horreum_list_datasets` and `/api/tools/horreum*
+  get_dataset`. Applied standardized error handling and included dataset info in
 responses (dataset_id, run_id, test_id, test_name, schemas, content). Created
 comprehensive smoke test `scripts/smoke-http-datasets.mjs` with 8 test cases covering
-     filtering by test ID, test name, schema URI, time ranges, and error handling. Updated
-     README.md to include new endpoints in HTTP API list. Updated development plan Phase 6
-     endpoints list and status checklist. Completes CR-20250930-4 (schema URI filtering)
-     that was previously deferred. All 7 HTTP endpoints now fully implemented and tested.
-   - 2025-09-30 — **Phase 6 SSL/TLS Configuration Added**: Implemented SSL/TLS certificate
-     support for corporate and self-signed certificates. Added user-friendly
-     `HORREUM_TLS_VERIFY` environment variable (defaults to `true`) in `src/config/env.ts`
-     with validation. Application code in `src/index.ts` applies the setting by setting
-     Node.js `NODE_TLS_REJECT_UNAUTHORIZED` when verification is disabled (logs warning).
-     Updated `docker-entrypoint.sh` to automatically run `update-ca-trust` when CA
-     certificates are detected in `/etc/pki/ca-trust/source/anchors/` (requires `--user=0`).
-     Updated `Containerfile` to run `update-ca-trust extract` in build stage. Created
-     comprehensive `SSL_CONFIGURATION.md` documentation with examples for production (mount
-     CA cert) and testing (disable verification). Updated `README.md` with SSL/TLS
-     Configuration section showing both options. Updated `INTEGRATION_STATUS.md` with
-     detailed SSL error troubleshooting. All code built, formatted, and type-checked
-     successfully. This addresses the SSL certificate errors encountered during end-to-end
-     integration testing with corporate Horreum instances.
-   - 2025-09-30 — **Phase 6 Complete - Documentation**: Created comprehensive time range
-     filtering documentation (CR-20250930-5). Added `docs/TIME_RANGE_FILTERING.md` with
-     detailed explanation of from/to parameter behavior, timestamp formats (ISO 8601
-     and epoch millis), inclusivity rules (inclusive on both ends), timezone handling
-     (UTC recommended), error handling (lenient parsing), edge cases, and best
-     practices. Updated README.md with HTTP API examples showing time filtering, added
-     direct HTTP API section with curl examples for all 6 endpoints (5 tools +
-     source.describe), updated status to Phase 6 Complete, and added cross-references
-     to new documentation. Phase 6 substantially complete with 4 of 5 CRs implemented
-     (CR-4 deferred as datasets.search doesn't exist yet). All critical and high-
-     priority features delivered for RHIVOS PerfScale MCP integration.
-   - 2025-09-30 — **Phase 6 Capability Discovery**: Implemented source.describe tool
-     (CR-20250930-2) for runtime capability discovery. Added as both MCP tool and HTTP
-     POST endpoint. Returns structured response with sourceType="horreum", version from
-     package.json, contractVersion, capabilities object (pagination, caching, streaming,
-     schemas), and limits object (maxPageSize, maxDatasetSize, rateLimitPerMinute).
-     Rate limit read from HORREUM_RATE_LIMIT env var. Created smoke test `scripts/
+  filtering by test ID, test name, schema URI, time ranges, and error handling. Updated
+  README.md to include new endpoints in HTTP API list. Updated development plan Phase 6
+  endpoints list and status checklist. Completes CR-20250930-4 (schema URI filtering)
+  that was previously deferred. All 7 HTTP endpoints now fully implemented and tested.
+- 2025-09-30 — **Phase 6 SSL/TLS Configuration Added**: Implemented SSL/TLS certificate
+  support for corporate and self-signed certificates. Added user-friendly
+  `HORREUM_TLS_VERIFY` environment variable (defaults to `true`) in `src/config/env.ts`
+  with validation. Application code in `src/index.ts` applies the setting by setting
+  Node.js `NODE_TLS_REJECT_UNAUTHORIZED` when verification is disabled (logs warning).
+  Updated `docker-entrypoint.sh` to automatically run `update-ca-trust` when CA
+  certificates are detected in `/etc/pki/ca-trust/source/anchors/` (requires `--user=0`).
+  Updated `Containerfile` to run `update-ca-trust extract` in build stage. Created
+  comprehensive `SSL_CONFIGURATION.md` documentation with examples for production (mount
+  CA cert) and testing (disable verification). Updated `README.md` with SSL/TLS
+  Configuration section showing both options. Updated `INTEGRATION_STATUS.md` with
+  detailed SSL error troubleshooting. All code built, formatted, and type-checked
+  successfully. This addresses the SSL certificate errors encountered during end-to-end
+  integration testing with corporate Horreum instances.
+- 2025-09-30 — **Phase 6 Complete - Documentation**: Created comprehensive time range
+  filtering documentation (CR-20250930-5). Added `docs/TIME_RANGE_FILTERING.md` with
+  detailed explanation of from/to parameter behavior, timestamp formats (ISO 8601
+  and epoch millis), inclusivity rules (inclusive on both ends), timezone handling
+  (UTC recommended), error handling (lenient parsing), edge cases, and best
+  practices. Updated README.md with HTTP API examples showing time filtering, added
+  direct HTTP API section with curl examples for all 6 endpoints (5 tools +
+  source.describe), updated status to Phase 6 Complete, and added cross-references
+  to new documentation. Phase 6 substantially complete with 4 of 5 CRs implemented
+  (CR-4 deferred as datasets.search doesn't exist yet). All critical and high-
+  priority features delivered for RHIVOS PerfScale MCP integration.
+- 2025-09-30 — **Phase 6 Capability Discovery**: Implemented source.describe tool
+  (CR-20250930-2) for runtime capability discovery. Added as both MCP tool and HTTP
+  POST endpoint. Returns structured response with sourceType="horreum", version from
+  package.json, contractVersion, capabilities object (pagination, caching, streaming,
+  schemas), and limits object (maxPageSize, maxDatasetSize, rateLimitPerMinute).
+  Rate limit read from HORREUM_RATE_LIMIT env var. Created smoke test `scripts/
 smoke-http-source-describe.mjs` that validates response structure and values. This
-     allows Domain MCP servers to discover capabilities at runtime. Completes low-
-     priority CR-20250930-2.
-   - 2025-09-30 — **Phase 6 Pagination Implementation**: Implemented Source MCP Contract
-     pagination (CR-20250930-3) across list_runs and list_tests HTTP endpoints. Added
-     pageToken/pageSize parameters with backward compatibility for legacy page/limit.
-     Page tokens are opaque base64-encoded cursors containing page and limit state.
-     Response format: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}`.
-     Added helper functions `encodePageToken` and `decodePageToken` for token
-     management. Implemented consistent ordering, validation (1-1000), and hasMore flag
-     logic. Created comprehensive smoke test `scripts/smoke-http-pagination.mjs` that
-     validates first/subsequent/last pages, invalid tokens, and both endpoints. All
-     tests passing. This completes high-priority CR-20250930-3.
-   - 2025-09-30 — **Phase 6 Major Milestone - All HTTP Endpoints Complete**: Implemented
-     all five direct HTTP API endpoints for server-to-server integration. Added `POST 
+  allows Domain MCP servers to discover capabilities at runtime. Completes low-
+  priority CR-20250930-2.
+- 2025-09-30 — **Phase 6 Pagination Implementation**: Implemented Source MCP Contract
+  pagination (CR-20250930-3) across list_runs and list_tests HTTP endpoints. Added
+  pageToken/pageSize parameters with backward compatibility for legacy page/limit.
+  Page tokens are opaque base64-encoded cursors containing page and limit state.
+  Response format: `{data, pagination: {nextPageToken?, hasMore, totalCount?}}`.
+  Added helper functions `encodePageToken` and `decodePageToken` for token
+  management. Implemented consistent ordering, validation (1-1000), and hasMore flag
+  logic. Created comprehensive smoke test `scripts/smoke-http-pagination.mjs` that
+  validates first/subsequent/last pages, invalid tokens, and both endpoints. All
+  tests passing. This completes high-priority CR-20250930-3.
+- 2025-09-30 — **Phase 6 Major Milestone - All HTTP Endpoints Complete**: Implemented
+  all five direct HTTP API endpoints for server-to-server integration. Added `POST 
 /api/tools/horreum_get_run`, `/horreum_list_tests`, `/horreum_list_schemas`, and
-     `/horreum_get_schema` with consistent Source MCP Contract error handling across all
-     endpoints. Each endpoint uses the `sendContractError` helper, supports Bearer token
-     authentication, and returns appropriate JSON responses. `list_tests` includes
-     folder-aware aggregation logic; schema endpoints support lookup by id or name.
-     Created comprehensive smoke test `scripts/smoke-http-all-endpoints.mjs` that
-     validates all five endpoints with mock Horreum API. All tests passing. This
-     completes the core Direct HTTP API requirement for RHIVOS PerfScale MCP integration.
-   - 2025-09-30 — **Phase 6 Implementation Started**: Implemented first direct HTTP API
-     endpoint `POST /api/tools/horreum_list_runs` with Source MCP Contract error
-     handling. Added `sendContractError` helper function that returns standardized
-     error responses with error codes (INVALID_REQUEST, NOT_FOUND, RATE_LIMITED,
-     INTERNAL_ERROR, SERVICE_UNAVAILABLE, TIMEOUT), retryable flag, and optional
-     retryAfter seconds. Endpoint supports test resolution by name/id, optional time
-     filtering (from/to), pagination, sorting, and trashed flag. Added smoke test
-     `scripts/smoke-http-list-runs.mjs` with mock Horreum API that validates JSON
-     response shape. Error mapping covers common HTTP status codes (404/401/403/429/
-     503/504) with appropriate retryable flags. This is the first of five HTTP tool
-     endpoints for RHIVOS PerfScale MCP integration.
-   - 2025-09-30 — **Phase Reorganization**: Moved Direct HTTP API for Server-to-Server
-     Integration from Phase 8 to Phase 6 as the immediate next priority following
-     Phase 5 (Containerization). Renumbered all subsequent phases: Enhanced CI/CD
-     Pipeline (Phase 7), Architecture Refactoring & Modularity (Phase 8), Alternative
-     REST API Mode (Phase 9), Build System Enhancement (Phase 10), Testing & Security
-     Hardening (Phase 11), Data Analysis (Phase 12). Updated execution directive to
-     authorize Phase 6 implementation immediately. This prioritization ensures RHIVOS
-     PerfScale MCP integration requirements are addressed as the next actionable work.
-   - 2025-09-30 — **Phase Integration from RHIVOS Requirements**: Added comprehensive
-     Direct HTTP API for Server-to-Server Integration phase based on RHIVOS PerfScale
-     MCP integration requirements and end-to-end testing feedback. Includes: (1) Direct
-     HTTP POST endpoints for MCP tools (/api/tools/horreum\_\*), (2) Standardized error
-     handling compliant with Source MCP Contract (CR-20250930-1), (3) Consistent
-     pagination support across all list tools (CR-20250930-3), (4) Schema URI filtering
-     for datasets.search (CR-20250930-4), (5) Capability discovery via source.describe
-     tool (CR-20250930-2), and (6) Time range filtering documentation (CR-20250930-5).
-     References: /home/dblack/git/gitlab/perfscale/sandbox/rhivos-perfscale-mcp/docs/
-     horreum-mcp-requirements.md and horreum-mcp-change-requests.md.
-   - 2025-09-29 — **Container Multi-Architecture Fixes**: Resolved critical WebAssembly
-     and QEMU emulation issues preventing multi-architecture container builds. Fixed
-     `ReferenceError: WebAssembly is not defined` by removing global `--jitless` flag
-     while preserving WebAssembly support in runtime. Added intelligent QEMU detection
-     via `docker-entrypoint.sh` that dynamically applies `--jitless` only during
-     emulated execution. Updated Containerfile to use `--jitless` only during npm
-     install in builder stage to prevent V8 crashes under QEMU. Validated successful
-     builds and execution on both AMD64 and ARM64 architectures with automatic
-     environment adaptation. Multi-architecture build script now fully functional.
-   - 2025-09-26 — **Phase 9 status refined**: Marked multi-arch support as
-     completed, split cross-compilation into a separate item, and recorded build
-     performance optimizations in progress (cache mounts, context filtering) with
-     pending work for incremental builds and CI caching.
-   - 2025-09-26 — **Domain MCP Integration Documentation**: Added comprehensive
-     "Connecting to Other MCP Servers" section to README with step-by-step guide
-     for connecting Domain MCP servers to Horreum MCP via HTTP containers. Includes
-     architecture diagrams, deployment examples, testing procedures, and
-     troubleshooting. Documented current status: Horreum MCP is production-ready,
-     Domain MCP needs plugin and configuration fixes. Validated end-to-end
-     container deployment and HTTP API functionality.
-   - 2025-09-26 — **Phase 5 Completed**: Hardened container image (OCI labels,
-     STOPSIGNAL, HEALTHCHECK, non-root perms, tuned NODE_OPTIONS), added build
-     context filtering via `.dockerignore`/`.containerignore`, introduced
-     `scripts/trivy_scan.sh` and documented scanning in README. Authorized Phase 6
-     to begin (enhanced CI/CD and security scanning).
-   - 2025-09-25 — **CI Container Build added**: Introduced GitHub Actions
-     workflow to build and push multi-arch images to Quay using Buildah,
-     tagging with short SHA and aliasing to :main. Added Trivy image scan job
-     post-push. Documented IMAGE*REPO required variable and QUAY*\* secrets.
-   - 2025-09-25 — **Major Plan Enhancement**: Merged comprehensive enhancement
-     recommendations based on gap analysis. Restructured phases 5-11 to address
-     enterprise deployment requirements: (5) Containerization & Multi-Architecture
-     Support, (6) Enhanced CI/CD Pipeline, (7) Architecture Refactoring & Modularity,
-     (8) Alternative HTTP API Mode, (9) Build System Enhancement, (10) Testing &
-     Security Hardening, (11) Data Analysis. Updated CI/CD and deployment sections
-     with detailed enterprise-grade requirements. Current execution directive
-     remains Phase 5 containerization with expanded scope for multi-architecture
-     builds and automated registry deployment.
-   - 2025-09-24 — Prioritized containerization into Phase 5. The next
-     development task is to create a `Containerfile` for Podman.
-   - 2025-09-24 — **Phase 4 (HTTP Standalone Mode) completed**. Implemented comprehensive HTTP transport with StreamableHTTPServerTransport, Express.js middleware, session management, Bearer token authentication, CORS support, and external LLM client integration (OpenAI, Anthropic, Azure). Added hybrid entrypoint supporting both stdio and HTTP modes. Updated documentation with Mermaid architecture diagrams and comprehensive usage examples. All HTTP smoke tests passing. Ready for production deployment.
-   - 2025-09-24 — Added Phase 5 "External MCP Integration" to support service-based HTTP endpoints for external MCPs. Renumbered subsequent phases from 5, 6 to 6, 7.
-   - 2025-09-23 — Synchronized Development Strategy section with Status Checklist by
-     adding missing Phase 5 "Testing & Security Hardening" and Phase 6 "Data
-     Analysis" to the strategy section. All phases now properly documented in both
-     sections for consistency.
-   - 2025-09-23 — Added Phase 4 "HTTP Standalone Mode" to support HTTP transport
-     using StreamableHTTPServerTransport, external LLM API integration, session
-     management, and deployment flexibility. Renumbered existing phases: Testing
-     & Security Hardening is now Phase 5, Data Analysis is Phase 6. Updated
-     execution directive to authorize Phase 4 implementation.
-   - 2025-09-22 — Expanded Phase 4 to "Testing & Security Hardening" to address
-     operational concerns identified during implementation review: CI security
-     scanning, health checks, token redaction, resource error handling
-     consistency, and required CHANGELOG.md maintenance. Added Production
-     Readiness section (8.1) with specific operational requirements.
-   - 2025-09-22 — Added optional OpenTelemetry tracing (OTLP); auto-instrumented
-     undici and wrapped tools/resources with spans; documented enablement.
-   - 2025-09-22 — Added optional Prometheus metrics endpoint with counters for
-     invocations and histograms for durations; documented env and usage.
-   - 2025-09-22 — Extended structured error handling and pino logging to
-     resources (`schema`, `run`); corrected package.json metadata and `private`
-     boolean.
-   - 2025-09-22 — Structured error handling wrapper added for all tools; migrated
-     logging to pino with correlation IDs and durations; refactored tool
-     registrations to reduce boilerplate.
-   - 2025-09-22 — Injected rate-limited fetch via `OpenAPI.FETCH` (no global
-     patch); updated postgen to enforce NodeNext import extensions and FETCH
-     typing; adjusted server to wire custom fetch.
-   - 2025-09-22 — Project review completed: Implementation is well-aligned with plan; identified testing framework gap and error handling inconsistencies; CI is working well with comprehensive smoke tests; recommended priority adjustments for Phase 4 testing framework setup.
-   - 2025-09-22 — Structured logging (correlation IDs + durations) added for all tools; type tightening across `src/server/tools.ts` (removed explicit anys); smoke tests now use generic fixtures (`example-test`, id `123`) for `list_runs`.
-   - 2025-09-22 — Added Phase 4 (Testing) and Phase 5 (Data Analysis) to the
-     plan. Updated Phase 3 (Hardening) to include specific refactoring tasks
-     for fetch logic, error handling, and logging based on code review.
-   - 2025-09-22 — `list_tests` made folder-aware (aggregates across folders);
-     `list_runs` gained `from`/`to` time filters and test name resolution with
-     client-side filtering across pages; CI smokes expanded; README clarified
-     AI client connection steps; removed redundant HTTP client in favor of the
-     generated OpenAPI client.
-   - 2025-09-19 — Implemented rate-limited fetch with retries/backoff; exposed MCP
-     resources for tests, schemas, and runs; updated README with tools/resources.
-   - 2025-09-19 — Implemented read tools (`list_tests`, `get_schema`, `list_runs`) using generated OpenAPI client; added `upload_run` with smoke test; CI runs all smokes.
-   - 2025-09-19 — Completed scaffolding, env validation, ESLint/Prettier, CI, and npm scripts.
-   - 2025-09-19 — Authorized Phase 1 implementation and marked scaffolding as in progress.
-   - 2025-09-19 — Added OpenAPI client generation wrapper, MCP resource exposure, cancellation/streaming behavior, CI optional live smoke test, SemVer and schema deprecation policy, and Quickstart with `.env` example.
-   - 2025-09-19 — Added support for optional authentication: read tools work in anonymous mode, write tools require auth, updated configuration to make HORREUM_TOKEN optional, enhanced error handling and logging for auth modes.
-   - 2025-09-19 — Enhanced plan with specific technical details: API versioning support, tool discovery implementation, concrete rate limiting values (10 req/sec), error handling timeouts (30s), and expanded configuration variables.
-   - 2025-09-19 — Establish MCP server plan; set TypeScript/Node 20 and MCP SDK; define phases with read-first tool approach; update CI/testing accordingly.
-   - 2025-09-19 — Added maintenance instructions, status checklist, and changelog; emphasized read-first priority; expanded sections.
+  `/horreum_get_schema` with consistent Source MCP Contract error handling across all
+  endpoints. Each endpoint uses the `sendContractError` helper, supports Bearer token
+  authentication, and returns appropriate JSON responses. `list_tests` includes
+  folder-aware aggregation logic; schema endpoints support lookup by id or name.
+  Created comprehensive smoke test `scripts/smoke-http-all-endpoints.mjs` that
+  validates all five endpoints with mock Horreum API. All tests passing. This
+  completes the core Direct HTTP API requirement for RHIVOS PerfScale MCP integration.
+- 2025-09-30 — **Phase 6 Implementation Started**: Implemented first direct HTTP API
+  endpoint `POST /api/tools/horreum_list_runs` with Source MCP Contract error
+  handling. Added `sendContractError` helper function that returns standardized
+  error responses with error codes (INVALID_REQUEST, NOT_FOUND, RATE_LIMITED,
+  INTERNAL_ERROR, SERVICE_UNAVAILABLE, TIMEOUT), retryable flag, and optional
+  retryAfter seconds. Endpoint supports test resolution by name/id, optional time
+  filtering (from/to), pagination, sorting, and trashed flag. Added smoke test
+  `scripts/smoke-http-list-runs.mjs` with mock Horreum API that validates JSON
+  response shape. Error mapping covers common HTTP status codes (404/401/403/429/
+  503/504) with appropriate retryable flags. This is the first of five HTTP tool
+  endpoints for RHIVOS PerfScale MCP integration.
+- 2025-09-30 — **Phase Reorganization**: Moved Direct HTTP API for Server-to-Server
+  Integration from Phase 8 to Phase 6 as the immediate next priority following
+  Phase 5 (Containerization). Renumbered all subsequent phases: Enhanced CI/CD
+  Pipeline (Phase 7), Architecture Refactoring & Modularity (Phase 8), Alternative
+  REST API Mode (Phase 9), Build System Enhancement (Phase 10), Testing & Security
+  Hardening (Phase 11), Data Analysis (Phase 12). Updated execution directive to
+  authorize Phase 6 implementation immediately. This prioritization ensures RHIVOS
+  PerfScale MCP integration requirements are addressed as the next actionable work.
+- 2025-09-30 — **Phase Integration from RHIVOS Requirements**: Added comprehensive
+  Direct HTTP API for Server-to-Server Integration phase based on RHIVOS PerfScale
+  MCP integration requirements and end-to-end testing feedback. Includes: (1) Direct
+  HTTP POST endpoints for MCP tools (/api/tools/horreum\_\*), (2) Standardized error
+  handling compliant with Source MCP Contract (CR-20250930-1), (3) Consistent
+  pagination support across all list tools (CR-20250930-3), (4) Schema URI filtering
+  for datasets.search (CR-20250930-4), (5) Capability discovery via source.describe
+  tool (CR-20250930-2), and (6) Time range filtering documentation (CR-20250930-5).
+  References: /home/dblack/git/gitlab/perfscale/sandbox/rhivos-perfscale-mcp/docs/
+  horreum-mcp-requirements.md and horreum-mcp-change-requests.md.
+- 2025-09-29 — **Container Multi-Architecture Fixes**: Resolved critical WebAssembly
+  and QEMU emulation issues preventing multi-architecture container builds. Fixed
+  `ReferenceError: WebAssembly is not defined` by removing global `--jitless` flag
+  while preserving WebAssembly support in runtime. Added intelligent QEMU detection
+  via `docker-entrypoint.sh` that dynamically applies `--jitless` only during
+  emulated execution. Updated Containerfile to use `--jitless` only during npm
+  install in builder stage to prevent V8 crashes under QEMU. Validated successful
+  builds and execution on both AMD64 and ARM64 architectures with automatic
+  environment adaptation. Multi-architecture build script now fully functional.
+- 2025-09-26 — **Phase 9 status refined**: Marked multi-arch support as
+  completed, split cross-compilation into a separate item, and recorded build
+  performance optimizations in progress (cache mounts, context filtering) with
+  pending work for incremental builds and CI caching.
+- 2025-09-26 — **Domain MCP Integration Documentation**: Added comprehensive
+  "Connecting to Other MCP Servers" section to README with step-by-step guide
+  for connecting Domain MCP servers to Horreum MCP via HTTP containers. Includes
+  architecture diagrams, deployment examples, testing procedures, and
+  troubleshooting. Documented current status: Horreum MCP is production-ready,
+  Domain MCP needs plugin and configuration fixes. Validated end-to-end
+  container deployment and HTTP API functionality.
+- 2025-09-26 — **Phase 5 Completed**: Hardened container image (OCI labels,
+  STOPSIGNAL, HEALTHCHECK, non-root perms, tuned NODE_OPTIONS), added build
+  context filtering via `.dockerignore`/`.containerignore`, introduced
+  `scripts/trivy_scan.sh` and documented scanning in README. Authorized Phase 6
+  to begin (enhanced CI/CD and security scanning).
+- 2025-09-25 — **CI Container Build added**: Introduced GitHub Actions
+  workflow to build and push multi-arch images to Quay using Buildah,
+  tagging with short SHA and aliasing to :main. Added Trivy image scan job
+  post-push. Documented IMAGE*REPO required variable and QUAY*\* secrets.
+- 2025-09-25 — **Major Plan Enhancement**: Merged comprehensive enhancement
+  recommendations based on gap analysis. Restructured phases 5-11 to address
+  enterprise deployment requirements: (5) Containerization & Multi-Architecture
+  Support, (6) Enhanced CI/CD Pipeline, (7) Architecture Refactoring & Modularity,
+  (8) Alternative HTTP API Mode, (9) Build System Enhancement, (10) Testing &
+  Security Hardening, (11) Data Analysis. Updated CI/CD and deployment sections
+  with detailed enterprise-grade requirements. Current execution directive
+  remains Phase 5 containerization with expanded scope for multi-architecture
+  builds and automated registry deployment.
+- 2025-09-24 — Prioritized containerization into Phase 5. The next
+  development task is to create a `Containerfile` for Podman.
+- 2025-09-24 — **Phase 4 (HTTP Standalone Mode) completed**. Implemented comprehensive HTTP transport with StreamableHTTPServerTransport, Express.js middleware, session management, Bearer token authentication, CORS support, and external LLM client integration (OpenAI, Anthropic, Azure). Added hybrid entrypoint supporting both stdio and HTTP modes. Updated documentation with Mermaid architecture diagrams and comprehensive usage examples. All HTTP smoke tests passing. Ready for production deployment.
+- 2025-09-24 — Added Phase 5 "External MCP Integration" to support service-based HTTP endpoints for external MCPs. Renumbered subsequent phases from 5, 6 to 6, 7.
+- 2025-09-23 — Synchronized Development Strategy section with Status Checklist by
+  adding missing Phase 5 "Testing & Security Hardening" and Phase 6 "Data
+  Analysis" to the strategy section. All phases now properly documented in both
+  sections for consistency.
+- 2025-09-23 — Added Phase 4 "HTTP Standalone Mode" to support HTTP transport
+  using StreamableHTTPServerTransport, external LLM API integration, session
+  management, and deployment flexibility. Renumbered existing phases: Testing
+  & Security Hardening is now Phase 5, Data Analysis is Phase 6. Updated
+  execution directive to authorize Phase 4 implementation.
+- 2025-09-22 — Expanded Phase 4 to "Testing & Security Hardening" to address
+  operational concerns identified during implementation review: CI security
+  scanning, health checks, token redaction, resource error handling
+  consistency, and required CHANGELOG.md maintenance. Added Production
+  Readiness section (8.1) with specific operational requirements.
+- 2025-09-22 — Added optional OpenTelemetry tracing (OTLP); auto-instrumented
+  undici and wrapped tools/resources with spans; documented enablement.
+- 2025-09-22 — Added optional Prometheus metrics endpoint with counters for
+  invocations and histograms for durations; documented env and usage.
+- 2025-09-22 — Extended structured error handling and pino logging to
+  resources (`schema`, `run`); corrected package.json metadata and `private`
+  boolean.
+- 2025-09-22 — Structured error handling wrapper added for all tools; migrated
+  logging to pino with correlation IDs and durations; refactored tool
+  registrations to reduce boilerplate.
+- 2025-09-22 — Injected rate-limited fetch via `OpenAPI.FETCH` (no global
+  patch); updated postgen to enforce NodeNext import extensions and FETCH
+  typing; adjusted server to wire custom fetch.
+- 2025-09-22 — Project review completed: Implementation is well-aligned with plan; identified testing framework gap and error handling inconsistencies; CI is working well with comprehensive smoke tests; recommended priority adjustments for Phase 4 testing framework setup.
+- 2025-09-22 — Structured logging (correlation IDs + durations) added for all tools; type tightening across `src/server/tools.ts` (removed explicit anys); smoke tests now use generic fixtures (`example-test`, id `123`) for `list_runs`.
+- 2025-09-22 — Added Phase 4 (Testing) and Phase 5 (Data Analysis) to the
+  plan. Updated Phase 3 (Hardening) to include specific refactoring tasks
+  for fetch logic, error handling, and logging based on code review.
+- 2025-09-22 — `list_tests` made folder-aware (aggregates across folders);
+  `list_runs` gained `from`/`to` time filters and test name resolution with
+  client-side filtering across pages; CI smokes expanded; README clarified
+  AI client connection steps; removed redundant HTTP client in favor of the
+  generated OpenAPI client.
+- 2025-09-19 — Implemented rate-limited fetch with retries/backoff; exposed MCP
+  resources for tests, schemas, and runs; updated README with tools/resources.
+- 2025-09-19 — Implemented read tools (`list_tests`, `get_schema`, `list_runs`) using generated OpenAPI client; added `upload_run` with smoke test; CI runs all smokes.
+- 2025-09-19 — Completed scaffolding, env validation, ESLint/Prettier, CI, and npm scripts.
+- 2025-09-19 — Authorized Phase 1 implementation and marked scaffolding as in progress.
+- 2025-09-19 — Added OpenAPI client generation wrapper, MCP resource exposure, cancellation/streaming behavior, CI optional live smoke test, SemVer and schema deprecation policy, and Quickstart with `.env` example.
+- 2025-09-19 — Added support for optional authentication: read tools work in anonymous mode, write tools require auth, updated configuration to make HORREUM_TOKEN optional, enhanced error handling and logging for auth modes.
+- 2025-09-19 — Enhanced plan with specific technical details: API versioning support, tool discovery implementation, concrete rate limiting values (10 req/sec), error handling timeouts (30s), and expanded configuration variables.
+- 2025-09-19 — Establish MCP server plan; set TypeScript/Node 20 and MCP SDK; define phases with read-first tool approach; update CI/testing accordingly.
+- 2025-09-19 — Added maintenance instructions, status checklist, and changelog; emphasized read-first priority; expanded sections.
 
 ### 13. Quickstart
 
