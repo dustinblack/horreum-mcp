@@ -1043,6 +1043,23 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-10 — **Phase 6.10 Completed - source.describe Contract Compliance**: Fixed critical
+     Source MCP Contract field naming issue in source.describe endpoint. The endpoint was returning
+     camelCase fields (sourceType, contractVersion, maxPageSize, etc.) instead of required snake_case
+     format, causing Pydantic validation failures when Domain MCP calls this endpoint for capability
+     discovery. Updated both HTTP endpoint (src/server/http.ts lines 1005-1029) and MCP tool
+     (src/server/tools.ts lines 1304-1335) to use correct field names: sourceType→source_type,
+     contractVersion→contract_version, limits.maxPageSize→max_page_size, limits.maxDatasetSize→
+     max_dataset_size, limits.rateLimitPerMinute→rate_limit_per_minute. Created validation test
+     script scripts/smoke-source-describe.mjs that verifies all field names match Source MCP Contract
+     requirements (SourceDescribeResponse model lines 132-144 in source_mcp_contract.py). Test
+     validates presence of required fields, correct snake_case naming, no camelCase fields present,
+     and proper structure of capabilities and limits objects. Updated CONTRACT.md with implementation
+     status confirmation and converted ASCII diagrams to Mermaid format with dark fonts on light
+     backgrounds for better readability. Added future architecture diagram showing extracted contract
+     package design for multi-domain scenarios. All tests passing with correct response format. This
+     fix enables Domain MCP to successfully discover Horreum MCP capabilities and validate responses
+     with Pydantic models. Build, lint, format checks passing. Agent: Claude Sonnet 4.5.
    - 2025-10-10 — **Phase 6.9 Completed - Label Values Format Compliance**: Fixed critical
      Source MCP Contract compliance issue in label values endpoints. The get_run_label_values and
      get_test_label_values endpoints were returning Horreum's native format causing Pydantic

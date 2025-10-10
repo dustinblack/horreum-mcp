@@ -876,7 +876,9 @@ export async function registerTools(
       'When multiFilter=true, filter values can be arrays to match multiple values: ' +
       '{"label_name": ["value1", "value2"]}',
     {
-      run_id: z.number().int().positive().describe('Run ID'),
+      run_id: z
+        .union([z.number().int().positive(), z.string()])
+        .describe('Run ID (number or numeric string)'),
       filter: z
         .union([z.string(), z.record(z.unknown())])
         .optional()
@@ -896,6 +898,12 @@ export async function registerTools(
       page: z.number().int().min(1).optional().describe('1-based page number'),
     },
     async (args) => {
+      // Convert run_id to number if it's a string
+      const runId =
+        typeof args.run_id === 'string'
+          ? parseInt(args.run_id as string, 10)
+          : (args.run_id as number);
+
       const filterStr =
         typeof args.filter === 'string'
           ? (args.filter as string)
@@ -904,7 +912,7 @@ export async function registerTools(
             : '{}';
 
       const res = await RunService.runServiceGetRunLabelValues({
-        id: args.run_id as number,
+        id: runId,
         filter: filterStr,
         ...(args.sort ? { sort: args.sort as string } : {}),
         ...(args.direction ? { direction: args.direction as unknown as string } : {}),
@@ -919,7 +927,16 @@ export async function registerTools(
 
       // Transform to Source MCP Contract format
       const transformed = transformLabelValues(Array.isArray(res) ? res : [res]);
-      return { content: [text(JSON.stringify(transformed, null, 2))] };
+
+      // Wrap in Source MCP Contract response structure
+      const response = {
+        items: transformed,
+        pagination: {
+          has_more: false,
+          total_count: transformed.length,
+        },
+      };
+      return { content: [text(JSON.stringify(response, null, 2))] };
     }
   );
 
@@ -930,7 +947,10 @@ export async function registerTools(
       'When multiFilter=true, filter values can be arrays to match multiple values: ' +
       '{"label_name": ["value1", "value2"]}',
     {
-      test_id: z.number().int().positive().optional(),
+      test_id: z
+        .union([z.number().int().positive(), z.string()])
+        .optional()
+        .describe('Test ID (number or numeric string)'),
       test_name: z.string().optional(),
       filtering: z.boolean().optional().describe('Include filtering labels'),
       metrics: z.boolean().optional().describe('Include metric labels'),
@@ -955,9 +975,14 @@ export async function registerTools(
         .describe('Enable array value matching in filter'),
     },
     async (args) => {
-      // Resolve test ID from name if provided
-      let resolvedTestId: number | undefined = args.test_id as number | undefined;
-      if (!resolvedTestId && args.test_name) {
+      // Resolve test ID from name if provided, handle string test_id
+      let resolvedTestId: number | undefined;
+      if (args.test_id) {
+        resolvedTestId =
+          typeof args.test_id === 'string'
+            ? parseInt(args.test_id as string, 10)
+            : (args.test_id as number);
+      } else if (args.test_name) {
         const t = await TestService.testServiceGetByNameOrId({
           name: args.test_name as string,
         });
@@ -1007,7 +1032,16 @@ export async function registerTools(
 
       // Transform to Source MCP Contract format
       const transformed = transformLabelValues(Array.isArray(res) ? res : [res]);
-      return { content: [text(JSON.stringify(transformed, null, 2))] };
+
+      // Wrap in Source MCP Contract response structure
+      const response = {
+        items: transformed,
+        pagination: {
+          has_more: false,
+          total_count: transformed.length,
+        },
+      };
+      return { content: [text(JSON.stringify(response, null, 2))] };
     }
   );
 
@@ -1276,9 +1310,9 @@ export async function registerTools(
       const env = await getEnv();
       logger.info({ event: 'mcp.tools.list.start' });
       const response = {
-        sourceType: 'horreum',
+        source_type: 'horreum',
         version: '0.1.0', // From package.json
-        contractVersion: '1.0.0',
+        contract_version: '1.0.0',
         capabilities: {
           pagination: true,
           caching: false,
@@ -1286,9 +1320,9 @@ export async function registerTools(
           schemas: true,
         },
         limits: {
-          maxPageSize: 1000,
-          maxDatasetSize: 10485760, // 10MB
-          rateLimitPerMinute: env.HORREUM_RATE_LIMIT || 60,
+          max_page_size: 1000,
+          max_dataset_size: 10485760, // 10MB
+          rate_limit_per_minute: env.HORREUM_RATE_LIMIT || 60,
         },
       };
       logger.info({

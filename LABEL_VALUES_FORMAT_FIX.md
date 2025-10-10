@@ -6,6 +6,21 @@ The `horreum_get_run_label_values` and `horreum_get_test_label_values` tools wer
 returning Horreum's native API format instead of transforming it to the Source MCP
 Contract format, causing Pydantic validation errors in the Domain MCP.
 
+## Update (2025-10-10): Additional Fixes
+
+After initial deployment, two additional issues were discovered and fixed:
+
+1. **run_id/test_id validation too strict**: The endpoints were rejecting string
+   values even though the Source MCP Contract specifies `run_id: str`. Fixed to
+   accept both string and numeric values.
+
+2. **Response structure incorrect**: The endpoints were returning a bare array
+   instead of the required `{items: [...], pagination: {...}}` structure per the
+   Source MCP Contract.
+
+These fixes were applied to all 4 endpoints (2 MCP tools, 2 HTTP endpoints) and
+validated with production data.
+
 ## Changes Made
 
 ### 1. Added Transformation Function
@@ -34,16 +49,22 @@ Transforms Horreum's `ExportedLabelValues[]` format to Source MCP Contract forma
 **Output (Source MCP Contract):**
 
 ```json
-[{
-  "values": [
-    {"name": "BOOT0 - SystemInit Duration Average ms", "value": 1530.286},
-    ...
-  ],
-  "run_id": "120214",
-  "dataset_id": "323991",
-  "start": "2025-10-07T21:20:26.747Z",
-  "stop": "2025-10-07T21:41:47.248Z"
-}]
+{
+  "items": [{
+    "values": [
+      {"name": "BOOT0 - SystemInit Duration Average ms", "value": 1530.286},
+      ...
+    ],
+    "run_id": "120214",
+    "dataset_id": "323991",
+    "start": "2025-10-07T21:20:26.747Z",
+    "stop": "2025-10-07T21:41:47.248Z"
+  }],
+  "pagination": {
+    "has_more": false,
+    "total_count": 1
+  }
+}
 ```
 
 **Transformation Details:**

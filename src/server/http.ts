@@ -1006,9 +1006,9 @@ export async function startHttpServer(server: McpServer, env: Env) {
   app.post('/api/tools/source.describe', authMiddleware, async (req, res) => {
     try {
       const response = {
-        sourceType: 'horreum',
+        source_type: 'horreum',
         version: '0.1.0', // From package.json
-        contractVersion: '1.0.0',
+        contract_version: '1.0.0',
         capabilities: {
           pagination: true,
           caching: false,
@@ -1016,9 +1016,9 @@ export async function startHttpServer(server: McpServer, env: Env) {
           schemas: true,
         },
         limits: {
-          maxPageSize: 1000,
-          maxDatasetSize: 10485760, // 10MB
-          rateLimitPerMinute: env.HORREUM_RATE_LIMIT || 60,
+          max_page_size: 1000,
+          max_dataset_size: 10485760, // 10MB
+          rate_limit_per_minute: env.HORREUM_RATE_LIMIT || 60,
         },
       };
       return res.status(200).json(response);
@@ -2225,13 +2225,35 @@ export async function startHttpServer(server: McpServer, env: Env) {
           );
         }
 
-        const runId = body.run_id as number | undefined;
-        if (!runId || !Number.isFinite(runId)) {
+        // Accept both string and number for run_id (Source MCP Contract uses string)
+        const runIdRaw = body.run_id;
+        let runId: number;
+        if (typeof runIdRaw === 'string') {
+          runId = parseInt(runIdRaw, 10);
+          if (isNaN(runId) || runId <= 0) {
+            return sendContractError(
+              res,
+              400,
+              'INVALID_REQUEST',
+              'run_id must be a positive integer or numeric string.'
+            );
+          }
+        } else if (typeof runIdRaw === 'number') {
+          if (!Number.isFinite(runIdRaw) || runIdRaw <= 0) {
+            return sendContractError(
+              res,
+              400,
+              'INVALID_REQUEST',
+              'run_id must be a positive integer.'
+            );
+          }
+          runId = runIdRaw;
+        } else {
           return sendContractError(
             res,
             400,
             'INVALID_REQUEST',
-            "Provide valid 'run_id' parameter."
+            "Provide valid 'run_id' parameter (number or numeric string)."
           );
         }
 
@@ -2272,7 +2294,16 @@ export async function startHttpServer(server: McpServer, env: Env) {
         const transformed = transformLabelValues(
           Array.isArray(result) ? result : [result]
         );
-        return res.status(200).json(transformed);
+
+        // Wrap in Source MCP Contract response structure
+        const response = {
+          items: transformed,
+          pagination: {
+            has_more: false,
+            total_count: transformed.length,
+          },
+        };
+        return res.status(200).json(response);
       } catch (err) {
         const anyErr = err as { status?: number; message?: string; body?: unknown };
         if (anyErr?.status === 404) {
@@ -2352,14 +2383,45 @@ export async function startHttpServer(server: McpServer, env: Env) {
           );
         }
 
-        // Resolve test id
-        const testId = body.test_id as number | undefined;
+        // Resolve test id - accept both string and number (Source MCP Contract uses string)
+        const testIdRaw = body.test_id;
         const testName = body.test_name as string | undefined;
-        let resolvedTestId: number | undefined = testId;
-        if (!resolvedTestId && testName) {
+        let resolvedTestId: number | undefined;
+
+        if (testIdRaw !== undefined) {
+          if (typeof testIdRaw === 'string') {
+            resolvedTestId = parseInt(testIdRaw, 10);
+            if (isNaN(resolvedTestId) || resolvedTestId <= 0) {
+              return sendContractError(
+                res,
+                400,
+                'INVALID_REQUEST',
+                'test_id must be a positive integer or numeric string.'
+              );
+            }
+          } else if (typeof testIdRaw === 'number') {
+            if (!Number.isFinite(testIdRaw) || testIdRaw <= 0) {
+              return sendContractError(
+                res,
+                400,
+                'INVALID_REQUEST',
+                'test_id must be a positive integer.'
+              );
+            }
+            resolvedTestId = testIdRaw;
+          } else {
+            return sendContractError(
+              res,
+              400,
+              'INVALID_REQUEST',
+              'test_id must be a number or numeric string.'
+            );
+          }
+        } else if (testName) {
           const t = await TestService.testServiceGetByNameOrId({ name: testName });
           resolvedTestId = (t as { id?: number }).id;
         }
+
         if (!resolvedTestId) {
           return sendContractError(
             res,
@@ -2420,7 +2482,16 @@ export async function startHttpServer(server: McpServer, env: Env) {
         const transformed = transformLabelValues(
           Array.isArray(result) ? result : [result]
         );
-        return res.status(200).json(transformed);
+
+        // Wrap in Source MCP Contract response structure
+        const response = {
+          items: transformed,
+          pagination: {
+            has_more: false,
+            total_count: transformed.length,
+          },
+        };
+        return res.status(200).json(response);
       } catch (err) {
         const anyErr = err as { status?: number; message?: string; body?: unknown };
         if (anyErr?.status === 404) {

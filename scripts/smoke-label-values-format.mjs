@@ -165,7 +165,10 @@ async function testTransformedAPI() {
 
   try {
     const url = `${BASE_URL}/api/tools/horreum_get_run_label_values`;
-    const response = await fetch(url, {
+
+    // Test 1: Numeric run_id
+    log('INFO', `Test 1: Numeric run_id (${parseInt(RUN_ID, 10)})`);
+    let response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -177,24 +180,61 @@ async function testTransformedAPI() {
     });
 
     if (!response.ok) {
-      log('FAIL', `MCP API returned ${response.status}`);
+      log('FAIL', `MCP API returned ${response.status} for numeric run_id`);
       const text = await response.text();
       console.log('Response:', text.slice(0, 500));
       return false;
     }
 
-    const data = await response.json();
-    log('INFO', `Transformed format (first item):`);
-    console.log(JSON.stringify(data[0], null, 2).slice(0, 500));
+    let data = await response.json();
 
-    const errors = validateFormat(data);
+    // Check response structure
+    if (!data.items || !data.pagination) {
+      log('FAIL', 'Response missing {items, pagination} structure');
+      console.log('Response:', JSON.stringify(data, null, 2).slice(0, 500));
+      return false;
+    }
+
+    log('INFO', `Transformed format (first item):`);
+    console.log(JSON.stringify(data.items[0], null, 2).slice(0, 500));
+
+    const errors = validateFormat(data.items);
     if (errors.length > 0) {
       log('FAIL', 'Format validation failed:');
       errors.forEach((err) => console.log(`  - ${err}`));
       return false;
     }
 
+    // Test 2: String run_id
+    log('INFO', `Test 2: String run_id ("${RUN_ID}")`);
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${TOKEN}`,
+      },
+      body: JSON.stringify({
+        run_id: RUN_ID, // String
+      }),
+    });
+
+    if (!response.ok) {
+      log('FAIL', `MCP API returned ${response.status} for string run_id`);
+      const text = await response.text();
+      console.log('Response:', text.slice(0, 500));
+      return false;
+    }
+
+    data = await response.json();
+
+    if (!data.items || !data.pagination) {
+      log('FAIL', 'String run_id: Response missing {items, pagination} structure');
+      return false;
+    }
+
     log('PASS', 'Transformed API format is correct ✓');
+    log('PASS', 'Both numeric and string run_id accepted ✓');
+    log('PASS', 'Response wrapped in {items, pagination} structure ✓');
     return true;
   } catch (err) {
     log('FAIL', `Error testing transformed API: ${err.message}`);
