@@ -28,10 +28,10 @@ echo "No high-severity vulnerabilities found."
 
 # --- Auto-format staged files ---
 echo "Checking formatting..."
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js|json|md|yml|yaml)$')
 
 if [ -n "$STAGED_FILES" ]; then
-    # Format all staged files
+    # Format staged files that Prettier can handle
     echo "$STAGED_FILES" | xargs npx prettier --write
     
     # Re-add formatted files to staging
@@ -39,7 +39,7 @@ if [ -n "$STAGED_FILES" ]; then
     
     echo "Files formatted and re-staged."
 else
-    echo "No files to format."
+    echo "No formattable files staged."
 fi
 
 # --- Check for staged TypeScript files ---
