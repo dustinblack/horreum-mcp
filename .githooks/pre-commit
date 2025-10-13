@@ -26,14 +26,21 @@ if [ $? -ne 0 ]; then
 fi
 echo "No high-severity vulnerabilities found."
 
-# --- Run formatter check ---
-echo "Checking code formatting..."
-npx prettier --check .
-if [ $? -ne 0 ]; then
-    echo "Code is not formatted correctly. Run 'npm run format' to fix. Aborting commit."
-    exit 1
+# --- Auto-format staged files ---
+echo "Checking formatting..."
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$STAGED_FILES" ]; then
+    # Format all staged files
+    echo "$STAGED_FILES" | xargs npx prettier --write
+    
+    # Re-add formatted files to staging
+    echo "$STAGED_FILES" | xargs git add
+    
+    echo "Files formatted and re-staged."
+else
+    echo "No files to format."
 fi
-echo "Code formatting is correct."
 
 # --- Check for staged TypeScript files ---
 STAGED_TS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.ts$')
