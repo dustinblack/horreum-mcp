@@ -19,7 +19,7 @@ The Horreum API endpoint `/api/dataset/list/{testId}` returns **HTTP 500 Interna
 ❌ /api/dataset/list/262?limit=5&page=0     → 500 Internal Server Error
 ```
 
-**Tested on**: https://horreum.corp.redhat.com
+**Tested on**: Production Horreum instance (v0.16)
 
 ## Our Workaround
 
@@ -53,7 +53,7 @@ if (page && page > 0) {
 Test the Horreum API directly:
 
 ```bash
-curl "https://horreum.corp.redhat.com/api/dataset/list/262?limit=5&page=0"
+curl "https://horreum.example.com/api/dataset/list/262?limit=5&page=0"
 ```
 
 If it returns **200 OK** with valid JSON (not a 500 error), the bug is fixed.
@@ -91,7 +91,7 @@ Bug reported to Horreum team on 2025-09-30.
 >
 > Both params are in the OpenAPI spec as valid, so looks like a server-side issue. For now I'm just omitting `page` when it's 0 as a workaround.
 >
-> Tested on https://horreum.corp.redhat.com
+> Tested on production Horreum instance (v0.16)
 
 ## Impact
 

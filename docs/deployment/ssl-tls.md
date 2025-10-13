@@ -129,8 +129,9 @@ podman run -d --name horreum-mcp-server \
   quay.io/redhat-performance/horreum-mcp:main
 ```
 
-⚠️ **Note:** HTTP transmits authentication tokens and data in plaintext. Only
-use this on trusted networks.
+> [!WARNING]
+> HTTP transmits authentication tokens and data in plaintext. Only use this on
+> trusted networks.
 
 ## Configuration Reference
 

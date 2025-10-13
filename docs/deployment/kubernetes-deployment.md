@@ -115,7 +115,7 @@ stringData:
   # If omitted, only public/anonymous data will be accessible
   HORREUM_TOKEN: 'your-horreum-api-token'
   # Required: Bearer token for securing the MCP HTTP endpoints
-  HTTP_AUTH_TOKEN: 'your-secure-mcp-token-changeme'
+  HTTP_AUTH_TOKEN: 'mcp_auth_token_xyz789abc'
 ```
 
 ### ConfigMap for Tuning (Optional)
@@ -424,7 +424,7 @@ curl http://localhost:3000/ready
 # Expected: {"status":"ready"}
 
 # Test authenticated endpoint
-curl -H 'Authorization: Bearer your-secure-mcp-token-changeme' \
+curl -H 'Authorization: Bearer mcp_auth_token_xyz789abc' \
      -H 'Content-Type: application/json' \
      -X POST http://localhost:3000/api/tools/source.describe \
      -d '{}'
@@ -435,9 +435,10 @@ curl -H 'Authorization: Bearer your-secure-mcp-token-changeme' \
 
 ### Using OpenShift Routes
 
-**Important**: OpenShift uses **Routes** instead of Kubernetes Ingress
-resources for external access. Do not create an Ingress on OpenShift -
-create a Route instead.
+> [!IMPORTANT]
+> OpenShift uses **Routes** instead of Kubernetes Ingress resources for
+> external access. Do not create an Ingress on OpenShift - create a Route
+> instead.
 
 ```yaml
 apiVersion: route.openshift.io/v1
@@ -472,10 +473,11 @@ deployment uses `runAsNonRoot: true` but does **not** specify hardcoded
 UIDs, allowing OpenShift to assign UIDs dynamically from the namespace's
 allocated range (e.g., `1000940000-1000949999`).
 
-**Important**: The container image is built with UID 10001, but OpenShift
-will override this at runtime with a UID from the namespace range. The
-container must support arbitrary UIDs (which the Horreum MCP image does
-via proper file permissions with `chmod -R g=u`).
+> [!IMPORTANT]
+> The container image is built with UID 10001, but OpenShift will override this
+> at runtime with a UID from the namespace range. The container must support
+> arbitrary UIDs (which the Horreum MCP image does via proper file permissions
+> with `chmod -R g=u`).
 
 If you need to mount custom CA certificates:
 
@@ -687,7 +689,7 @@ horreum:
   tlsVerify: true
 
 http:
-  authToken: "changeme"
+  authToken: "mcp_auth_token_xyz789abc"
   port: 3000
 
 resources:
@@ -998,7 +1000,7 @@ service networking:
     "horreum-mcp-prod": {
       "type": "horreum-mcp-http",
       "endpoint": "http://horreum-mcp-service.horreum-mcp.svc.cluster.local",
-      "api_key": "your-secure-mcp-token-changeme",
+      "api_key": "mcp_auth_token_xyz789abc",
       "timeout_seconds": 30
     }
   }
@@ -1031,7 +1033,7 @@ data:
         "horreum": {
           "type": "horreum-mcp-http",
           "endpoint": "http://horreum-mcp-service.horreum-mcp.svc.cluster.local",
-          "api_key": "your-secure-mcp-token-changeme",
+          "api_key": "mcp_auth_token_xyz789abc",
           "timeout_seconds": 30
         }
       }
@@ -1046,20 +1048,19 @@ between namespaces.
 Once your Horreum MCP server is deployed and accessible, you can connect AI
 chat clients to use it.
 
-### Using the HTTP Proxy for Kubernetes/OpenShift Deployments
+### Connecting AI Clients to Kubernetes/OpenShift Deployments
 
-AI chat clients typically expect to spawn MCP servers locally via stdio.
-When your MCP server is running in Kubernetes/OpenShift, use the HTTP proxy
-bridge provided with this project.
+AI chat clients can connect to remote Horreum MCP deployments using the
+standard `mcp-remote` package (verified with Claude Desktop, Cursor, and
+Gemini CLI).
 
 **Prerequisites:**
 
 - Horreum MCP server deployed and accessible (via port-forward, Route, or
   Ingress)
-- The `mcp-http-proxy.mjs` script from the `scripts/` directory
 - Your HTTP authentication token
 
-**Setup Example (Claude Desktop/Code):**
+**Setup Example (Claude Desktop/Cursor/Gemini CLI):**
 
 First, get the server URL. For local testing with port-forward:
 
@@ -1068,41 +1069,24 @@ First, get the server URL. For local testing with port-forward:
 kubectl port-forward -n horreum-mcp svc/horreum-mcp-service 3000:80
 ```
 
-Then configure your AI client (`claude_desktop_config.json` or similar):
+Then configure your AI client (`claude_desktop_config.json`, `~/.cursor/mcp.json`,
+or `~/.gemini/settings.json`):
 
 ```json
 {
   "mcpServers": {
     "horreum": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs",
+        "-y",
+        "mcp-remote",
         "http://localhost:3000/mcp",
-        "your-secure-mcp-token-changeme"
+        "--header",
+        "Authorization: Bearer your-secure-mcp-token-changeme"
       ]
     }
   }
 }
-```
-
-**Setup Example (Cursor):**
-
-1. Open Settings → MCP → Add Server
-2. Command: `node`
-3. Args:
-   `/absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs`,
-   `http://localhost:3000/mcp`, `your-secure-mcp-token-changeme`
-
-**Setup Example (Gemini CLI):**
-
-```bash
-gemini mcp add horreum node \
-  /absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs \
-  http://localhost:3000/mcp \
-  your-secure-mcp-token-changeme
-
-# Verify connection
-gemini mcp list
 ```
 
 **Using Production URL (via Route/Ingress):**
@@ -1113,22 +1097,24 @@ If you have a Route (OpenShift) or Ingress (Kubernetes) configured:
 {
   "mcpServers": {
     "horreum": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs",
+        "-y",
+        "mcp-remote",
         "https://horreum-mcp.apps.cluster.example.com/mcp",
-        "your-secure-mcp-token-changeme"
+        "--header",
+        "Authorization: Bearer your-secure-mcp-token-changeme"
       ]
     }
   }
 }
 ```
 
-**How the Proxy Works:**
+**How It Works:**
 
-- Your AI client spawns the proxy script as a local stdio process
-- The proxy forwards MCP protocol messages to your Kubernetes/OpenShift
-  deployment via HTTP POST
+- The `mcp-remote` package is the standard MCP HTTP client
+- Your AI client spawns it locally as a stdio process
+- It forwards MCP protocol messages to your deployment via HTTP POST
 - Responses are streamed back to the AI client
 - Session management and authentication are handled automatically
 

@@ -1303,7 +1303,7 @@ export async function registerTools(
 
   // source.describe - Capability discovery tool
   withTool(
-    'source.describe',
+    'source_describe',
     'Discover the capabilities and limits of the Horreum MCP server.',
     {},
     async () => {

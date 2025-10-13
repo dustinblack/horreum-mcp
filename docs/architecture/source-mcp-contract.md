@@ -284,10 +284,9 @@ This would allow:
 
 ## Related Documentation
 
-- **Label Values Format**: `LABEL_VALUES_FORMAT_FIX.md`
-- **Label Values Filtering**: `docs/LABEL_VALUES_FILTERING.md`
-- **Integration Status**: `RHIVOS_INTEGRATION.md`
-- **Development Plan**: `mcp_development_plan.md` (Phase 6.5, 6.9)
+- **[Label Values Filtering](../user-guide/filtering.md)** - Query and filter guide
+- **[Development Plan](../../mcp_development_plan.md)** - Implementation status and history
+- **[Troubleshooting](../troubleshooting/README.md)** - Known issues and workarounds
 
 ## Questions or Changes
 

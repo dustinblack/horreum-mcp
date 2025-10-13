@@ -1,18 +1,46 @@
 # Horreum MCP Server
 
-A Model Context Protocol (MCP) server that connects AI assistants to
-[Horreum](https://horreum.hyperfoil.io/) performance testing databases. This
-enables AI agents to query performance data, analyze test results, and manage
-testing workflows through natural language.
+A **Source MCP adapter** that provides standardized access to
+[Horreum](https://horreum.hyperfoil.io/) performance testing databases for
+Domain-specific MCP servers and AI assistants.
 
-**What this does:**
+## Primary Purpose: Source MCP Adapter
+
+**Horreum MCP is designed to be a Source MCP** - an abstraction layer that
+Domain MCP servers use to access Horreum data. This architecture enables:
+
+- **Domain experts** to build specialized AI assistants without Horreum API
+  expertise
+- **Standardized interface** through the Source MCP Contract
+- **Multiple domains** (boot time, network performance, memory analysis) to
+  share one Source
+- **Flexibility** to swap data sources without changing Domain MCP code
+
+```mermaid
+graph LR
+    AI["AI Assistant"] --> Domain["Domain MCP<br/>(performance analysis)"]
+    Domain --> Source["Source MCP<br/>(Horreum)"]
+    Source --> DB["Horreum DB"]
+
+    style AI fill:#e1f5ff,stroke:#01579b,stroke-width:2px,color:#000
+    style Domain fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style Source fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
+    style DB fill:#ffccbc,stroke:#bf360c,stroke-width:2px,color:#000
+```
+
+See [Domain MCP Integration Guide](docs/architecture/domain-mcp-integration.md)
+for complete details on building Domain MCPs.
+
+## Standalone Usage
+
+While designed primarily as a Source MCP, it can also be used standalone by
+users familiar with Horreum's architecture:
 
 - 🔍 **Query performance data** from Horreum instances
-- 📊 **Analyze test results** with built-in tools and filters
-- 🤖 **Works with AI assistants** through the Model Context Protocol (MCP)
+- 📊 **Filter and paginate** test results with built-in tools
+- 🗣️ **Natural language time queries** - Use "last week" instead of timestamps
 - 🚀 **Upload test runs** and manage testing workflows
 - 📈 **Access schemas** and test configurations
-- 🗣️ **Natural language time queries** - Use "last week" or "yesterday" instead of timestamps
 
 ## Quick Start
 
@@ -67,8 +95,9 @@ podman run --rm -p 127.0.0.1:3000:3000 \
   quay.io/redhat-performance/horreum-mcp:main
 ```
 
-⚠️ **WARNING:** `HORREUM_TLS_VERIFY=false` disables all SSL verification
-and should **NEVER** be used in production.
+> [!WARNING]
+> `HORREUM_TLS_VERIFY=false` disables all SSL verification and should
+> **NEVER** be used in production.
 
 ### 🔧 **Development Setup**
 
@@ -89,7 +118,19 @@ cp .env.example .env
 npm start -- --log-level info
 ```
 
-## Status
+## Documentation
+
+Complete documentation is available in the [`docs/`](docs/) directory:
+
+- **[User Guide](docs/user-guide/README.md)** - Installation, configuration, and usage
+- **[Developer Guide](docs/developer/README.md)** - Contributing and CI/CD
+- **[Deployment](docs/deployment/README.md)** - Kubernetes, SSL/TLS, and production setup
+- **[Architecture](docs/architecture/README.md)** - Technical design and contracts
+- **[Troubleshooting](docs/troubleshooting/README.md)** - Common issues and solutions
+
+See the [documentation index](docs/README.md) for a complete overview.
+
+## Development Status
 
 **Phase 6 Complete** - Server-to-server integration with Source MCP Contract compliance:
 
@@ -140,9 +181,18 @@ In addition to tools, the server exposes key resources as URIs:
 
 ### Transport Modes
 
-- **Stdio Mode** (default): Direct integration with MCP-compatible AI clients
-- **HTTP Mode**: Persistent server for network access and web API integration
-- **Container Mode**: Multi-architecture containerized deployment
+- **Stdio Mode** (default): Direct process integration with local AI clients
+- **HTTP/POST** (`/mcp`): POST-based JSON-RPC transport (can stream via SSE when
+  supported by client)
+- **Direct REST API** (`/api/tools/*`): Simplified server-to-server integration
+  for Domain MCP servers
+
+> [!NOTE]
+> **Architecture Note:** Current implementation uses `StreamableHTTPServerTransport`
+> at a single POST endpoint (`/mcp`) with content negotiation. An alternative
+> architecture separates SSE (GET `/sse`) and HTTP (POST `/message`) transports
+> into distinct endpoints, providing clearer client selection and better MCP spec
+> alignment. This may be considered for future enhancement.
 
 ### Production Features
 
@@ -395,71 +445,43 @@ TRACING_ENABLED=false
 
 ### Key Configuration Options
 
-| Variable             | Required | Description                                                       |
-| -------------------- | -------- | ----------------------------------------------------------------- |
-| `HORREUM_BASE_URL`   | ✅       | Base URL of your Horreum instance                                 |
-| `HORREUM_TOKEN`      | ⚠️       | API token (required for writes/private data)                      |
-| `HORREUM_RATE_LIMIT` | ❌       | Client-side rate limit in requests per second (default: 10)       |
-| `HORREUM_TIMEOUT`    | ❌       | Per-request timeout in milliseconds (default: 30000)              |
-| `HTTP_MODE_ENABLED`  | ❌       | Enable HTTP server mode (default: stdio)                          |
-| `HTTP_PORT`          | ❌       | HTTP server port (default: 3000)                                  |
-| `HTTP_AUTH_TOKEN`    | ❌       | Secure your HTTP endpoints                                        |
-| `LOG_LEVEL`          | ❌       | Logging verbosity (`trace`,`debug`,`info`,`warn`,`error`,`fatal`) |
-| `LOG_FORMAT`         | ❌       | Log output format (`json` or `pretty`)                            |
-| `METRICS_ENABLED`    | ❌       | Enable Prometheus metrics endpoint (default: false)               |
-| `METRICS_PORT`       | ❌       | Port for metrics endpoint (default: 9464)                         |
-| `TRACING_ENABLED`    | ❌       | Enable OpenTelemetry tracing (default: false)                     |
+| Variable             | Description                                                       |
+| -------------------- | ----------------------------------------------------------------- |
+| `HORREUM_BASE_URL`   | **Required.** Base URL of your Horreum instance                   |
+| `HORREUM_TOKEN`      | **Conditional.** API token (required for writes/private data)     |
+| `HORREUM_RATE_LIMIT` | Client-side rate limit in requests per second (default: 10)       |
+| `HORREUM_TIMEOUT`    | Per-request timeout in milliseconds (default: 30000)              |
+| `HTTP_MODE_ENABLED`  | Enable HTTP server mode (default: stdio)                          |
+| `HTTP_PORT`          | HTTP server port (default: 3000)                                  |
+| `HTTP_AUTH_TOKEN`    | Secure your HTTP endpoints                                        |
+| `LOG_LEVEL`          | Logging verbosity (`trace`,`debug`,`info`,`warn`,`error`,`fatal`) |
+| `LOG_FORMAT`         | Log output format (`json` or `pretty`)                            |
+| `METRICS_ENABLED`    | Enable Prometheus metrics endpoint (default: false)               |
+| `METRICS_PORT`       | Port for metrics endpoint (default: 9464)                         |
+| `TRACING_ENABLED`    | Enable OpenTelemetry tracing (default: false)                     |
 
 > [!NOTE]
 > When using with AI clients, these variables are typically configured in the client's MCP server settings rather than a local `.env` file.
 
-## Usage
+## Deployment
 
-### With AI Assistants (Recommended)
+### Multi-Architecture Support
 
-The primary use case is connecting AI assistants to Horreum for natural language
-performance analysis.
+The container images support both AMD64 and ARM64 architectures with automatic
+QEMU emulation detection. When running under emulation, the container
+automatically applies compatibility flags to prevent WebAssembly-related crashes
+while preserving performance on native architectures.
 
-**Supported AI Clients:**
+### Production Deployment
 
-- Claude Desktop/Code
-- Cursor
-- Any MCP-compatible client
-
-**Setup Steps:**
-
-1. Build the project: `npm ci && npm run build`
-2. Configure your AI client with the server details (see examples below)
-3. Start asking questions like: _"List all tests in Horreum"_ or _"Show me the
-   latest runs for test 123"_
-
-### Container Deployment
-
-For production or shared environments:
-
-```bash
-# Run with HTTP mode for network access
-podman run --rm -p 127.0.0.1:3000:3000 \
-  -e HORREUM_BASE_URL=https://horreum.example.com \
-  -e HTTP_MODE_ENABLED=true \
-  -e HTTP_AUTH_TOKEN=changeme \
-  quay.io/redhat-performance/horreum-mcp:main
-
-# Test the deployment
-curl -H 'Authorization: Bearer changeme' \
-     http://localhost:3000/health
-```
-
-**Multi-Architecture Support**: The container images support both AMD64 and ARM64
-architectures with automatic QEMU emulation detection. When running under emulation,
-the container automatically applies compatibility flags to prevent WebAssembly-related
-crashes while preserving performance on native architectures.
+For production or shared environments, see the [Quick Start](#quick-start)
+section above for container deployment examples.
 
 ### Kubernetes/OpenShift Deployment
 
 For production Kubernetes or OpenShift deployments with high availability and
 persistent HTTP mode, see the complete
-[Kubernetes Deployment Guide](docs/kubernetes-deployment.md).
+[Kubernetes Deployment Guide](docs/deployment/kubernetes-deployment.md).
 
 The guide includes:
 
@@ -482,23 +504,99 @@ npm start -- --log-level debug
 HTTP_MODE_ENABLED=true npm start
 ```
 
-## AI Client Configuration
+## Integration
 
-### Stdio Mode (Recommended)
+### Domain MCP Integration (Recommended)
 
-Configure your AI client to spawn the MCP server as a local process:
+**Primary use case:** Connect Domain MCP servers to Horreum MCP for data access.
 
-**Core Settings (all clients):**
+Deploy Horreum MCP in HTTP mode (see [Quick Start](#quick-start)) and use the
+Direct REST API endpoints from your Domain MCP:
 
-- **Command:** `node`
-- **Args:** `/absolute/path/to/horreum-mcp/build/index.js`
-- **Environment:** `HORREUM_BASE_URL=https://horreum.example.com`
+```bash
+# From your Domain MCP server
+curl -X POST http://horreum-mcp:3000/api/tools/horreum_get_test_label_values \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "test_id": "123",
+    "from": "last 30 days",
+    "include": ["cpu_usage", "memory_used"]
+  }'
+```
 
-> [!IMPORTANT]
-> Use absolute paths - many clients don't resolve `~` or relative paths
-> correctly.
+See [Domain MCP Integration Guide](docs/architecture/domain-mcp-integration.md)
+for complete details on building Domain MCPs.
 
-**Claude Desktop/Code** (`claude_mcp.json` or Preferences → MCP):
+### AI Client Configuration (Standalone Usage)
+
+For direct AI assistant integration (standalone mode), see the complete
+**[AI Client Configuration Guide](docs/user-guide/ai-clients.md)** with
+detailed setup instructions:
+
+| Client                  | Direct HTTP | HTTP (mcp-remote) | STDIO       | Notes                   |
+| ----------------------- | ----------- | ----------------- | ----------- | ----------------------- |
+| **Claude Desktop/Code** | ❓ Untested | ✅ Verified       | ✅ Verified | Universal compatibility |
+| **Cursor**              | ✅ Verified | ✅ Verified       | ✅ Verified | All methods work        |
+| **Gemini CLI**          | ✅ Verified | ✅ Verified       | ✅ Verified | Use interactive mode    |
+| **Cline**               | 🧪 Untested | 🧪 Untested       | 🧪 Untested | VS Code extension       |
+
+**Connection Methods (all supported):**
+
+1. **Direct HTTP** — Native HTTP connection using `url`/`httpUrl` field
+   - ✅ No proxy process required
+   - ✅ Lowest overhead
+   - ✅ Simplest architecture for remote/containerized deployments
+   - ⚠️ Not supported by all clients (e.g., Claude Desktop)
+
+2. **HTTP via mcp-remote** — Standard MCP proxy (`npx mcp-remote`)
+   - ✅ Universal client compatibility
+   - ✅ Works with all tested clients
+   - ⚠️ Requires spawning local proxy process
+
+3. **STDIO** — Local subprocess with stdin/stdout communication
+   - ✅ Simplest setup for local development
+   - ✅ No network configuration needed
+   - ⚠️ Requires local build and absolute paths
+
+**Quick Start Example (Cursor/Gemini - Direct HTTP):**
+
+```json
+{
+  "mcpServers": {
+    "horreum": {
+      "url": "http://horreum-mcp.example.com:3000/mcp",
+      "headers": {
+        "Authorization": "Bearer mcp_auth_token_xyz789abc"
+      }
+    }
+  }
+}
+```
+
+> [!NOTE]
+> Cursor uses `url` field, Gemini CLI uses `httpUrl` field
+
+**Alternative: HTTP via mcp-remote (all clients):**
+
+```json
+{
+  "mcpServers": {
+    "horreum": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://horreum-mcp.example.com:3000/mcp",
+        "--header",
+        "Authorization: Bearer mcp_auth_token_xyz789abc"
+      ]
+    }
+  }
+}
+```
+
+**Alternative: STDIO for local development:**
 
 ```json
 {
@@ -508,89 +606,19 @@ Configure your AI client to spawn the MCP server as a local process:
       "args": ["/absolute/path/to/horreum-mcp/build/index.js"],
       "env": {
         "HORREUM_BASE_URL": "https://horreum.example.com",
-        "HORREUM_TOKEN": "${HORREUM_TOKEN}"
+        "HORREUM_TOKEN": "horreum_api_token_abc123xyz"
       }
     }
   }
 }
 ```
 
-**Cursor** (Settings → MCP → Add Server):
+> [!IMPORTANT]
+> Use absolute paths - many clients don't resolve `~` or relative paths
+> correctly. See the [full guide](docs/user-guide/ai-clients.md) for
+> client-specific configuration locations and troubleshooting.
 
-- Command: `node`
-- Args: `/absolute/path/to/horreum-mcp/build/index.js`
-- Env: `HORREUM_BASE_URL`, `HORREUM_TOKEN`
-
-### HTTP Mode with Gemini CLI
-
-**Gemini CLI** requires a different approach since it expects SSE-based streaming, while
-the MCP SDK uses POST-based JSON-RPC. We provide an HTTP proxy bridge that makes
-them compatible.
-
-**Prerequisites:**
-
-1. Horreum MCP server running in HTTP mode (container or local)
-2. The `mcp-http-proxy.mjs` script from this repository
-
-**Configuration:**
-
-```bash
-# Option 1: Using gemini CLI command
-gemini mcp add horreum-mcp node \
-  /absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs \
-  http://localhost:3001/mcp
-
-# Option 2: Manually edit ~/.gemini/settings.json
-```
-
-```json
-{
-  "mcpServers": {
-    "horreum-mcp": {
-      "command": "node",
-      "args": [
-        "/absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs",
-        "http://localhost:3001/mcp"
-      ]
-    }
-  }
-}
-```
-
-**Verification:**
-
-```bash
-# Check connection status
-gemini mcp list
-
-# Should show:
-# ✓ horreum-mcp: ... (stdio) - Connected
-```
-
-**How it works:**
-
-- Gemini spawns the proxy as a local stdio process
-- Proxy forwards MCP messages to your HTTP server via POST
-- Server responses are piped back to Gemini via stdout
-- Session management is handled automatically
-
-**With Authentication:**
-
-If your HTTP server requires authentication, add the token as a third argument:
-
-```bash
-gemini mcp add horreum-mcp node \
-  /absolute/path/to/horreum-mcp/scripts/mcp-http-proxy.mjs \
-  http://localhost:3001/mcp \
-  your-auth-token
-```
-
-> [!NOTE]
-> The MCP SDK's `StreamableHTTPServerTransport` uses POST-based JSON-RPC, not pure
-> SSE GET streaming. The proxy bridges this gap, allowing Gemini CLI to work with
-> standard MCP HTTP servers.
-
-### HTTP Mode (Advanced)
+### HTTP API (Advanced)
 
 For persistent servers, remote access, or server-to-server integration:
 
@@ -659,23 +687,35 @@ See [RHIVOS_INTEGRATION.md](RHIVOS_INTEGRATION.md) for complete HTTP API
 documentation and [Time Range Filtering](docs/TIME_RANGE_FILTERING.md) for
 time-based query details.
 
-## What You Can Do
+## Usage
 
-Once connected to an AI assistant, you can use natural language to interact
-with Horreum:
+Once connected to an AI assistant (see [AI Client Configuration](#ai-client-configuration)),
+you can query Horreum data.
 
-### Query Performance Data
+> [!IMPORTANT]
+> **Standalone Usage**: When using Horreum MCP directly (not through a Domain MCP),
+> queries must be specific and include all required parameters. Vague queries like
+> "show me recent performance" will fail without established context (test names, IDs,
+> time ranges, etc.).
+>
+> **Domain MCP Usage**: Domain-specific MCPs provide contextual understanding and can
+> handle natural language queries. See the
+> [Domain MCP Integration Guide](docs/architecture/domain-mcp-integration.md).
 
-- _"List all available tests in Horreum"_
-- _"Show me the latest 10 runs for the boot-time test"_
-- _"Get details for test run ID 12345"_
-- _"Find tests created in the last month"_
+### Example Queries (Standalone - Direct/Specific)
 
-### Analyze Results
+- _"List all tests in Horreum"_
+- _"Get test by name 'api-performance-test'"_
+- _"Show runs for test ID 123 from the last 7 days"_
+- _"Get label values for run ID 456"_
+- _"Find datasets for test 'load-test' created after 2025-01-01"_
+
+### Example Queries (Domain MCP - Natural Language)
 
 - _"Compare the performance of the last 5 runs"_
 - _"Show me any failed runs from yesterday"_
-- _"What's the average runtime for test 'api-performance'?"_
+- _"What's the average runtime for the api-performance test?"_
+- _"Has response time regressed in the latest version?"_
 
 ### Manage Schemas and Data
 

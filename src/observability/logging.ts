@@ -24,6 +24,11 @@ function createLogger() {
     },
   };
 
+  // In STDIO mode (when HTTP_MODE_ENABLED is not set), write logs to stderr
+  // to avoid interfering with JSON-RPC messages on stdout
+  const destination =
+    process.env.HTTP_MODE_ENABLED === 'true' ? undefined : process.stderr;
+
   if (wantPretty) {
     try {
       // pino-pretty is a dev-only dependency; optional at runtime
@@ -34,15 +39,16 @@ function createLogger() {
           singleLine: false,
           translateTime: 'SYS:standard',
           ignore: 'pid,hostname',
+          destination: destination || 1, // 1 = stdout, 2 = stderr
         },
       });
       return pino(baseOptions, transport);
     } catch {
       // Fallback to JSON when pino-pretty is not available
-      return pino(baseOptions);
+      return pino(baseOptions, destination);
     }
   }
-  return pino(baseOptions);
+  return pino(baseOptions, destination);
 }
 
 export const logger = createLogger();

@@ -1002,8 +1002,8 @@ export async function startHttpServer(server: McpServer, env: Env) {
     }
   });
 
-  // POST /api/tools/source.describe - Capability discovery
-  app.post('/api/tools/source.describe', authMiddleware, async (req, res) => {
+  // POST /api/tools/source_describe - Capability discovery
+  app.post('/api/tools/source_describe', authMiddleware, async (req, res) => {
     try {
       const response = {
         source_type: 'horreum',
@@ -1023,7 +1023,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       };
       return res.status(200).json(response);
     } catch (err) {
-      logger.error({ err }, 'Unhandled error in source.describe');
+      logger.error({ err }, 'Unhandled error in source_describe');
       return sendContractError(res, 500, 'INTERNAL_ERROR', 'Internal server error');
     }
   });
