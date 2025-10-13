@@ -89,6 +89,13 @@ jobs:
         run: |
           bash scripts/build_multiarch.sh --tag "$TAG"
 
+      - name: Start Podman socket for Trivy
+        run: |
+          # Start Podman service socket so Trivy can access images
+          # Podman doesn't run daemonized by default
+          systemctl --user start podman.socket
+          systemctl --user status podman.socket
+
       - name: Install Trivy
         run: |
           wget -qO- https://aquasecurity.github.io/trivy-repo/deb/public.key | \
@@ -103,7 +110,7 @@ jobs:
         env:
           TAG: ${{ steps.compute_tag.outputs.tag }}
         run: |
-          # Scan the amd64 image (built by build_multiarch.sh)
+          # Scan the amd64 image via Podman socket
           # Trivy can't scan multi-arch manifests, so we scan a specific architecture
           bash scripts/trivy_scan.sh "localhost/horreum-mcp:${TAG}-amd64"
 
