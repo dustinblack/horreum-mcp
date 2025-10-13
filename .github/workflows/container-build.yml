@@ -103,7 +103,9 @@ jobs:
         env:
           TAG: ${{ steps.compute_tag.outputs.tag }}
         run: |
-          bash scripts/trivy_scan.sh "localhost/horreum-mcp:${TAG}"
+          # Scan the amd64 image (built by build_multiarch.sh)
+          # Trivy can't scan multi-arch manifests, so we scan a specific architecture
+          bash scripts/trivy_scan.sh "localhost/horreum-mcp:${TAG}-amd64"
 
       - name: Login to Quay.io
         if: env.QUAY_USERNAME != '' && env.QUAY_PASSWORD != ''
