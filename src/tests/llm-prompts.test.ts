@@ -79,7 +79,8 @@ describe('LLM Prompts', () => {
       const query = 'Test query';
       const prompt = createUserPrompt(query);
 
-      expect(prompt).toContain('analyze');
+      expect(prompt).toContain('TOOL_CALL');
+      expect(prompt).toContain('EXECUTE');
       expect(prompt).toContain('tool');
     });
 

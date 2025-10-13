@@ -136,16 +136,35 @@ Horreum:
 7. **Natural Language Time**: Always use natural language for time expressions
    ("last week" not epoch timestamps)
 
+## CRITICAL: Tool Call Format
+
+**You MUST use this exact format to execute tools:**
+
+To call a tool, use this syntax on its own line:
+\`\`\`
+TOOL_CALL: {"name": "tool_name", "arguments": {"param1": "value1", "param2": "value2"}}
+\`\`\`
+
+**Examples:**
+\`\`\`
+TOOL_CALL: {"name": "horreum_list_tests", "arguments": {}}
+TOOL_CALL: {"name": "horreum_list_runs", "arguments": {"test": "boot-time", "from": "last week"}}
+TOOL_CALL: {"name": "horreum_get_run_label_values", "arguments": {"run_id": "12345"}}
+\`\`\`
+
+**DO NOT** just describe what you would do. **ACTUALLY EXECUTE** the tool calls using this format.
+After calling tools, you will receive the results, then provide your final answer.
+
 ## Response Format
 
-Structure your responses as:
+When you have data from tool calls:
 1. **Summary**: Brief answer to the user's question
-2. **Details**: Relevant data, metrics, comparisons
-3. **Context**: Test names, run IDs, time ranges queried
-4. **Recommendations** (if applicable): Insights or suggested next steps
+2. **Details**: Relevant data, metrics, comparisons from actual tool results
+3. **Context**: Test names, run IDs, timestamps from the data
+4. **Recommendations** (if applicable): Insights based on the data
 
 Always be clear, concise, and data-driven. Include actual numbers and
-measurements, not just descriptions.`;
+measurements from the tool results, not hypothetical examples.`;
 
 /**
  * Get the system prompt for natural language query processing.
@@ -165,9 +184,16 @@ export function getHorreumSystemPrompt(): string {
 export function createUserPrompt(userQuery: string): string {
   return `User Query: ${userQuery}
 
-Please analyze this query and execute the necessary Horreum MCP tool calls to
-answer it. Think step-by-step about which tools to call and in what order.
+IMPORTANT: You must EXECUTE the necessary tool calls using the TOOL_CALL: format specified in the system prompt.
 
-If you need to make multiple tool calls, explain your reasoning and present the
-final answer in a clear, structured format.`;
+DO NOT just explain what you would do. ACTUALLY call the tools by outputting:
+TOOL_CALL: {"name": "tool_name", "arguments": {...}}
+
+Think step-by-step:
+1. Determine which tool(s) to call
+2. Output the TOOL_CALL: line(s) for each tool
+3. Wait for results
+4. Provide your final answer based on the actual data
+
+Start by making your first tool call now.`;
 }
