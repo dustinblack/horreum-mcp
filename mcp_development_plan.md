@@ -46,7 +46,7 @@ for full details on:
 - Phase 6.8: Logging and Diagnostics Enhancement (COMPLETED 2025-10-08)
 - Phase 6.9: Label Values Format Compliance (COMPLETED 2025-10-10)
 
-### Planned Phases (7-12)
+### Planned Phases (7-13)
 
 **Phase 7: Enhanced CI/CD Pipeline**
 
@@ -63,25 +63,40 @@ for full details on:
 - Centralized error handling with circuit breaker patterns
 - Hierarchical configuration system with validation and hot-reload
 
-**Phase 9: Alternative REST API Mode**
+**Phase 9: LLM-Powered Natural Language Query Endpoint**
+
+- HTTP endpoint accepting natural language queries (e.g., `POST /api/query`)
+- Integration with external LLM APIs (OpenAI, Anthropic, etc.) via existing
+  `src/llm/client.ts`
+- Stand-alone operation mode: LLM translates natural language → MCP tool calls →
+  Horreum API
+- Query intent parsing and tool orchestration (multi-step queries)
+- Streaming response support for long-running analyses
+- Configuration: `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL` environment
+  variables
+- System prompt engineering for Horreum domain expertise
+- Example queries: "Show me tests that failed in the last week", "Compare
+  performance of run 123 vs 456"
+
+**Phase 10: Alternative REST API Mode**
 
 - REST API endpoints (`GET /api/v1/tests`, `POST /api/v1/tests/{id}/runs`, etc.)
 - OpenAPI 3.0 specification with Pydantic-compatible responses
 - API versioning strategy with rate limiting and backward compatibility
 
-**Phase 10: Build System Enhancement**
+**Phase 11: Build System Enhancement**
 
 - Multi-architecture builds with cross-compilation and bundle optimization
 - Advanced dependency management with automated updates and vulnerability scanning
 - Build performance optimization (incremental builds, parallel processes)
 
-**Phase 11: Testing & Security Hardening**
+**Phase 12: Testing & Security Hardening**
 
 - Enhanced testing framework (unit, integration, contract, performance testing)
 - Runtime security monitoring with secrets management and audit logging
 - Operational readiness (health checks, metrics, graceful shutdown)
 
-**Phase 12: Data Analysis**
+**Phase 13: Data Analysis**
 
 - `analyze_run_data` tool for server-side statistical analysis with testing
 
@@ -301,6 +316,65 @@ direction.
   - [ ] Performance optimizations
   - [ ] Release automation
 
+- [ ] Phase 8 — Architecture Refactoring & Modularity (PLANNED)
+  - [ ] Extract shared logic into reusable modules
+  - [ ] Implement plugin architecture for extensibility
+  - [ ] Make observability features truly optional with dependency injection
+  - [ ] Centralized error handling with circuit breaker patterns
+  - [ ] Hierarchical configuration system with validation
+  - [ ] Hot-reload support for configuration changes
+
+- [ ] Phase 9 — LLM-Powered Natural Language Query Endpoint (PLANNED)
+  - [ ] Natural language query HTTP endpoint
+  - [ ] LLM provider integration (OpenAI, Anthropic, etc.)
+  - [ ] Tool orchestration and multi-step query support
+  - [ ] Streaming response capability
+  - [ ] System prompt engineering for Horreum domain
+  - [ ] Configuration and documentation
+
+- [ ] Phase 10 — Alternative REST API Mode (PLANNED)
+  - [ ] Design and implement REST API endpoints (GET /api/v1/tests, POST
+        /api/v1/tests/{id}/runs, etc.)
+  - [ ] OpenAPI 3.0 specification generation
+  - [ ] Pydantic-compatible response schemas
+  - [ ] API versioning strategy implementation
+  - [ ] Rate limiting middleware
+  - [ ] Backward compatibility layer
+  - [ ] REST API documentation and examples
+
+- [ ] Phase 11 — Build System Enhancement (PLANNED)
+  - [ ] Multi-architecture build support with cross-compilation
+  - [ ] Bundle optimization and tree-shaking
+  - [ ] Advanced dependency management
+  - [ ] Automated dependency updates with Dependabot
+  - [ ] Vulnerability scanning integration
+  - [ ] Incremental build support
+  - [ ] Parallel build processes
+  - [ ] Build performance profiling and optimization
+
+- [ ] Phase 12 — Testing & Security Hardening (PLANNED)
+  - [ ] Enhanced unit testing framework
+  - [ ] Integration test suite expansion
+  - [ ] Contract testing implementation
+  - [ ] Performance/load testing infrastructure
+  - [ ] Runtime security monitoring
+  - [ ] Secrets management system
+  - [ ] Audit logging implementation
+  - [ ] Health check endpoints
+  - [ ] Metrics collection and exposure
+  - [ ] Graceful shutdown handling
+
+- [ ] Phase 13 — Data Analysis (PLANNED)
+  - [ ] Design analyze_run_data tool specification
+  - [ ] Implement server-side statistical analysis
+  - [ ] Add common statistical functions (mean, median, percentiles, etc.)
+  - [ ] Performance comparison capabilities
+  - [ ] Trend analysis over time
+  - [ ] Regression detection algorithms
+  - [ ] Unit tests for analysis functions
+  - [ ] Integration tests with real Horreum data
+  - [ ] Documentation and usage examples
+
 ## 9. How to update this document
 
 1. Review open tasks and repository state (commits, CI, issues).
@@ -316,6 +390,33 @@ direction.
 
 > **Note**: Older changelog entries (September 2025) are archived in
 > [`docs/developer/development-history.md`](docs/developer/development-history.md).
+
+- 2025-10-13 — **Development Plan Enhancement: Phase 9 Addition and Complete
+  Phase Checklists**: Added new Phase 9 (LLM-Powered Natural Language Query
+  Endpoint) to development plan for stand-alone operation mode with LLM
+  integration. This feature will enable the Horreum MCP server to accept
+  natural language queries via HTTP endpoint and leverage external LLM APIs
+  (OpenAI, Anthropic, etc.) to translate user intent into MCP tool calls.
+  Architecture: `POST /api/query` accepts natural language → LLM parses intent
+  → orchestrates MCP tool calls → returns Horreum data. Builds on existing
+  `src/llm/client.ts` infrastructure. Configuration via `LLM_PROVIDER`,
+  `LLM_API_KEY`, `LLM_MODEL` environment variables. Will support streaming
+  responses for long-running analyses, system prompt engineering for Horreum
+  domain expertise, and multi-step query orchestration. Example use cases:
+  "Show me tests that failed in the last week", "Compare performance of run
+  123 vs 456", "What are the top 5 slowest tests in October?". This mode
+  complements existing transport modes (STDIO, HTTP/SSE, Direct REST API) by
+  enabling conversational access to Horreum data without requiring AI client
+  configuration. Phases renumbered: Alternative REST API Mode → Phase 10,
+  Build System Enhancement → Phase 11, Testing & Security Hardening → Phase
+  12, Data Analysis → Phase 13. Added comprehensive task checklists for all
+  planned phases (7-13): Phase 7 (CI/CD Pipeline - 4 items), Phase 8
+  (Architecture Refactoring - 6 items), Phase 9 (LLM Endpoint - 6 items),
+  Phase 10 (REST API - 7 items), Phase 11 (Build System - 8 items), Phase 12
+  (Testing & Security - 10 items), Phase 13 (Data Analysis - 9 items). Each
+  phase now has detailed, actionable task items for implementation tracking.
+  Updated header from "Planned Phases (7-12)" to "Planned Phases (7-13)" to
+  reflect all phases. Agent: Claude Sonnet 4.5.
 
 - 2025-10-13 — **AI Client Testing & Documentation Standardization**: Completed
   comprehensive testing of AI client connectivity across three methods (STDIO,
