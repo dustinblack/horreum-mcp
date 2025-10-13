@@ -25,10 +25,10 @@ describe('LLM Prompts', () => {
     it('should include tool information', () => {
       const prompt = getHorreumSystemPrompt();
 
-      // Check for MCP tool references
-      expect(prompt).toContain('horreum_list_tests');
-      expect(prompt).toContain('horreum_list_runs');
-      expect(prompt).toContain('horreum_get_schema');
+      // Check for MCP tool references (without horreum_ prefix)
+      expect(prompt).toContain('list_tests');
+      expect(prompt).toContain('list_runs');
+      expect(prompt).toContain('get_schema');
     });
 
     it('should include natural language time guidance', () => {
