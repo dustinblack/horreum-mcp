@@ -95,7 +95,8 @@ jobs:
         run: |
           # Buildah and Podman use separate storage backends
           # Push from buildah storage to podman storage so Trivy can access it
-          buildah push "localhost/horreum-mcp:${TAG}-amd64" \
+          # Note: buildah tags images as ${IMAGE_REPO}:${TAG}-amd64
+          buildah push "${IMAGE_REPO}:${TAG}-amd64" \
             "containers-storage:localhost/horreum-mcp:${TAG}-amd64"
           # Verify the image is now in podman storage
           podman images | grep "horreum-mcp.*${TAG}-amd64"
