@@ -151,8 +151,8 @@ case "$CURRENT_ARCH" in
     ;;
 esac
 
-echo "Creating local runnable tag: ${IMAGE_REPO}:${TAG} -> ${LOCAL_ARCH_TAG}"
-podman tag "$LOCAL_ARCH_TAG" "${IMAGE_REPO}:${TAG}"
+echo "Creating local runnable tag: ${IMAGE_REPO}:${TAG}-local -> ${LOCAL_ARCH_TAG}"
+podman tag "$LOCAL_ARCH_TAG" "${IMAGE_REPO}:${TAG}-local"
 
 if [[ "$PUSH" -eq 1 ]]; then
   echo "Pushing multi-arch manifest to ${REMOTE_MANIFEST_REF}..."
@@ -163,7 +163,7 @@ if [[ "$PUSH" -eq 1 ]]; then
   fi
 else
   echo "Built multi-arch manifest locally: ${LOCAL_MANIFEST_REF} (not pushed)" >&2
-  echo "Local runnable image available: ${IMAGE_REPO}:${TAG}" >&2
+  echo "Local runnable image available: ${IMAGE_REPO}:${TAG}-local" >&2
 fi
 
 echo "Done: ${IMAGE_REPO}:${TAG}" >&2
