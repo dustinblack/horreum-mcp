@@ -89,6 +89,17 @@ jobs:
         run: |
           bash scripts/build_multiarch.sh --tag "$TAG"
 
+      - name: Import buildah image to podman for scanning
+        env:
+          TAG: ${{ steps.compute_tag.outputs.tag }}
+        run: |
+          # Buildah and Podman use separate storage backends
+          # Push from buildah storage to podman storage so Trivy can access it
+          buildah push "localhost/horreum-mcp:${TAG}-amd64" \
+            "containers-storage:localhost/horreum-mcp:${TAG}-amd64"
+          # Verify the image is now in podman storage
+          podman images | grep "horreum-mcp.*${TAG}-amd64"
+
       - name: Start Podman socket for Trivy
         run: |
           # Start Podman service socket so Trivy can access images
