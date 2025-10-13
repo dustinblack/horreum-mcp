@@ -72,11 +72,11 @@ Configure LLM provider for natural language query endpoint (`/api/query`):
 enable the natural language query endpoint. If not configured, the `/api/query`
 endpoint will return a 503 error.
 
-\*\* Optional. Use for corporate/private Gemini instances. `LLM_GEMINI_ENDPOINT`
-defaults to public Google Gemini API
-(`https://generativelanguage.googleapis.com/v1beta`). `LLM_GEMINI_PROJECT` is
-required for some corporate Gemini deployments (e.g., Vertex AI) to specify
-billing and quota management.
+\*\* Optional. Use for corporate/private Gemini instances (e.g., Vertex AI).
+`LLM_GEMINI_ENDPOINT` defaults to public Google Gemini API
+(`https://generativelanguage.googleapis.com/v1beta`). When a custom endpoint is
+specified, `LLM_GEMINI_PROJECT` is used for billing and quota management via the
+`x-goog-user-project` header. For the public API, the project ID can be omitted.
 
 \*\*\* Required only when `LLM_PROVIDER=azure`.
 
@@ -96,15 +96,16 @@ export LLM_API_KEY=sk-ant-...
 export LLM_MODEL=claude-4-5-sonnet-20241022
 ```
 
-**Example (Google Gemini - Public):**
+**Example (Google Gemini - Public API):**
 
 ```bash
 export LLM_PROVIDER=gemini
 export LLM_API_KEY=AIza...
 export LLM_MODEL=gemini-2.5-pro
+# LLM_GEMINI_PROJECT is optional for public API
 ```
 
-**Example (Google Gemini - Corporate Instance):**
+**Example (Google Gemini - Corporate/Vertex AI):**
 
 ```bash
 export LLM_PROVIDER=gemini
@@ -115,11 +116,12 @@ export LLM_GEMINI_PROJECT=your-gcp-project-id
 ```
 
 > [!NOTE]
-> For corporate Gemini instances, consult your IT department for the correct
-> `LLM_GEMINI_ENDPOINT`, `LLM_GEMINI_PROJECT`, and API key format. The endpoint
-> should typically end with `/v1beta` to match the Gemini API structure. The
-> project ID is used for billing and quota management and is passed via the
-> `x-goog-user-project` header.
+> **Custom Endpoint Behavior**: When `LLM_GEMINI_ENDPOINT` is specified, the
+> server automatically sends the `x-goog-user-project` header (using
+> `LLM_GEMINI_PROJECT`) for billing and quota management. This is required for
+> Vertex AI and corporate Gemini deployments. For the public Gemini API (no
+> custom endpoint), the project header is not sent, so `LLM_GEMINI_PROJECT` is
+> optional.
 
 **Example (Azure OpenAI):**
 

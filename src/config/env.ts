@@ -24,6 +24,7 @@ const EnvSchema = z.object({
   LLM_MODEL: z.string().min(1).optional(),
   LLM_GEMINI_ENDPOINT: z.string().url().optional(), // For corporate Gemini instances
   LLM_GEMINI_PROJECT: z.string().min(1).optional(), // Google Cloud Project ID for Gemini
+  LLM_GEMINI_USE_PROJECT_HEADER: z.coerce.boolean().optional().default(false), // Send x-goog-user-project header
   LLM_AZURE_ENDPOINT: z.string().url().optional(),
   LLM_AZURE_DEPLOYMENT: z.string().min(1).optional(),
 

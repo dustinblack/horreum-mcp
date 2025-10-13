@@ -209,7 +209,7 @@ curl -X POST http://localhost:3000/api/query \
 export LLM_PROVIDER=gemini
 export LLM_API_KEY=your_api_key
 export LLM_MODEL=gemini-2.5-pro
-# Optional: For corporate Gemini instances
+# For corporate/Vertex AI Gemini (custom endpoint auto-enables project header):
 export LLM_GEMINI_ENDPOINT=https://gemini-api.corp.example.com/v1beta
 export LLM_GEMINI_PROJECT=your-gcp-project-id
 ```

@@ -158,9 +158,10 @@ data:
 > [!NOTE]
 > **LLM Configuration**: To enable natural language queries via the `/api/query`
 > endpoint, you must set `LLM_PROVIDER`, `LLM_MODEL` (ConfigMap), and
-> `LLM_API_KEY` (Secret). For corporate Gemini instances, also set
-> `LLM_GEMINI_ENDPOINT` and `LLM_GEMINI_PROJECT`. Consult your IT department for
-> the correct API endpoint and Google Cloud Project ID. See
+> `LLM_API_KEY` (Secret). For corporate Gemini/Vertex AI instances with custom
+> endpoints, also set `LLM_GEMINI_ENDPOINT` and `LLM_GEMINI_PROJECT`. When a
+> custom endpoint is specified, the `x-goog-user-project` header is automatically
+> sent for billing/quota management. See
 > [Configuration Guide](../user-guide/configuration.md) for details.
 
 ### Deployment
@@ -1441,9 +1442,12 @@ oc get secret horreum-mcp-secret -n horreum-mcp -o jsonpath='{.data.LLM_API_KEY}
 
 1. Verify `LLM_GEMINI_ENDPOINT` is correct (consult IT department)
 2. Verify `LLM_GEMINI_PROJECT` matches your Google Cloud Project ID
-3. Ensure API key format matches corporate requirements
-4. Check network policies allow egress to Gemini endpoint
-5. Verify corporate SSL certificates if needed (see SSL/TLS section)
+3. Ensure API key has proper IAM permissions for the project (if using custom
+   endpoint, the `x-goog-user-project` header requires
+   `roles/serviceusage.serviceUsageConsumer`)
+4. For public Gemini API, omit `LLM_GEMINI_ENDPOINT` to avoid project header
+5. Check network policies allow egress to Gemini endpoint
+6. Verify corporate SSL certificates if needed (see SSL/TLS section)
 
 **Horreum connection issues:**
 

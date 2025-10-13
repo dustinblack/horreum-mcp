@@ -417,10 +417,19 @@ class AzureOpenAIClient implements LlmClient {
 
 /**
  * Google Gemini client implementation.
+ *
+ * Supports both:
+ * - Public Gemini API (generativelanguage.googleapis.com) - API key only
+ * - Custom/Corporate endpoints (Vertex AI) - API key + x-goog-user-project header
+ *
+ * The x-goog-user-project header is automatically enabled when a custom endpoint
+ * is specified, as corporate/Vertex AI deployments require it for billing and
+ * quota management.
  */
 class GeminiClient implements LlmClient {
   private baseUrl: string;
   private projectId?: string;
+  private useProjectHeader: boolean;
 
   constructor(
     private apiKey: string,
@@ -430,6 +439,9 @@ class GeminiClient implements LlmClient {
   ) {
     this.baseUrl = customEndpoint || 'https://generativelanguage.googleapis.com/v1beta';
     this.projectId = projectId;
+    // Only use project header for custom endpoints (Vertex AI / corporate instances)
+    // Public Gemini API doesn't need/want this header
+    this.useProjectHeader = !!customEndpoint;
   }
 
   async complete(request: LlmRequest): Promise<LlmResponse> {
@@ -468,8 +480,9 @@ class GeminiClient implements LlmClient {
         'Content-Type': 'application/json',
       };
 
-      // Add project header for corporate Gemini instances
-      if (this.projectId) {
+      // Add project header for Vertex AI / corporate Gemini instances
+      // Only send when explicitly enabled via LLM_GEMINI_USE_PROJECT_HEADER
+      if (this.projectId && this.useProjectHeader) {
         headers['x-goog-user-project'] = this.projectId;
       }
 
@@ -551,8 +564,9 @@ class GeminiClient implements LlmClient {
         'Content-Type': 'application/json',
       };
 
-      // Add project header for corporate Gemini instances
-      if (this.projectId) {
+      // Add project header for Vertex AI / corporate Gemini instances
+      // Only send when explicitly enabled via LLM_GEMINI_USE_PROJECT_HEADER
+      if (this.projectId && this.useProjectHeader) {
         headers['x-goog-user-project'] = this.projectId;
       }
 
