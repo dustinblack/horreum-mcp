@@ -210,72 +210,22 @@ spec:
             - containerPort: 9464
               name: metrics
               protocol: TCP
+          # Use envFrom to automatically map all ConfigMap and Secret keys as env vars
+          envFrom:
+            # Import all ConfigMap entries as environment variables
+            - configMapRef:
+                name: horreum-mcp-config
+                optional: false
+            # Import all Secret entries as environment variables
+            - secretRef:
+                name: horreum-mcp-secret
+                optional: false
           env:
-            # HTTP mode is enabled by default in the container
+            # Override specific values if needed
             - name: HTTP_MODE_ENABLED
               value: 'true'
             - name: HTTP_PORT
               value: '3000'
-            # Secrets
-            - name: HORREUM_BASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: horreum-mcp-secret
-                  key: HORREUM_BASE_URL
-            - name: HORREUM_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: horreum-mcp-secret
-                  key: HORREUM_TOKEN
-                  optional: true
-            - name: HTTP_AUTH_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: horreum-mcp-secret
-                  key: HTTP_AUTH_TOKEN
-            # ConfigMap overrides
-            - name: HORREUM_RATE_LIMIT
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: HORREUM_RATE_LIMIT
-                  optional: true
-            - name: HORREUM_TIMEOUT
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: HORREUM_TIMEOUT
-                  optional: true
-            - name: HORREUM_TLS_VERIFY
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: HORREUM_TLS_VERIFY
-                  optional: true
-            - name: LOG_LEVEL
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: LOG_LEVEL
-                  optional: true
-            - name: LOG_FORMAT
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: LOG_FORMAT
-                  optional: true
-            - name: METRICS_ENABLED
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: METRICS_ENABLED
-                  optional: true
-            - name: METRICS_PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: horreum-mcp-config
-                  key: METRICS_PORT
-                  optional: true
           livenessProbe:
             httpGet:
               path: /health
@@ -1273,74 +1223,18 @@ spec:
           name: http
         - containerPort: 9464
           name: metrics
+        # Use envFrom to automatically import all ConfigMap and Secret keys
+        envFrom:
+        - configMapRef:
+            name: horreum-mcp-config
+        - secretRef:
+            name: horreum-mcp-secret
         env:
-        # Required from Secret
-        - name: HORREUM_BASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: horreum-mcp-secret
-              key: HORREUM_BASE_URL
-        - name: HORREUM_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: horreum-mcp-secret
-              key: HORREUM_TOKEN
-        - name: HTTP_AUTH_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: horreum-mcp-secret
-              key: HTTP_AUTH_TOKEN
-        - name: LLM_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: horreum-mcp-secret
-              key: LLM_API_KEY
-        # Required hardcoded
+        # Override specific values as needed
         - name: HTTP_MODE_ENABLED
           value: "true"
         - name: HTTP_PORT
           value: "3000"
-        # From ConfigMap
-        - name: LOG_LEVEL
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: LOG_LEVEL
-        - name: LOG_FORMAT
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: LOG_FORMAT
-        - name: METRICS_ENABLED
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: METRICS_ENABLED
-        - name: METRICS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: METRICS_PORT
-        - name: LLM_PROVIDER
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: LLM_PROVIDER
-        - name: LLM_MODEL
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: LLM_MODEL
-        - name: LLM_GEMINI_ENDPOINT
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: LLM_GEMINI_ENDPOINT
-        - name: LLM_GEMINI_PROJECT
-          valueFrom:
-            configMapKeyRef:
-              name: horreum-mcp-config
-              key: LLM_GEMINI_PROJECT
         resources:
           requests:
             memory: "256Mi"
