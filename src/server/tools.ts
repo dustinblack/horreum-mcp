@@ -31,6 +31,17 @@ type RegisterOptions = {
 };
 
 /**
+ * Map of tool names to their handler functions.
+ * This is populated during tool registration and can be used for direct tool invocation.
+ */
+export const toolHandlers = new Map<
+  string,
+  (
+    args: Record<string, unknown>
+  ) => Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }>
+>();
+
+/**
  * Transform Horreum's ExportedLabelValues to Source MCP Contract format.
  *
  * Converts:
@@ -308,52 +319,55 @@ export async function registerTools(
     handler: (args: ToolArgs) => Promise<ToolResult>
   ) => {
     registerToolName(toolName);
-    server.tool(
-      toolName,
-      description,
-      shape,
-      async (args: ToolArgs): Promise<ToolResult> => {
-        const cid = getRequestId() || genCid();
-        const started = Date.now();
+
+    // Wrapped handler with logging and metrics
+    const wrappedHandler = async (args: ToolArgs): Promise<ToolResult> => {
+      const cid = getRequestId() || genCid();
+      const started = Date.now();
+      logger.info({
+        event: 'mcp.tools.call.start',
+        req_id: cid,
+        tool: toolName,
+        arguments_keys: Object.keys(args || {}),
+      });
+      try {
+        const res = await startSpan(`tool.${toolName}`, async () => handler(args));
+        const duration = Date.now() - started;
         logger.info({
-          event: 'mcp.tools.call.start',
+          event: 'mcp.tools.call.complete',
           req_id: cid,
           tool: toolName,
-          arguments_keys: Object.keys(args || {}),
+          duration_ms: duration,
         });
-        try {
-          const res = await startSpan(`tool.${toolName}`, async () => handler(args));
-          const duration = Date.now() - started;
-          logger.info({
-            event: 'mcp.tools.call.complete',
-            req_id: cid,
-            tool: toolName,
-            duration_ms: duration,
-          });
-          metrics?.recordTool(
-            toolName,
-            duration,
-            !(res as { isError?: boolean }).isError
-          );
-          return res;
-        } catch (err) {
-          const errObj = errorToObject(err, cid);
-          const duration = Date.now() - started;
-          logger.error({
-            event: 'mcp.request.failed',
-            req_id: cid,
-            error_type: 'tool_error',
-            error: errObj,
-            duration_ms: duration,
-          });
-          metrics?.recordTool(toolName, duration, false);
-          return {
-            content: [{ type: 'text', text: JSON.stringify(errObj) }],
-            isError: true,
-          };
-        }
+        metrics?.recordTool(
+          toolName,
+          duration,
+          !(res as { isError?: boolean }).isError
+        );
+        return res;
+      } catch (err) {
+        const errObj = errorToObject(err, cid);
+        const duration = Date.now() - started;
+        logger.error({
+          event: 'mcp.request.failed',
+          req_id: cid,
+          error_type: 'tool_error',
+          error: errObj,
+          duration_ms: duration,
+        });
+        metrics?.recordTool(toolName, duration, false);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(errObj) }],
+          isError: true,
+        };
       }
-    );
+    };
+
+    // Register with MCP server
+    server.tool(toolName, description, shape, wrappedHandler);
+
+    // Also store in our handler map for direct invocation
+    toolHandlers.set(toolName, wrappedHandler);
   };
 
   withTool(

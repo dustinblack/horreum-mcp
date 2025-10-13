@@ -286,8 +286,11 @@ export class QueryOrchestrator {
     const jsonBlockRegex = /```json\s*\n({[\s\S]*?})\s*\n```/g;
     let jsonMatch;
     while ((jsonMatch = jsonBlockRegex.exec(content)) !== null) {
+      const jsonText = jsonMatch[1];
+      if (!jsonText) continue;
+
       try {
-        const parsed = JSON.parse(jsonMatch[1]) as {
+        const parsed = JSON.parse(jsonText) as {
           tool?: string;
           name?: string;
           parameters?: Record<string, unknown>;
@@ -303,10 +306,7 @@ export class QueryOrchestrator {
           });
         }
       } catch (error) {
-        logger.warn(
-          { raw: jsonMatch[1], error },
-          'Failed to parse JSON block tool call'
-        );
+        logger.warn({ raw: jsonText, error }, 'Failed to parse JSON block tool call');
       }
     }
 
@@ -320,25 +320,43 @@ export class QueryOrchestrator {
    * @returns The tool execution result.
    */
   private async executeTool(toolCall: ToolCall): Promise<unknown> {
-    // Use the MCP server's tool execution mechanism
-    // Note: This is a simplified implementation that directly calls tool handlers
-    // In a real implementation, you'd use the MCP protocol's CallToolRequest
-
     const toolName = toolCall.name;
     const args = toolCall.arguments;
 
-    // For now, we'll simulate tool execution by returning a placeholder
-    // TODO: Integrate with actual MCP server tool execution
-    logger.warn(
-      { tool: toolName, args },
-      'Tool execution not yet fully integrated with MCP server'
-    );
+    // Import toolHandlers dynamically to avoid circular dependency
+    const { toolHandlers } = await import('../server/tools.js');
 
-    return {
-      status: 'simulated',
-      tool: toolName,
-      message: 'Tool execution integration pending',
-    };
+    // Look up the tool handler
+    const handler = toolHandlers.get(toolName);
+    if (!handler) {
+      logger.error({ tool: toolName }, 'Tool not found');
+      throw new Error(`Tool "${toolName}" not found`);
+    }
+
+    // Execute the tool handler directly
+    logger.debug({ tool: toolName, args }, 'Executing MCP tool');
+    const result = await handler(args);
+
+    // Extract text content from MCP tool result
+    if (result.isError) {
+      // Tool execution failed
+      const errorText = result.content?.[0]?.text || 'Unknown error';
+      logger.warn({ tool: toolName, error: errorText }, 'Tool execution failed');
+      return { error: errorText };
+    }
+
+    // Parse the text content as JSON if possible
+    const textContent = result.content?.[0]?.text;
+    if (textContent) {
+      try {
+        return JSON.parse(textContent);
+      } catch {
+        // Not JSON, return as-is
+        return textContent;
+      }
+    }
+
+    return result;
   }
 
   /**

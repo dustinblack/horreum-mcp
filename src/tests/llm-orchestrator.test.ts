@@ -19,6 +19,43 @@ vi.mock('../llm/prompts.js', () => ({
   createUserPrompt: (query: string) => `User query: ${query}`,
 }));
 
+// Mock the tools module
+vi.mock('../server/tools.js', async () => {
+  const mockToolHandlers = new Map();
+
+  // Register mock tool handlers
+  mockToolHandlers.set('horreum_get_schema', async () => ({
+    content: [{ type: 'text', text: JSON.stringify({ name: 'test-schema', id: 123 }) }],
+  }));
+
+  mockToolHandlers.set('horreum_list_tests', async () => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({ tests: [{ id: 1, name: 'test1' }], count: 1 }),
+      },
+    ],
+  }));
+
+  mockToolHandlers.set('horreum_list_runs', async () => ({
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({ runs: [{ id: 100, test_id: 1 }], count: 1 }),
+      },
+    ],
+  }));
+
+  mockToolHandlers.set('test_tool', async () => ({
+    content: [{ type: 'text', text: JSON.stringify({ result: 'test' }) }],
+  }));
+
+  return {
+    toolHandlers: mockToolHandlers,
+    registerTools: vi.fn(),
+  };
+});
+
 describe('Query Orchestrator', () => {
   let mockLlmClient: LlmClient;
   let mockMcpServer: McpServer;
