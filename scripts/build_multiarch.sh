@@ -89,9 +89,9 @@ if [[ -z "$TAG" ]]; then
   TAG=${TAG:-"local-$(date +%Y%m%d%H%M%S)"}
 fi
 
-# Use a local manifest name to avoid collisions with existing image tags
+# Use manifest name with the full image repo path
 REPO_NAME="${IMAGE_REPO##*/}"
-LOCAL_MANIFEST_REF="localhost/${REPO_NAME}:manifest-${TAG}"
+LOCAL_MANIFEST_REF="${IMAGE_REPO}:${TAG}"
 REMOTE_MANIFEST_REF="${IMAGE_REPO}:${TAG}"
 
 # Best-effort binfmt enablement (requires privileges; safe to skip if preconfigured)
