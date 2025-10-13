@@ -597,25 +597,27 @@ No database is required for the MCP server. Optional components:
 tests, basic security scanning (`npm audit`, secretlint), path-based change
 detection, containerized builds with multi-arch manifests and Trivy scanning.
 
-Container build (Phase 5 specifics):
+Container build workflow (`.github/workflows/container-build.yml`):
 
-- Use a Buildah container job to invoke `scripts/build_multiarch.sh` with
-  `IMAGE_REPO` and registry credentials from secrets, tagging `:main` on
-  successful builds.
-- Trigger on `main` branch when these paths change: `Containerfile`,
-  `package.json`, `package-lock.json`, `src/**/*`, `.github/workflows/*`.
-- Example invocation (CI job script):
-  ```bash
-  export IMAGE_REPO=quay.io/<org>/horreum-mcp
-  export QUAY_USERNAME="${{ secrets.QUAY_USERNAME }}"
-  export QUAY_PASSWORD="${{ secrets.QUAY_PASSWORD }}"
-  bash scripts/build_multiarch.sh --tag "${GIT_SHORT_SHA}" --push --push-main
-  ```
+- **Triggers**: Push to main (when container files change), GitHub releases, manual
+- **Single-job design**: Build → Scan → Push (efficient, no duplication)
+- **Multi-arch**: Builds linux/amd64 and linux/arm64 in one pass
+- **Security gate**: Trivy scans for HIGH/CRITICAL vulnerabilities before push
+  - Uses `scripts/trivy_scan.sh` wrapper
+  - Blocks push if vulnerabilities found (exit code 1)
+- **Tagging strategy**:
+  - Main pushes: `:abc1234` (SHA) + `:main`
+  - Releases: `:v1.2.3` (version) + `:latest`
+- **Registry**: Pushes to quay.io using `IMAGE_REPO` variable and secrets
+
+**Trivy Fix (Oct 2025)**: Fixed empty tag bug (was using
+`github.event.workflow_run.head_sha`, now uses `GITHUB_SHA`). Simplified from
+3-job workflow (build/scan/push) to efficient single job. Added release support.
 
 **Enhanced (Phase 6)**: Multi-stage testing, comprehensive security scanning
-(osv-scanner, SAST, container scanning via Trivy job), performance optimizations
-(caching, job interruption), release automation (semantic versioning, NPM/
-container publishing), quality gates, deployment pipeline with rollback.
+(osv-scanner, SAST), performance optimizations (caching, job interruption),
+release automation (semantic versioning, NPM publishing), quality gates,
+deployment pipeline with rollback.
 
 **Requirements**: SemVer for packages/containers, automated CHANGELOG.md maintenance, API documentation generation.
 
@@ -1002,6 +1004,11 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
   - [ ] Set up release automation (semantic versioning, release notes, publishing)
   - [ ] Add quality gates and code coverage requirements
   - [ ] Implement deployment pipeline with rollback capabilities
+  - [x] Fix container build workflow Trivy scanner and optimize architecture (2025-10-13)
+    - [x] Fix empty image tag bug (github.event.workflow_run.head_sha → GITHUB_SHA)
+    - [x] Simplify from 3-job to single efficient job (build→scan→push)
+    - [x] Add GitHub release support with :version + :latest tagging
+    - [x] Ensure Trivy security gate blocks vulnerable images before push
 - Phase 8 — Architecture Refactoring & Modularity
   - [ ] Extract shared logic into reusable modules
   - [ ] Implement plugin architecture for optional features
@@ -1043,6 +1050,21 @@ This section instructs any AI agent or maintainer on how to keep this plan autho
    4. Commit with a clear message (e.g., `docs(plan): update status checklist and add changelog`).
 
 7. Changelog (most recent first)
+   - 2025-10-13 — **CI/CD: Container Build Workflow Fixed and Optimized**: Fixed critical Trivy
+     scanner failure and optimized the container build workflow. Root cause was empty image tag due
+     to incorrect GitHub context variable (github.event.workflow_run.head_sha only available for
+     workflow_run events, not push events). Switched to GITHUB_SHA which is always available.
+     Completely redesigned workflow from inefficient 3-job architecture (build→scan→push with
+     artifact overhead and duplicate builds) to efficient single job that builds multi-arch image
+     once, scans with Trivy before push, then pushes only if scan passes. Added GitHub release
+     support with semantic versioning: main branch pushes create :SHA + :main tags, releases create
+     :version + :latest tags. Trivy security gate now properly blocks vulnerable images (HIGH/CRITICAL
+     severity) from reaching quay.io registry. Removed redundant if: conditions and outputs: section.
+     Updated CI/CD section in development plan with concise workflow summary. Simplified documentation
+     by consolidating verbose fix documents (TRIVY_FIX_SUMMARY.md, docs/TRIVY_WORKFLOW_FIX.md,
+     docs/TRIVY_WORKFLOW_TEST_PLAN.md) into development plan and streamlining docs/SECURITY_SCANNING.md
+     and docs/WORKFLOW_ARCHITECTURE.md. Workflow now triggers on: push to main (when container files
+     change), GitHub releases (published), or manual dispatch. Agent: Claude Sonnet 4.5.
    - 2025-10-10 — **Phase 6.10 Completed - source.describe Contract Compliance**: Fixed critical
      Source MCP Contract field naming issue in source.describe endpoint. The endpoint was returning
      camelCase fields (sourceType, contractVersion, maxPageSize, etc.) instead of required snake_case
