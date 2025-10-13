@@ -84,6 +84,17 @@ function transformLabelValues(horreumValues: ExportedLabelValues[]): Array<{
  * @param env - The loaded environment configuration.
  */
 export async function startHttpServer(server: McpServer, env: Env) {
+  // Import LLM modules dynamically to allow operation without LLM configured
+  let llmClient: unknown | undefined;
+  let QueryOrchestrator: unknown | undefined;
+  try {
+    const llmModule = await import('../llm/client.js');
+    const orchestratorModule = await import('../llm/orchestrator.js');
+    llmClient = llmModule.createLlmClient(env);
+    QueryOrchestrator = orchestratorModule.QueryOrchestrator;
+  } catch (error) {
+    logger.debug({ err: error }, 'LLM modules not available');
+  }
   const app = express();
 
   // Enable CORS for all routes
@@ -2555,10 +2566,134 @@ export async function startHttpServer(server: McpServer, env: Env) {
     }
   );
 
+  // POST /api/query - Natural language query endpoint (Phase 9)
+  app.post('/api/query', authMiddleware, async (req, res) => {
+    try {
+      const body = req.body as Record<string, unknown> | undefined;
+      if (!body || typeof body !== 'object') {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.'
+        );
+      }
+
+      const query = body.query as string | undefined;
+      if (!query || typeof query !== 'string' || query.trim().length === 0) {
+        return sendContractError(
+          res,
+          400,
+          'INVALID_REQUEST',
+          "Provide 'query' parameter with your natural language question."
+        );
+      }
+
+      // Check if LLM is configured
+      if (!llmClient || !QueryOrchestrator) {
+        return sendContractError(
+          res,
+          503,
+          'SERVICE_UNAVAILABLE',
+          'Natural language query endpoint requires LLM configuration. Set LLM_PROVIDER, LLM_API_KEY, and LLM_MODEL environment variables.',
+          {
+            hint: 'Supported providers: openai, anthropic, gemini, azure',
+            example_config: {
+              LLM_PROVIDER: 'gemini',
+              LLM_API_KEY: 'your-api-key',
+              LLM_MODEL: 'gemini-1.5-pro',
+            },
+          },
+          false
+        );
+      }
+
+      logger.info(
+        { query, req_id: getRequestId() },
+        'Processing natural language query'
+      );
+
+      // Create orchestrator instance
+      const orchestratorClass = QueryOrchestrator as new (
+        llmClient: unknown,
+        mcpServer: unknown,
+        maxIterations?: number,
+        temperature?: number
+      ) => {
+        executeQuery(query: string): Promise<{
+          answer: string;
+          tool_calls: Array<{
+            tool: string;
+            arguments: Record<string, unknown>;
+            result: unknown;
+            duration_ms: number;
+          }>;
+          total_duration_ms: number;
+          llm_calls: number;
+        }>;
+      };
+
+      const orchestrator = new orchestratorClass(llmClient, server, 10, 0.1);
+
+      // Execute query
+      const result = await orchestrator.executeQuery(query);
+
+      logger.info(
+        {
+          query,
+          req_id: getRequestId(),
+          tool_calls: result.tool_calls.length,
+          llm_calls: result.llm_calls,
+          duration_ms: result.total_duration_ms,
+        },
+        'Natural language query completed'
+      );
+
+      return res.status(200).json({
+        query,
+        answer: result.answer,
+        metadata: {
+          tool_calls: result.tool_calls.length,
+          llm_calls: result.llm_calls,
+          duration_ms: result.total_duration_ms,
+        },
+        tool_calls: result.tool_calls,
+      });
+    } catch (err) {
+      const anyErr = err as { status?: number; message?: string; body?: unknown };
+      logger.error({ err, req_id: getRequestId() }, 'Natural language query failed');
+
+      if (anyErr?.status === 429) {
+        return sendContractError(
+          res,
+          429,
+          'RATE_LIMITED',
+          'LLM API rate limit exceeded',
+          anyErr.body,
+          true,
+          60
+        );
+      }
+
+      return sendContractError(
+        res,
+        500,
+        'INTERNAL_ERROR',
+        anyErr?.message || 'Query processing failed',
+        anyErr?.body
+      );
+    }
+  });
+
   const httpServer = app.listen(env.HTTP_PORT, () => {
     logger.info(
-      `MCP server running in HTTP mode at http://localhost:${env.HTTP_PORT}/mcp`
+      `MCP server running in HTTP mode on port ${env.HTTP_PORT} (endpoint: /mcp)`
     );
+    if (llmClient) {
+      logger.info(
+        `Natural language query endpoint available on port ${env.HTTP_PORT} (endpoint: /api/query)`
+      );
+    }
   });
   return httpServer;
 }

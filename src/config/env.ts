@@ -19,9 +19,13 @@ const EnvSchema = z.object({
   HTTP_MODE_ENABLED: z.coerce.boolean().optional().default(false),
   HTTP_PORT: z.coerce.number().int().positive().max(65535).optional().default(3000),
   HTTP_AUTH_TOKEN: z.string().min(1).optional(),
-  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'azure']).optional(),
+  LLM_PROVIDER: z.enum(['openai', 'anthropic', 'azure', 'gemini']).optional(),
   LLM_API_KEY: z.string().min(1).optional(),
   LLM_MODEL: z.string().min(1).optional(),
+  LLM_GEMINI_ENDPOINT: z.string().url().optional(), // For corporate Gemini instances
+  LLM_GEMINI_PROJECT: z.string().min(1).optional(), // Google Cloud Project ID for Gemini
+  LLM_AZURE_ENDPOINT: z.string().url().optional(),
+  LLM_AZURE_DEPLOYMENT: z.string().min(1).optional(),
 
   // Phase 6: SSL/TLS Configuration
   HORREUM_TLS_VERIFY: z

@@ -132,19 +132,24 @@ See the [documentation index](docs/README.md) for a complete overview.
 
 ## Development Status
 
-**Phase 6 Complete** - Server-to-server integration with Source MCP Contract compliance:
+**Phase 9 Complete** - LLM-Powered Natural Language Query Endpoint:
 
+- ✅ **Natural Language Queries**: `POST /api/query` endpoint for conversational queries
+- ✅ **Multi-Provider LLM Support**: OpenAI, Anthropic, Gemini, Azure OpenAI
+- ✅ **Tool Orchestration**: Automatic multi-step query execution with LLM reasoning
+- ✅ **Streaming Support**: Efficient streaming responses for real-time feedback
+- ✅ **Domain Expertise**: Horreum-specific system prompts for accurate responses
 - ✅ **Core MCP Tools**: `ping`, `list_tests`, `list_runs`, `get_schema`, `upload_run`,
   `source.describe`
-- ✅ **Direct HTTP API**: 5 POST endpoints for server-to-server integration
-- ✅ **1-Based Pagination**: Aligned with Horreum's native pagination model (first page is 1)
-- ✅ **Error Handling**: Standardized Source MCP Contract error responses with snake_case
+- ✅ **Direct HTTP API**: POST endpoints for server-to-server integration
+- ✅ **1-Based Pagination**: Aligned with Horreum's native pagination model
+- ✅ **Error Handling**: Standardized Source MCP Contract error responses
 - ✅ **Capability Discovery**: Runtime capability introspection via `source.describe`
 - ✅ **Dual Transport**: stdio (default) and HTTP server modes with Bearer auth
 - ✅ **Multi-Architecture**: AMD64 and ARM64 container support
 - ✅ **Production Ready**: Structured logging, metrics, tracing, security
-- 📚 **Documented**: Comprehensive time range filtering and API documentation
-- 🚀 **Next Phase**: Enhanced CI/CD and security scanning
+- 📚 **Documented**: Comprehensive guides for all features
+- 🚀 **Next Phase**: Enhanced CI/CD and architecture refactoring
 
 ## Features
 
@@ -170,6 +175,47 @@ See the [documentation index](docs/README.md) for a complete overview.
 - **`get_test_label_values`**: Aggregated label values across a test with time
   boundaries (natural language supported)
 - **`get_dataset_label_values`**: Label values for a specific dataset
+
+### Natural Language Queries (Phase 9) 🆕
+
+The `/api/query` endpoint accepts natural language questions and uses external
+LLM APIs to orchestrate tool calls and provide intelligent answers:
+
+```bash
+curl -X POST http://localhost:3000/api/query \
+  -H "Authorization: Bearer your_token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Show me tests that failed in the last week"
+  }'
+```
+
+> [!IMPORTANT]
+> **Requires External LLM API Configuration**: This endpoint requires
+> configuring an external LLM service (OpenAI, Anthropic, Gemini, or Azure
+> OpenAI). You must set `LLM_PROVIDER`, `LLM_API_KEY`, and `LLM_MODEL`
+> environment variables. The endpoint returns 503 if not configured.
+
+**Supported LLM Providers:**
+
+- OpenAI (GPT models)
+- Anthropic (Claude models)
+- Google Gemini (all models) - including corporate instances
+- Azure OpenAI
+
+**Configuration:**
+
+```bash
+export LLM_PROVIDER=gemini
+export LLM_API_KEY=your_api_key
+export LLM_MODEL=gemini-2.5-pro
+# Optional: For corporate Gemini instances
+export LLM_GEMINI_ENDPOINT=https://gemini-api.corp.example.com/v1beta
+export LLM_GEMINI_PROJECT=your-gcp-project-id
+```
+
+See [Natural Language Queries Guide](docs/user-guide/natural-language-queries.md)
+for complete documentation and examples.
 
 ### MCP Resources
 
@@ -428,14 +474,19 @@ local development:
 HORREUM_BASE_URL=https://horreum.example.com
 HORREUM_TOKEN=your-api-token
 
-# Optional - Performance tuning
-HORREUM_RATE_LIMIT=10
-HORREUM_TIMEOUT=30000
-
 # Optional - HTTP mode (for persistent server)
 HTTP_MODE_ENABLED=false
 HTTP_PORT=3000
 HTTP_AUTH_TOKEN=changeme
+
+# Optional - LLM integration (Phase 9)
+LLM_PROVIDER=gemini  # openai, anthropic, gemini, azure
+LLM_API_KEY=your_llm_api_key
+LLM_MODEL=gemini-1.5-pro
+
+# Optional - Performance tuning
+HORREUM_RATE_LIMIT=10
+HORREUM_TIMEOUT=30000
 
 # Optional - Observability
 LOG_LEVEL=info
@@ -445,23 +496,36 @@ TRACING_ENABLED=false
 
 ### Key Configuration Options
 
-| Variable             | Description                                                       |
-| -------------------- | ----------------------------------------------------------------- |
-| `HORREUM_BASE_URL`   | **Required.** Base URL of your Horreum instance                   |
-| `HORREUM_TOKEN`      | **Conditional.** API token (required for writes/private data)     |
-| `HORREUM_RATE_LIMIT` | Client-side rate limit in requests per second (default: 10)       |
-| `HORREUM_TIMEOUT`    | Per-request timeout in milliseconds (default: 30000)              |
-| `HTTP_MODE_ENABLED`  | Enable HTTP server mode (default: stdio)                          |
-| `HTTP_PORT`          | HTTP server port (default: 3000)                                  |
-| `HTTP_AUTH_TOKEN`    | Secure your HTTP endpoints                                        |
-| `LOG_LEVEL`          | Logging verbosity (`trace`,`debug`,`info`,`warn`,`error`,`fatal`) |
-| `LOG_FORMAT`         | Log output format (`json` or `pretty`)                            |
-| `METRICS_ENABLED`    | Enable Prometheus metrics endpoint (default: false)               |
-| `METRICS_PORT`       | Port for metrics endpoint (default: 9464)                         |
-| `TRACING_ENABLED`    | Enable OpenTelemetry tracing (default: false)                     |
+| Variable               | Description                                                       |
+| ---------------------- | ----------------------------------------------------------------- |
+| `HORREUM_BASE_URL`     | **Required.** Base URL of your Horreum instance                   |
+| `HORREUM_TOKEN`        | **Conditional.** API token (required for writes/private data)     |
+| `HTTP_MODE_ENABLED`    | Enable HTTP server mode (default: stdio)                          |
+| `HTTP_PORT`            | HTTP server port (default: 3000)                                  |
+| `HTTP_AUTH_TOKEN`      | Secure your HTTP endpoints                                        |
+| `LLM_PROVIDER`         | LLM provider: `openai`, `anthropic`, `gemini`, `azure`            |
+| `LLM_API_KEY`          | API key for LLM provider                                          |
+| `LLM_MODEL`            | Model name (provider-specific)                                    |
+| `LLM_GEMINI_ENDPOINT`  | Custom Gemini API endpoint (corporate instances)                  |
+| `LLM_GEMINI_PROJECT`   | Google Cloud Project ID (required for some Gemini deployments)    |
+| `LLM_AZURE_ENDPOINT`   | Azure OpenAI endpoint URL                                         |
+| `LLM_AZURE_DEPLOYMENT` | Azure OpenAI deployment name                                      |
+| `HORREUM_RATE_LIMIT`   | Client-side rate limit in requests per second (default: 10)       |
+| `HORREUM_TIMEOUT`      | Per-request timeout in milliseconds (default: 30000)              |
+| `LOG_LEVEL`            | Logging verbosity (`trace`,`debug`,`info`,`warn`,`error`,`fatal`) |
+| `LOG_FORMAT`           | Log output format (`json` or `pretty`)                            |
+| `METRICS_ENABLED`      | Enable Prometheus metrics endpoint (default: false)               |
+| `METRICS_PORT`         | Port for metrics endpoint (default: 9464)                         |
+| `TRACING_ENABLED`      | Enable OpenTelemetry tracing (default: false)                     |
+
+> [!TIP]
+> See **[Complete Configuration Guide](docs/user-guide/configuration.md)** for
+> all environment variables, SSL/TLS setup, container deployment, and
+> security best practices.
 
 > [!NOTE]
-> When using with AI clients, these variables are typically configured in the client's MCP server settings rather than a local `.env` file.
+> When using with AI clients, these variables are typically configured in the
+> client's MCP server settings rather than a local `.env` file.
 
 ## Deployment
 

@@ -116,6 +116,9 @@ stringData:
   HORREUM_TOKEN: 'your-horreum-api-token'
   # Required: Bearer token for securing the MCP HTTP endpoints
   HTTP_AUTH_TOKEN: 'mcp_auth_token_xyz789abc'
+  # Optional: LLM API Key (for natural language query endpoint)
+  # Required if you want to use the /api/query endpoint
+  LLM_API_KEY: 'your-llm-api-key'
 ```
 
 ### ConfigMap for Tuning (Optional)
@@ -140,9 +143,25 @@ data:
   LOG_FORMAT: 'json'
   METRICS_ENABLED: 'true'
   METRICS_PORT: '9464'
+  # LLM Configuration (Phase 9 - Natural Language Queries)
+  # Enables the /api/query endpoint for conversational queries
+  # Options: openai, anthropic, gemini, azure
+  LLM_PROVIDER: 'gemini'
+  LLM_MODEL: 'gemini-2.5-pro'
+  # For corporate/private Gemini instances, set custom endpoint and project:
+  # LLM_GEMINI_ENDPOINT: 'https://gemini-api.corp.example.com/v1beta'
+  # LLM_GEMINI_PROJECT: 'your-gcp-project-id'
   # Uncomment to disable SSL verification (testing only!)
   # HORREUM_TLS_VERIFY: "false"
 ```
+
+> [!NOTE]
+> **LLM Configuration**: To enable natural language queries via the `/api/query`
+> endpoint, you must set `LLM_PROVIDER`, `LLM_MODEL` (ConfigMap), and
+> `LLM_API_KEY` (Secret). For corporate Gemini instances, also set
+> `LLM_GEMINI_ENDPOINT` and `LLM_GEMINI_PROJECT`. Consult your IT department for
+> the correct API endpoint and Google Cloud Project ID. See
+> [Configuration Guide](../user-guide/configuration.md) for details.
 
 ### Deployment
 
@@ -1183,6 +1202,291 @@ env:
    (dev/staging/prod)
 9. **Mount CA certificates** properly instead of disabling TLS verification
 10. **Monitor security advisories** and update images regularly
+
+## Complete Example: Corporate Gemini on OpenShift
+
+This section provides a complete, ready-to-deploy example for running Horreum
+MCP on OpenShift with a corporate Gemini instance.
+
+### Scenario
+
+- **Platform**: OpenShift 4.x
+- **Horreum**: Corporate Horreum instance with SSL
+- **LLM**: Corporate Gemini API instance
+- **Features**: Natural language queries enabled via `/api/query`
+- **Access**: External access via OpenShift Route
+
+### Step 1: Create Secrets
+
+```bash
+# Create namespace
+oc new-project horreum-mcp
+
+# Create secret with all credentials
+oc create secret generic horreum-mcp-secret \
+  --from-literal=HORREUM_BASE_URL='https://horreum.corp.example.com' \
+  --from-literal=HORREUM_TOKEN='your-horreum-api-token' \
+  --from-literal=HTTP_AUTH_TOKEN='your-secure-http-token' \
+  --from-literal=LLM_API_KEY='your-corporate-gemini-api-key'
+```
+
+### Step 2: Create ConfigMap
+
+```bash
+oc create configmap horreum-mcp-config \
+  --from-literal=LOG_LEVEL='info' \
+  --from-literal=LOG_FORMAT='json' \
+  --from-literal=METRICS_ENABLED='true' \
+  --from-literal=METRICS_PORT='9464' \
+  --from-literal=LLM_PROVIDER='gemini' \
+  --from-literal=LLM_MODEL='gemini-2.5-pro' \
+  --from-literal=LLM_GEMINI_ENDPOINT='https://gemini-api.corp.example.com/v1beta' \
+  --from-literal=LLM_GEMINI_PROJECT='your-gcp-project-id'
+```
+
+### Step 3: Deploy
+
+```bash
+# Create deployment
+cat <<EOF | oc apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: horreum-mcp
+  namespace: horreum-mcp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: horreum-mcp
+  template:
+    metadata:
+      labels:
+        app: horreum-mcp
+    spec:
+      containers:
+      - name: horreum-mcp
+        image: quay.io/redhat-performance/horreum-mcp:main
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        # Required from Secret
+        - name: HORREUM_BASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: horreum-mcp-secret
+              key: HORREUM_BASE_URL
+        - name: HORREUM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: horreum-mcp-secret
+              key: HORREUM_TOKEN
+        - name: HTTP_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: horreum-mcp-secret
+              key: HTTP_AUTH_TOKEN
+        - name: LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: horreum-mcp-secret
+              key: LLM_API_KEY
+        # Required hardcoded
+        - name: HTTP_MODE_ENABLED
+          value: "true"
+        - name: HTTP_PORT
+          value: "3000"
+        # From ConfigMap
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: LOG_FORMAT
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: METRICS_ENABLED
+        - name: METRICS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: METRICS_PORT
+        - name: LLM_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: LLM_PROVIDER
+        - name: LLM_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: LLM_MODEL
+        - name: LLM_GEMINI_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: LLM_GEMINI_ENDPOINT
+        - name: LLM_GEMINI_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: horreum-mcp-config
+              key: LLM_GEMINI_PROJECT
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: horreum-mcp
+  namespace: horreum-mcp
+spec:
+  selector:
+    app: horreum-mcp
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+  - name: metrics
+    port: 9464
+    targetPort: 9464
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: horreum-mcp
+  namespace: horreum-mcp
+spec:
+  to:
+    kind: Service
+    name: horreum-mcp
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+EOF
+```
+
+### Step 4: Verify Deployment
+
+```bash
+# Check pod status
+oc get pods -n horreum-mcp
+
+# Check logs
+oc logs -f deployment/horreum-mcp -n horreum-mcp
+
+# Get route URL
+oc get route horreum-mcp -n horreum-mcp -o jsonpath='{.spec.host}'
+
+# Test health endpoint
+curl https://$(oc get route horreum-mcp -n horreum-mcp -o jsonpath='{.spec.host}')/health
+```
+
+### Step 5: Test Natural Language Queries
+
+```bash
+# Get your route URL
+ROUTE_URL=$(oc get route horreum-mcp -n horreum-mcp -o jsonpath='{.spec.host}')
+
+# Test the /api/query endpoint
+curl -X POST "https://${ROUTE_URL}/api/query" \
+  -H "Authorization: Bearer your-secure-http-token" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "List all tests in Horreum"}'
+```
+
+### Troubleshooting
+
+**LLM endpoint not working:**
+
+```bash
+# Check if LLM configuration is loaded
+oc logs deployment/horreum-mcp -n horreum-mcp | grep -i "llm\|gemini"
+
+# Verify ConfigMap
+oc get configmap horreum-mcp-config -n horreum-mcp -o yaml
+
+# Verify Secret
+oc get secret horreum-mcp-secret -n horreum-mcp -o jsonpath='{.data.LLM_API_KEY}' | base64 -d
+```
+
+**Corporate Gemini connection issues:**
+
+1. Verify `LLM_GEMINI_ENDPOINT` is correct (consult IT department)
+2. Verify `LLM_GEMINI_PROJECT` matches your Google Cloud Project ID
+3. Ensure API key format matches corporate requirements
+4. Check network policies allow egress to Gemini endpoint
+5. Verify corporate SSL certificates if needed (see SSL/TLS section)
+
+**Horreum connection issues:**
+
+```bash
+# Test from inside pod
+oc exec deployment/horreum-mcp -n horreum-mcp -- curl -k $HORREUM_BASE_URL/api/test
+
+# Check SSL/TLS verification
+oc set env deployment/horreum-mcp HORREUM_TLS_VERIFY=false  # Testing only!
+```
+
+### Configuration Updates
+
+**Update Gemini endpoint:**
+
+```bash
+oc set data configmap/horreum-mcp-config \
+  LLM_GEMINI_ENDPOINT='https://new-gemini-api.corp.example.com/v1beta'
+oc rollout restart deployment/horreum-mcp
+```
+
+**Update API keys:**
+
+```bash
+oc set data secret/horreum-mcp-secret \
+  LLM_API_KEY='new-api-key' \
+  HORREUM_TOKEN='new-horreum-token'
+oc rollout restart deployment/horreum-mcp
+```
+
+**Scale deployment:**
+
+```bash
+oc scale deployment/horreum-mcp --replicas=5
+```
+
+### Additional Resources
+
+- [Complete Configuration Guide](../user-guide/configuration.md) - All
+  environment variables
+- [Natural Language Queries](../user-guide/natural-language-queries.md) - Using
+  the `/api/query` endpoint
+- [SSL/TLS Configuration](ssl-tls.md) - Corporate certificate setup
 
 ## Production Checklist
 

@@ -8,11 +8,12 @@ Complete guide for using Horreum MCP.
   Cursor, Cline, Gemini)
 - **[Installation](getting-started.md)** - Install and configure (TODO: create)
 - **[Configuration](configuration.md)** - Environment variables and options
-  (TODO: create)
 - **[Quick Start Examples](examples.md)** - Common usage patterns (TODO: create)
 
 ## Features
 
+- **[Natural Language Queries](natural-language-queries.md)** - LLM-powered
+  conversational queries (Phase 9) 🆕
 - **[Label Values Filtering](filtering.md)** - Query and filter test data
 - **[Time Range Queries](time-ranges.md)** - Natural language time parsing
 - **[Observability](observability.md)** - Logging, metrics, and tracing
