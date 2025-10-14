@@ -19,7 +19,7 @@
     "smoke": "node scripts/smoke-ping.mjs",
     "smoke:tests": "node scripts/smoke-list-tests.mjs",
     "smoke:schema": "node scripts/smoke-get-schema.mjs",
-    "gen:api": "openapi --useOptions --useUnionTypes --exportServices true --exportModels true --client fetch --output src/horreum/generated",
+    "gen:api": "openapi --input openapi/horreum.json --useOptions --useUnionTypes --exportServices true --exportModels true --client fetch --output src/horreum/generated",
     "postgen:api": "node scripts/fix-generated-extensions.mjs",
     "smoke:runs": "node scripts/smoke-list-runs.mjs",
     "smoke:upload": "node scripts/smoke-upload-run.mjs",

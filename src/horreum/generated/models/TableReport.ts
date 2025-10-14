@@ -2,8 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Instant } from './Instant.js';
+import type { ReportLog } from './ReportLog.js';
 import type { TableReportConfig } from './TableReportConfig.js';
+import type { TableReportData } from './TableReportData.js';
 /**
  * Table Report
  */
@@ -30,26 +31,9 @@ export type TableReport = {
   /**
    * List of TableReportData
    */
-  data: Array<{
-    datasetId: number;
-    runId: number;
-    ordinal: number;
-    category: string;
-    series: string;
-    scale: string;
-    /**
-     * Array of values
-     */
-    values: Array<number>;
-  }>;
+  data: Array<TableReportData>;
   /**
    * List of ReportLogs
    */
-  logs: Array<{
-    id: number;
-    level: number;
-    timestamp: Instant;
-    message: string;
-    reportId: number;
-  }>;
+  logs: Array<ReportLog>;
 };

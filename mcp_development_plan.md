@@ -373,11 +373,13 @@ Refactoring) - awaiting explicit user direction.
   - [ ] Metrics collection and exposure
   - [ ] Graceful shutdown handling
 
-- [ ] Phase 13 — Data Analysis (PLANNED)
+- [ ] Phase 13 — Data Analysis & Comparison (PLANNED)
   - [ ] Design analyze_run_data tool specification
   - [ ] Implement server-side statistical analysis
   - [ ] Add common statistical functions (mean, median, percentiles, etc.)
-  - [ ] Performance comparison capabilities
+  - [ ] Performance comparison capabilities using Horreum Experiments
+  - [ ] Dataset comparison tool (compare_datasets)
+  - [ ] CSV export support for comparisons (optional)
   - [ ] Trend analysis over time
   - [ ] Regression detection algorithms
   - [ ] Unit tests for analysis functions
@@ -399,6 +401,27 @@ Refactoring) - awaiting explicit user direction.
 
 > **Note**: Older changelog entries (September 2025) are archived in
 > [`docs/developer/development-history.md`](docs/developer/development-history.md).
+
+- 2025-10-14 — **Horreum 0.19 API Migration**: Updated Horreum MCP server to
+  support Horreum 0.19 API changes. Downloaded new OpenAPI specification from
+  corporate Horreum instance (`/q/openapi`) and regenerated TypeScript client.
+  **Breaking Changes Applied**: (1) `/api/dataset/bySchema` →
+  `/api/dataset/list/bySchema`, (2) `/api/dataset/list/{testId}` →
+  `/api/dataset/list/byTest/{testId}`, (3) New endpoint
+  `/api/dataset/list/byRun/{runId}` now available. **Impact**: All MCP tools
+  using dataset endpoints (`list_datasets`) automatically updated to use correct
+  0.19 URLs. No code changes required - TypeScript client regeneration handled
+  all endpoint references. **Testing**: All 97 tests passing, build successful.
+  **New Features Evaluated**: (1) CSV export for dataset comparisons - deferred
+  to Phase 13 (Data Analysis & Comparison) as optional feature since LLMs
+  already format data well as markdown tables, (2) Datasets computed action
+  event - not applicable to MCP's synchronous request-response architecture
+  (Actions are for async event-driven automation). Updated Phase 13 plan to
+  include dataset comparison capabilities and CSV export as future enhancements.
+  **Documentation**: Fixed `package.json` gen:api script to include `--input`
+  parameter. Reference: [Horreum 0.19 Migration
+  Guide](https://github.com/Hyperfoil/Horreum/wiki/Migration-Guide-0.19).
+  Agent: Claude Sonnet 4.5.
 
 - 2025-10-13 — **Phase 9 Final Component: Actual MCP Tool Execution**: Completed
   the final integration for Phase 9 by implementing actual tool execution in the

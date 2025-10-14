@@ -14,6 +14,65 @@ import { OpenAPI } from '../core/OpenAPI.js';
 import { request as __request } from '../core/request.js';
 export class DatasetService {
   /**
+   * Retrieve a paginated list of Datasets, with total count, by Run
+   * @returns DatasetList OK
+   * @throws ApiError
+   */
+  public static datasetServiceListByRun({
+    runId,
+    filter,
+    limit,
+    page,
+    sort,
+    direction,
+    viewId,
+  }: {
+    /**
+     * Run ID of run to retrieve list of Datasets
+     */
+    runId: number;
+    /**
+     * JSON Filter expression to apply to query
+     */
+    filter?: string;
+    /**
+     * limit the number of results
+     */
+    limit?: number;
+    /**
+     * filter by page number of a paginated list of Schemas starting from 1
+     */
+    page?: number;
+    /**
+     * Field name to sort results
+     */
+    sort?: string;
+    /**
+     * Sort direction
+     */
+    direction?: SortDirection;
+    /**
+     * Optional View ID to filter datasets by view
+     */
+    viewId?: number;
+  }): CancelablePromise<DatasetList> {
+    return __request(OpenAPI, {
+      method: 'GET',
+      url: '/api/dataset/list/byRun/{runId}',
+      path: {
+        runId: runId,
+      },
+      query: {
+        filter: filter,
+        limit: limit,
+        page: page,
+        sort: sort,
+        direction: direction,
+        viewId: viewId,
+      },
+    });
+  }
+  /**
    * Retrieve a paginated list of Datasets, with total count, by Schema
    * @returns DatasetList OK
    * @throws ApiError
@@ -34,7 +93,7 @@ export class DatasetService {
      */
     limit?: number;
     /**
-     * filter by page number of a paginated list of Schemas
+     * filter by page number of a paginated list of Schemas starting from 1
      */
     page?: number;
     /**
@@ -48,7 +107,7 @@ export class DatasetService {
   }): CancelablePromise<DatasetList> {
     return __request(OpenAPI, {
       method: 'GET',
-      url: '/api/dataset/bySchema',
+      url: '/api/dataset/list/bySchema',
       query: {
         uri: uri,
         limit: limit,
@@ -77,7 +136,7 @@ export class DatasetService {
      */
     testId: number;
     /**
-     * JOSN Filter expression to apply to query
+     * JSON Filter expression to apply to query
      */
     filter?: string;
     /**
@@ -85,7 +144,7 @@ export class DatasetService {
      */
     limit?: number;
     /**
-     * filter by page number of a paginated list of Schemas
+     * filter by page number of a paginated list of Schemas starting from 1
      */
     page?: number;
     /**
@@ -103,7 +162,7 @@ export class DatasetService {
   }): CancelablePromise<DatasetList> {
     return __request(OpenAPI, {
       method: 'GET',
-      url: '/api/dataset/list/{testId}',
+      url: '/api/dataset/list/byTest/{testId}',
       path: {
         testId: testId,
       },

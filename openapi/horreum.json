@@ -1363,7 +1363,7 @@
       "Instant": {
         "type": "string",
         "format": "date-time",
-        "examples": ["2022-03-10T16:15:50Z"]
+        "examples": ["2022-03-10T16:15:50.000Z"]
       },
       "JsonNode": {
         "type": "object",
@@ -2840,76 +2840,14 @@
           "data": {
             "type": "array",
             "items": {
-              "type": "object",
-              "required": [
-                "datasetId",
-                "runId",
-                "ordinal",
-                "category",
-                "series",
-                "scale",
-                "values"
-              ],
-              "description": "Table Report Data",
-              "properties": {
-                "datasetId": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "runId": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "ordinal": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "category": {
-                  "type": "string"
-                },
-                "series": {
-                  "type": "string"
-                },
-                "scale": {
-                  "type": "string"
-                },
-                "values": {
-                  "type": "array",
-                  "items": {
-                    "type": "number"
-                  },
-                  "description": "Array of values"
-                }
-              }
+              "$ref": "#/components/schemas/TableReportData"
             },
             "description": "List of TableReportData"
           },
           "logs": {
             "type": "array",
             "items": {
-              "type": "object",
-              "required": ["id", "level", "timestamp", "message", "reportId"],
-              "description": "Report Log",
-              "properties": {
-                "id": {
-                  "type": "integer",
-                  "format": "int64"
-                },
-                "level": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "timestamp": {
-                  "$ref": "#/components/schemas/Instant"
-                },
-                "message": {
-                  "type": "string"
-                },
-                "reportId": {
-                  "type": "integer",
-                  "format": "int32"
-                }
-              }
+              "$ref": "#/components/schemas/ReportLog"
             },
             "description": "List of ReportLogs"
           }
@@ -2985,40 +2923,7 @@
           "components": {
             "type": "array",
             "items": {
-              "type": "object",
-              "required": ["name", "order", "labels"],
-              "description": "Report Component",
-              "properties": {
-                "id": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "order": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "labels": {
-                  "type": "array",
-                  "examples": [["Framework"]],
-                  "items": {
-                    "type": "string"
-                  },
-                  "description": "Array of labels"
-                },
-                "function": {
-                  "type": "string"
-                },
-                "unit": {
-                  "type": "string"
-                },
-                "reportId": {
-                  "type": "integer",
-                  "format": "int32"
-                }
-              }
+              "$ref": "#/components/schemas/ReportComponent"
             },
             "description": "List of ReportComponents"
           }
@@ -3800,17 +3705,22 @@
       },
       "VersionInfo": {
         "type": "object",
-        "required": ["version", "startTimestamp"],
+        "required": ["version", "commit", "startTimestamp"],
         "properties": {
           "version": {
             "type": "string",
             "examples": ["0.9.4"],
             "description": "Version of Horreum"
           },
+          "commit": {
+            "type": "string",
+            "examples": ["15bc9e5"],
+            "description": "Commit of Horreum"
+          },
           "startTimestamp": {
             "type": "integer",
             "format": "int64",
-            "examples": ["2023-10-18 18:00:57"],
+            "examples": ["2023-10-18T18:00:57.000Z"],
             "description": "Timestamp of server startup"
           },
           "privacyStatement": {
@@ -5187,7 +5097,96 @@
         }
       }
     },
-    "/api/dataset/bySchema": {
+    "/api/dataset/list/byRun/{runId}": {
+      "get": {
+        "description": "Retrieve a paginated list of Datasets, with total count, by Run",
+        "operationId": "DatasetService_listByRun",
+        "tags": ["Dataset"],
+        "parameters": [
+          {
+            "description": "Run ID of run to retrieve list of Datasets",
+            "example": 101,
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "description": "JSON Filter expression to apply to query",
+            "example": "{\"buildID\":111111}",
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "limit the number of results",
+            "example": 20,
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "description": "filter by page number of a paginated list of Schemas starting from 1",
+            "example": 2,
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "description": "Field name to sort results",
+            "example": "name",
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction",
+            "example": "Ascending",
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/SortDirection"
+            }
+          },
+          {
+            "description": "Optional View ID to filter datasets by view",
+            "example": 202,
+            "name": "viewId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dataset/list/bySchema": {
       "get": {
         "description": "Retrieve a paginated list of Datasets, with total count, by Schema",
         "operationId": "DatasetService_listDatasetsBySchema",
@@ -5214,7 +5213,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Schemas",
+            "description": "filter by page number of a paginated list of Schemas starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -5257,7 +5256,7 @@
         }
       }
     },
-    "/api/dataset/list/{testId}": {
+    "/api/dataset/list/byTest/{testId}": {
       "get": {
         "description": "Retrieve a paginated list of Datasets, with total count, by Test",
         "operationId": "DatasetService_listByTest",
@@ -5275,7 +5274,7 @@
             }
           },
           {
-            "description": "JOSN Filter expression to apply to query",
+            "description": "JSON Filter expression to apply to query",
             "example": "{\"buildID\":111111}",
             "name": "filter",
             "in": "query",
@@ -5294,7 +5293,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Schemas",
+            "description": "filter by page number of a paginated list of Schemas starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -5473,12 +5472,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No Dataset with the given id was found",
-            "content": {
-              "application/json": {}
-            }
-          },
           "200": {
             "description": "JVM system properties of a particular host.",
             "content": {
@@ -5487,6 +5480,12 @@
                   "$ref": "#/components/schemas/Dataset"
                 }
               }
+            }
+          },
+          "404": {
+            "description": "No Dataset with the given id was found",
+            "content": {
+              "application/json": {}
             }
           }
         }
@@ -6631,7 +6630,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Tests",
+            "description": "filter by page number of a paginated list of Tests starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -6715,7 +6714,7 @@
             "description": "start timestamp of run, or json path expression",
             "examples": {
               "scalar value": {
-                "value": "2023-10-23T00:13:35Z"
+                "value": "2023-10-23T00:13:35.000Z"
               },
               "json path": {
                 "value": "$.buildTimeStamp"
@@ -6732,7 +6731,7 @@
             "description": "stop timestamp of run, or json path expression",
             "examples": {
               "scalar value": {
-                "value": "2023-10-23T00:13:35Z"
+                "value": "2023-10-23T00:13:35.000Z"
               },
               "json path": {
                 "value": "$.buildTimeStamp"
@@ -6883,7 +6882,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Tests",
+            "description": "filter by page number of a paginated list of Tests starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -6962,7 +6961,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Tests",
+            "description": "filter by page number of a paginated list of Tests starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -7125,12 +7124,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "If no Run have been found with the given id",
-            "content": {
-              "application/json": {}
-            }
-          },
           "200": {
             "description": "Run data with the referenced schemas and generated datasets",
             "content": {
@@ -7139,6 +7132,12 @@
                   "$ref": "#/components/schemas/RunExtended"
                 }
               }
+            }
+          },
+          "404": {
+            "description": "If no Run have been found with the given id",
+            "content": {
+              "application/json": {}
             }
           }
         }
@@ -7521,12 +7520,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "If no Run have been found with the given id",
-            "content": {
-              "application/json": {}
-            }
-          },
           "200": {
             "description": "Run summary with the referenced schemas and generated datasets",
             "content": {
@@ -7535,6 +7528,12 @@
                   "$ref": "#/components/schemas/RunSummary"
                 }
               }
+            }
+          },
+          "404": {
+            "description": "If no Run have been found with the given id",
+            "content": {
+              "application/json": {}
             }
           }
         }
@@ -7665,7 +7664,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Schemas",
+            "description": "filter by page number of a paginated list of Schemas starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -7988,12 +7987,6 @@
           }
         ],
         "responses": {
-          "404": {
-            "description": "No Schema with the given id was found",
-            "content": {
-              "application/json": {}
-            }
-          },
           "200": {
             "description": "Returns Schema if a matching id is found",
             "content": {
@@ -8002,6 +7995,12 @@
                   "$ref": "#/components/schemas/Schema"
                 }
               }
+            }
+          },
+          "404": {
+            "description": "No Schema with the given id was found",
+            "content": {
+              "application/json": {}
             }
           }
         }
@@ -8109,8 +8108,8 @@
     },
     "/api/schema/{schemaId}/labels": {
       "put": {
-        "description": "Update existing Label for a Schema (Label id only required when updating existing one)",
-        "operationId": "SchemaService_updateLabel",
+        "description": "Update existing Label(s) for a Schema",
+        "operationId": "SchemaService_updateLabels",
         "tags": ["Schema"],
         "parameters": [
           {
@@ -8126,14 +8125,17 @@
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Label"
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Label"
+                }
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -8141,8 +8143,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "integer",
-                  "format": "int32"
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
                 }
               }
             }
@@ -8183,8 +8188,8 @@
         }
       },
       "post": {
-        "description": "Save new or update existing Label for a Schema (Label id only required when updating existing one)",
-        "operationId": "SchemaService_addLabel",
+        "description": "Save new Label for a Schema",
+        "operationId": "SchemaService_addLabels",
         "tags": ["Schema"],
         "parameters": [
           {
@@ -8204,7 +8209,10 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Label"
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Label"
+                }
               }
             }
           }
@@ -8215,8 +8223,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "integer",
-                  "format": "int32"
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32"
+                  }
                 }
               }
             }
@@ -8788,7 +8799,7 @@
             }
           },
           {
-            "description": "filter by page number of a paginated list of Tests",
+            "description": "filter by page number of a paginated list of Tests starting from 1",
             "example": 2,
             "name": "page",
             "in": "query",
@@ -9021,7 +9032,7 @@
             "in": "query"
           },
           {
-            "description": "filter by page number of a paginated list of, set to 0 means return all results ",
+            "description": "filter by page number of a paginated list of, set to 0 means return all results",
             "example": 1,
             "name": "page",
             "schema": {

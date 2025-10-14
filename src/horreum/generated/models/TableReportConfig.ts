@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ReportComponent } from './ReportComponent.js';
 import type { Test } from './Test.js';
 /**
  * Table Report Config
@@ -37,16 +38,5 @@ export type TableReportConfig = {
   /**
    * List of ReportComponents
    */
-  components: Array<{
-    id?: number;
-    name: string;
-    order: number;
-    /**
-     * Array of labels
-     */
-    labels: Array<string>;
-    function?: string;
-    unit?: string;
-    reportId?: number;
-  }>;
+  components: Array<ReportComponent>;
 };

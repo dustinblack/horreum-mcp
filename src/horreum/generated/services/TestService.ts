@@ -53,7 +53,7 @@ export class TestService {
      */
     limit?: number;
     /**
-     * filter by page number of a paginated list of Tests
+     * filter by page number of a paginated list of Tests starting from 1
      */
     page?: number;
     /**

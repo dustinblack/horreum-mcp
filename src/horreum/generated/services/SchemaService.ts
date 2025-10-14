@@ -52,7 +52,7 @@ export class SchemaService {
      */
     limit?: number;
     /**
-     * filter by page number of a paginated list of Schemas
+     * filter by page number of a paginated list of Schemas starting from 1
      */
     page?: number;
     /**
@@ -332,11 +332,11 @@ export class SchemaService {
     });
   }
   /**
-   * Update existing Label for a Schema (Label id only required when updating existing one)
+   * Update existing Label(s) for a Schema
    * @returns number Schema updated successfully
    * @throws ApiError
    */
-  public static schemaServiceUpdateLabel({
+  public static schemaServiceUpdateLabels({
     schemaId,
     requestBody,
   }: {
@@ -344,8 +344,8 @@ export class SchemaService {
      * Schema ID
      */
     schemaId: number;
-    requestBody: Label;
-  }): CancelablePromise<number> {
+    requestBody: Array<Label>;
+  }): CancelablePromise<Array<number>> {
     return __request(OpenAPI, {
       method: 'PUT',
       url: '/api/schema/{schemaId}/labels',
@@ -378,11 +378,11 @@ export class SchemaService {
     });
   }
   /**
-   * Save new or update existing Label for a Schema (Label id only required when updating existing one)
+   * Save new Label for a Schema
    * @returns number New schema created successfully
    * @throws ApiError
    */
-  public static schemaServiceAddLabel({
+  public static schemaServiceAddLabels({
     schemaId,
     requestBody,
   }: {
@@ -390,8 +390,8 @@ export class SchemaService {
      * Schema ID
      */
     schemaId: number;
-    requestBody: Label;
-  }): CancelablePromise<number> {
+    requestBody: Array<Label>;
+  }): CancelablePromise<Array<number>> {
     return __request(OpenAPI, {
       method: 'POST',
       url: '/api/schema/{schemaId}/labels',

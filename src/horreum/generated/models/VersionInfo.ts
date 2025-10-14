@@ -8,6 +8,10 @@ export type VersionInfo = {
    */
   version: string;
   /**
+   * Commit of Horreum
+   */
+  commit: string;
+  /**
    * Timestamp of server startup
    */
   startTimestamp: number;
