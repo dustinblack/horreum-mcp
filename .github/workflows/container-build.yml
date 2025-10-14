@@ -1,10 +1,17 @@
 name: container-build
 
 on:
-  # Trigger on push to main ONLY when relevant files change
+  # Trigger on push to any branch when relevant files change
   push:
-    branches:
-      - main
+    paths:
+      - 'Containerfile'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - 'scripts/**/*.sh'
+      - '.github/workflows/container-build.yml'
+  # Trigger on pull requests
+  pull_request:
     paths:
       - 'Containerfile'
       - 'package.json'
@@ -55,12 +62,31 @@ jobs:
             echo "tag=${VERSION}" >> "$GITHUB_OUTPUT"
             echo "additional_tag=latest" >> "$GITHUB_OUTPUT"
             echo "Building release version: ${VERSION}"
-          else
-            # For main branch pushes, use short SHA
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # For PRs, use PR number and short SHA (e.g., pr-123-a1b2c3d)
+            PR_NUM="${{ github.event.pull_request.number }}"
             SHORT_SHA="${GITHUB_SHA:0:7}"
-            echo "tag=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-            echo "additional_tag=main" >> "$GITHUB_OUTPUT"
-            echo "Building main branch commit: ${SHORT_SHA}"
+            echo "tag=pr-${PR_NUM}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            echo "additional_tag=pr-${PR_NUM}" >> "$GITHUB_OUTPUT"
+            echo "Building PR #${PR_NUM} commit: ${SHORT_SHA}"
+          else
+            # For branch pushes, use branch name and short SHA
+            BRANCH_NAME="${{ github.ref_name }}"
+            SHORT_SHA="${GITHUB_SHA:0:7}"
+            # Sanitize branch name for container tags (replace / with -)
+            SAFE_BRANCH=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+            
+            if [ "$BRANCH_NAME" = "main" ]; then
+              # Main branch: use SHA as primary tag, 'main' as additional
+              echo "tag=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+              echo "additional_tag=main" >> "$GITHUB_OUTPUT"
+              echo "Building main branch commit: ${SHORT_SHA}"
+            else
+              # Development branch: use branch-SHA as primary, branch name as additional
+              echo "tag=${SAFE_BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+              echo "additional_tag=${SAFE_BRANCH}" >> "$GITHUB_OUTPUT"
+              echo "Building branch '${BRANCH_NAME}' commit: ${SHORT_SHA}"
+            fi
           fi
 
       - name: Install buildah/podman/qemu
@@ -86,8 +112,22 @@ jobs:
       - name: Build multi-arch container image
         env:
           TAG: ${{ steps.compute_tag.outputs.tag }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          bash scripts/build_multiarch.sh --tag "$TAG"
+          # Set expiration based on build type
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "Building release - no expiration"
+            bash scripts/build_multiarch.sh --tag "$TAG" --expires ""
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Building PR - 14d expiration"
+            bash scripts/build_multiarch.sh --tag "$TAG" --expires "14d"
+          elif [ "$BRANCH_NAME" = "main" ]; then
+            echo "Building main branch - 90d expiration"
+            bash scripts/build_multiarch.sh --tag "$TAG" --expires "90d"
+          else
+            echo "Building dev branch '$BRANCH_NAME' - 30d expiration"
+            bash scripts/build_multiarch.sh --tag "$TAG" --expires "30d"
+          fi
 
       - name: Import buildah image to podman for scanning
         env:

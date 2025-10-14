@@ -194,7 +194,7 @@ npm start
 ### Contributors
 
 - Dustin Black (@dustinblack)
-- AI-assisted development by Claude Sonnet 4.5
+- AI-assisted development by Claude Sonnet 4.5, GPT-5, Gemini 2.5 Pro
 
 ---
 

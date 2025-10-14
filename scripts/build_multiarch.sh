@@ -28,7 +28,7 @@ Usage: QUAY_USERNAME=... QUAY_PASSWORD=... IMAGE_REPO=quay.io/org/repo \
 
 Options:
   -t, --tag <tag>             Image tag (default: git short SHA or timestamp)
-  -e, --expires <period>      Expiration label value (default: 90d)
+  -e, --expires <period>      Expiration label value (default: 90d, use "" for no expiration)
       --expires-label <key>   Expiration label key (default: quay.expires-after)
       --push                  Push manifest to <repo>:<tag>
       --push-main             Also push manifest to :main
@@ -37,6 +37,13 @@ Options:
 
 Environment:
   QUAY_USERNAME, QUAY_PASSWORD, IMAGE_REPO are required.
+
+Examples:
+  # Build with default 90d expiration
+  ./build_multiarch.sh --tag v1.0.0
+
+  # Build without expiration (permanent)
+  ./build_multiarch.sh --tag v1.0.0 --expires ""
 EOF
 }
 
@@ -122,18 +129,24 @@ buildah manifest rm "$LOCAL_MANIFEST_REF" >/dev/null 2>&1 || true
 buildah manifest create "$LOCAL_MANIFEST_REF"
 
 echo "Building amd64 image..."
-buildah bud --override-arch amd64 --override-os linux \
-  -f "$CONTAINERFILE" \
-  --label "org.opencontainers.image.revision=${OCI_REVISION:-$TAG}" \
-  --label "${EXPIRES_LABEL}=${EXPIRES}" \
-  -t "${IMAGE_REPO}:${TAG}-amd64" .
+BUILD_ARGS_AMD64=(--override-arch amd64 --override-os linux -f "$CONTAINERFILE" --label "org.opencontainers.image.revision=${OCI_REVISION:-$TAG}")
+if [[ -n "$EXPIRES" ]]; then
+  BUILD_ARGS_AMD64+=(--label "${EXPIRES_LABEL}=${EXPIRES}")
+  echo "  with expiration: ${EXPIRES_LABEL}=${EXPIRES}"
+else
+  echo "  without expiration (permanent)"
+fi
+buildah bud "${BUILD_ARGS_AMD64[@]}" -t "${IMAGE_REPO}:${TAG}-amd64" .
 
 echo "Building arm64 image..."
-buildah bud --override-arch arm64 --override-os linux \
-  -f "$CONTAINERFILE" \
-  --label "org.opencontainers.image.revision=${OCI_REVISION:-$TAG}" \
-  --label "${EXPIRES_LABEL}=${EXPIRES}" \
-  -t "${IMAGE_REPO}:${TAG}-arm64" .
+BUILD_ARGS_ARM64=(--override-arch arm64 --override-os linux -f "$CONTAINERFILE" --label "org.opencontainers.image.revision=${OCI_REVISION:-$TAG}")
+if [[ -n "$EXPIRES" ]]; then
+  BUILD_ARGS_ARM64+=(--label "${EXPIRES_LABEL}=${EXPIRES}")
+  echo "  with expiration: ${EXPIRES_LABEL}=${EXPIRES}"
+else
+  echo "  without expiration (permanent)"
+fi
+buildah bud "${BUILD_ARGS_ARM64[@]}" -t "${IMAGE_REPO}:${TAG}-arm64" .
 
 echo "Assembling manifest list..."
 buildah manifest add "$LOCAL_MANIFEST_REF" "containers-storage:${IMAGE_REPO}:${TAG}-amd64"

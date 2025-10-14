@@ -314,11 +314,19 @@ Refactoring) - awaiting explicit user direction.
 
 ### Next Up
 
-- [ ] Phase 7 — Enhanced CI/CD Pipeline (PLANNED)
-  - [ ] Multi-stage testing pipeline
-  - [ ] Comprehensive security scanning
-  - [ ] Performance optimizations
-  - [ ] Release automation
+- [ip] Phase 7 — Enhanced CI/CD Pipeline (IN PROGRESS 2025-10-14)
+  - [x] Container build automation for all branches and PRs
+  - [x] Intelligent image tagging (releases, main, dev branches, PRs)
+  - [x] Automatic image expiration policy (permanent releases, 90d main, 30d
+        dev, 14d PRs)
+  - [x] Multi-architecture builds (amd64, arm64)
+  - [x] Security scanning with Trivy
+  - [ ] Multi-stage testing pipeline with parallel execution
+  - [ ] Performance regression testing
+  - [ ] Comprehensive SAST scanning
+  - [ ] License compliance checking
+  - [ ] Release automation with semantic versioning
+  - [ ] NPM package publishing (optional)
 
 - [ ] Phase 8 — Architecture Refactoring & Modularity (PLANNED)
   - [ ] Extract shared logic into reusable modules
@@ -401,6 +409,28 @@ Refactoring) - awaiting explicit user direction.
 
 > **Note**: Older changelog entries (September 2025) are archived in
 > [`docs/developer/development-history.md`](docs/developer/development-history.md).
+
+- 2025-10-14 — **Phase 7: Enhanced CI/CD - Container Build Automation**: Implemented
+  comprehensive container build automation for all development workflows. **Key
+  Changes**: (1) **Universal Branch Support** - Container builds now trigger on
+  pushes to any branch (not just main), enabling testing of development branches
+  before merging. (2) **Intelligent Tagging Strategy** - Releases: `v{VERSION}` +
+  `latest` (permanent); Main: `{SHA}` + `main` (90d expiration); Dev branches:
+  `{BRANCH}-{SHA}` + `{BRANCH}` (30d expiration); PRs: `pr-{NUM}-{SHA}` +
+  `pr-{NUM}` (14d expiration). Branch names with slashes sanitized for container
+  compatibility. (3) **Expiration Policy** - Release images never expire; main
+  branch 90d; dev branches 30d; PRs 14d for automatic registry cleanup. (4)
+  **Build Script Enhancement** - Updated `scripts/build_multiarch.sh` to
+  conditionally add expiration labels only when specified, with empty string
+  (`--expires ""`) producing permanent images. Added build logging for expiration
+  status. (5) **PR Testing** - Every pull request gets dedicated container images
+  for integration testing before merge. **Benefits**: Complete CI/CD coverage for
+  all branches/PRs, easy testing with predictable image tags, automatic cleanup of
+  short-lived images, permanent release artifacts. **Usage**: `podman pull
+ghcr.io/dustinblack/horreum-mcp:{latest|main|feature-auth|pr-123}`. **Phase 7
+  Status**: Container automation complete; remaining items include multi-stage
+  testing, SAST scanning, and semantic versioning automation. Agent: Claude Sonnet
+  4.5.
 
 - 2025-10-14 — **Horreum 0.19 API Migration**: Updated Horreum MCP server to
   support Horreum 0.19 API changes. Downloaded new OpenAPI specification from
