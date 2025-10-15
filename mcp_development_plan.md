@@ -600,6 +600,30 @@ ghcr.io/dustinblack/horreum-mcp:{latest|main|feature-auth|pr-123}`. **Phase 7
   SSL_CONFIGURATION.md → docs/deployment/ssl-tls.md, etc.). All diagrams use
   Mermaid format and are current with implementation. Agent: Claude Sonnet 4.5.
 
+- 2025-10-15 — **Parameter Naming Standardization — Cross-Language
+  Interoperability & Future-Proofing**: Implemented dual snake_case and
+  camelCase support for HTTP API request body parameters to enable seamless
+  interoperability between Domain MCPs and clients written in different
+  languages. This future-proofs the Horreum Source MCP for ecosystem growth as
+  Domain MCPs are developed in Python (snake_case), JavaScript (camelCase), Go
+  (camelCase), Rust (snake_case), Java (camelCase), Ruby (snake_case), etc.
+  Implementation: Created `getParam<T>()` helper function using nullish
+  coalescing operator to accept both forms with snake_case priority (Source MCP
+  Contract standard). Updated all endpoints with multi-word parameters:
+  `test_id/testId`, `run_id/runId`, `dataset_id/datasetId`,
+  `schema_uri/schemaUri`, `view_id/viewId`, `test_name/testName`,
+  `page_size/pageSize`, `multi_filter/multiFilter`. Updated 10+ endpoints in
+  `src/server/http.ts`. Created comprehensive documentation:
+  `docs/user-guide/parameter-naming.md` explaining language-specific naming
+  conventions, Domain MCP ecosystem rationale, and technical implementation.
+  Updated `docs/user-guide/filtering.md` and `docs/user-guide/README.md`. Key
+  benefits: (1) language-agnostic integration without translation layers, (2)
+  ecosystem growth - new Domain MCPs in any language work immediately, (3)
+  eliminates silent parameter ignoring, (4) aligns with Source MCP Contract
+  while remaining flexible. Real-world impact: Fixes Domain MCP issue where
+  `multi_filter` was silently ignored causing complete filtering failure.
+  Agent: Claude Sonnet 4.5.
+
 - 2025-10-10 — **Phase 6.9 Complete — Label Values Format Compliance**: Fixed
   label values response format to match Source MCP Contract by transforming the
   `values` field from a map to an array of `{name, value}` objects and ensuring

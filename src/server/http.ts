@@ -25,6 +25,25 @@ import type { ExportedLabelValues } from '../horreum/generated/models/ExportedLa
 import { parseTimeRange } from '../utils/time.js';
 
 /**
+ * Helper to extract parameter accepting both snake_case and camelCase.
+ * Enables cross-language interoperability between Domain MCPs written in
+ * different languages (Python, JavaScript, Go, Rust, etc.) that have
+ * different naming conventions.
+ *
+ * Priority: snake_case (Source MCP Contract standard) > camelCase
+ *
+ * @example
+ * getParam(body, 'test_id', 'testId') // accepts both test_id and testId
+ */
+function getParam<T>(
+  body: Record<string, unknown>,
+  snakeCase: string,
+  camelCase: string
+): T | undefined {
+  return (body[snakeCase] ?? body[camelCase]) as T | undefined;
+}
+
+/**
  * Transform Horreum's ExportedLabelValues to Source MCP Contract format.
  *
  * Converts:
@@ -1139,10 +1158,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
         );
       }
 
-      const testId = body.test_id as number | undefined;
-      const testName = body.test_name as string | undefined;
-      const schemaUri = body.schema_uri as string | undefined;
-      const pageSize = body.page_size as number | undefined;
+      // Accept both snake_case and camelCase for cross-language interoperability
+      const testId = getParam<number>(body, 'test_id', 'testId');
+      const testName = getParam<string>(body, 'test_name', 'testName');
+      const schemaUri = getParam<string>(body, 'schema_uri', 'schemaUri');
+      const pageSize = getParam<number>(body, 'page_size', 'pageSize');
       const page = body.page as number | undefined;
       const sort = body.sort as string | undefined;
       const direction = body.direction as SortDirection | undefined;
@@ -1298,13 +1318,14 @@ export async function startHttpServer(server: McpServer, env: Env) {
         );
       }
 
-      const datasetId = body.dataset_id as number | undefined;
+      // Accept both snake_case and camelCase for cross-language interoperability
+      const datasetId = getParam<number>(body, 'dataset_id', 'datasetId');
       if (!datasetId || !Number.isFinite(datasetId)) {
         return sendContractError(
           res,
           400,
           'INVALID_REQUEST',
-          "Provide valid 'dataset_id' parameter."
+          "Provide valid 'dataset_id' or 'datasetId' parameter."
         );
       }
 
@@ -1397,13 +1418,14 @@ export async function startHttpServer(server: McpServer, env: Env) {
           'Request body must be a JSON object.'
         );
       }
-      const testId = body.test_id as number | undefined;
+      // Accept both snake_case and camelCase for cross-language interoperability
+      const testId = getParam<number>(body, 'test_id', 'testId');
       if (!testId || !Number.isFinite(testId)) {
         return sendContractError(
           res,
           400,
           'INVALID_REQUEST',
-          "Provide valid 'test_id' parameter."
+          "Provide valid 'test_id' or 'testId' parameter."
         );
       }
       const result = await RunService.runServiceRunCount({ testId });
@@ -1662,16 +1684,17 @@ export async function startHttpServer(server: McpServer, env: Env) {
             'Request body must be a JSON object.'
           );
         }
-        const datasetId = body.dataset_id as number | undefined;
+        // Accept both snake_case and camelCase for cross-language interoperability
+        const datasetId = getParam<number>(body, 'dataset_id', 'datasetId');
         if (!datasetId || !Number.isFinite(datasetId)) {
           return sendContractError(
             res,
             400,
             'INVALID_REQUEST',
-            "Provide valid 'dataset_id' parameter."
+            "Provide valid 'dataset_id' or 'datasetId' parameter."
           );
         }
-        const viewId = body.view_id as number | undefined;
+        const viewId = getParam<number>(body, 'view_id', 'viewId');
         const result = await DatasetService.datasetServiceGetDatasetSummary({
           datasetId,
           ...(viewId ? { viewId } : {}),
@@ -1752,16 +1775,17 @@ export async function startHttpServer(server: McpServer, env: Env) {
           'Request body must be a JSON object.'
         );
       }
-      const runId = body.run_id as number | undefined;
+      // Accept both snake_case and camelCase for cross-language interoperability
+      const runId = getParam<number>(body, 'run_id', 'runId');
       if (!runId || !Number.isFinite(runId)) {
         return sendContractError(
           res,
           400,
           'INVALID_REQUEST',
-          "Provide valid 'run_id' parameter."
+          "Provide valid 'run_id' or 'runId' parameter."
         );
       }
-      const schemaUri = body.schema_uri as string | undefined;
+      const schemaUri = getParam<string>(body, 'schema_uri', 'schemaUri');
       const result = await RunService.runServiceGetData({
         id: runId,
         ...(schemaUri ? { schemaUri } : {}),
@@ -1841,16 +1865,17 @@ export async function startHttpServer(server: McpServer, env: Env) {
           'Request body must be a JSON object.'
         );
       }
-      const runId = body.run_id as number | undefined;
+      // Accept both snake_case and camelCase for cross-language interoperability
+      const runId = getParam<number>(body, 'run_id', 'runId');
       if (!runId || !Number.isFinite(runId)) {
         return sendContractError(
           res,
           400,
           'INVALID_REQUEST',
-          "Provide valid 'run_id' parameter."
+          "Provide valid 'run_id' or 'runId' parameter."
         );
       }
-      const schemaUri = body.schema_uri as string | undefined;
+      const schemaUri = getParam<string>(body, 'schema_uri', 'schemaUri');
       const result = await RunService.runServiceGetMetadata({
         id: runId,
         ...(schemaUri ? { schemaUri } : {}),
@@ -1930,13 +1955,14 @@ export async function startHttpServer(server: McpServer, env: Env) {
           'Request body must be a JSON object.'
         );
       }
-      const runId = body.run_id as number | undefined;
+      // Accept both snake_case and camelCase for cross-language interoperability
+      const runId = getParam<number>(body, 'run_id', 'runId');
       if (!runId || !Number.isFinite(runId)) {
         return sendContractError(
           res,
           400,
           'INVALID_REQUEST',
-          "Provide valid 'run_id' parameter."
+          "Provide valid 'run_id' or 'runId' parameter."
         );
       }
       const result = await RunService.runServiceGetRunSummary({ id: runId });
@@ -2018,13 +2044,14 @@ export async function startHttpServer(server: McpServer, env: Env) {
             'Request body must be a JSON object.'
           );
         }
-        const uri = body.schema_uri as string | undefined;
+        // Accept both snake_case and camelCase for cross-language interoperability
+        const uri = getParam<string>(body, 'schema_uri', 'schemaUri');
         if (!uri) {
           return sendContractError(
             res,
             400,
             'INVALID_REQUEST',
-            "Provide 'schema_uri'."
+            "Provide 'schema_uri' or 'schemaUri'."
           );
         }
         const limit = Math.min(
@@ -2287,7 +2314,10 @@ export async function startHttpServer(server: McpServer, env: Env) {
         const exclude = Array.isArray(body.exclude)
           ? (body.exclude as string[])
           : undefined;
-        const multiFilter = body.multiFilter as boolean | undefined;
+        // Accept both snake_case and camelCase for cross-language interoperability
+        const multiFilter = (body.multi_filter ?? body.multiFilter) as
+          | boolean
+          | undefined;
 
         const result = await RunService.runServiceGetRunLabelValues({
           id: runId,
@@ -2459,6 +2489,9 @@ export async function startHttpServer(server: McpServer, env: Env) {
               ? JSON.stringify(filter)
               : '{}';
 
+        // Accept both snake_case and camelCase for cross-language interoperability
+        // Note: filtering and metrics don't have common snake_case variants,
+        // but we maintain flexibility for Domain MCPs in different languages
         const filtering = body.filtering as boolean | undefined;
         const metrics = body.metrics as boolean | undefined;
         const sort = body.sort as string | undefined;
@@ -2471,7 +2504,9 @@ export async function startHttpServer(server: McpServer, env: Env) {
         const exclude = Array.isArray(body.exclude)
           ? (body.exclude as string[])
           : undefined;
-        const multiFilter = body.multiFilter as boolean | undefined;
+        const multiFilter = (body.multi_filter ?? body.multiFilter) as
+          | boolean
+          | undefined;
 
         const result = await TestService.testServiceGetTestLabelValues({
           id: resolvedTestId,

@@ -16,6 +16,8 @@ Complete guide for using Horreum MCP.
   conversational queries (Phase 9) 🆕
 - **[Label Values Filtering](filtering.md)** - Query and filter test data
 - **[Time Range Queries](time-ranges.md)** - Natural language time parsing
+- **[Parameter Naming](parameter-naming.md)** - snake_case and camelCase
+  support 🆕
 - **[Observability](observability.md)** - Logging, metrics, and tracing
 
 ## API Reference

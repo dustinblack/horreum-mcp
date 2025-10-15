@@ -32,7 +32,8 @@ This returns only label values where `boot_time_ms` equals exactly "500" AND
 
 ### Array Filtering (multiFilter=true)
 
-When `multiFilter=true`, filter values can be arrays to match ANY of the values:
+When `multiFilter=true` (or `multi_filter=true` in Python), filter values can
+be arrays to match ANY of the values:
 
 ```json
 {
@@ -46,6 +47,9 @@ When `multiFilter=true`, filter values can be arrays to match ANY of the values:
 
 This returns label values where `boot_time_ms` is ANY of 500, 600, or 700, AND
 `kernel_version` is ANY of "6.1.0" or "6.2.0".
+
+**Note:** The server accepts both `multiFilter` (camelCase) and `multi_filter`
+(snake_case). See [Parameter Naming](parameter-naming.md) for details.
 
 **Important:** The `multiFilter` flag changes how the Horreum API interprets
 array values in the filter. Always set `multiFilter=true` when using arrays.
