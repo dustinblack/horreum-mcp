@@ -61,8 +61,14 @@ function transformLabelValues(horreumValues: ExportedLabelValues[]): Array<{
     // Transform values from object to array of {name, value} pairs
     const valuesArray: Array<{ name: string; value: unknown }> = [];
     if (item.values && typeof item.values === 'object') {
-      for (const [name, value] of Object.entries(item.values)) {
-        valuesArray.push({ name, value });
+      if (Array.isArray(item.values)) {
+        // Already in correct format [{name, value}, ...] - pass through
+        valuesArray.push(...item.values);
+      } else {
+        // Dict format from Horreum API {name: value, ...} - transform to array
+        for (const [name, value] of Object.entries(item.values)) {
+          valuesArray.push({ name, value });
+        }
       }
     }
 
