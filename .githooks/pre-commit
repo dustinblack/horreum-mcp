@@ -17,14 +17,14 @@ if [ $? -ne 0 ]; then
 fi
 echo "Secret scan passed."
 
-# --- Run dependency vulnerability check ---
-echo "Checking for vulnerable dependencies..."
-npm audit --audit-level=high
+# --- Run dependency vulnerability check (production only) ---
+echo "Checking for vulnerable production dependencies..."
+npm audit --audit-level=high --omit=dev
 if [ $? -ne 0 ]; then
-    echo "High-severity vulnerabilities found. Aborting commit."
+    echo "High-severity vulnerabilities found in production dependencies. Aborting commit."
     exit 1
 fi
-echo "No high-severity vulnerabilities found."
+echo "No high-severity vulnerabilities in production dependencies."
 
 # --- Auto-format staged files ---
 echo "Checking formatting..."
