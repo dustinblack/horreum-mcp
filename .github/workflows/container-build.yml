@@ -1,8 +1,12 @@
 name: container-build
 
 on:
-  # Trigger on push to any branch when relevant files change
+  # Trigger on push to branches (not tags) when relevant files change.
+  # Tag pushes are handled by the release trigger below to avoid
+  # concurrency conflicts that cancel the release-triggered build.
   push:
+    branches:
+      - '**'
     paths:
       - 'Containerfile'
       - 'package.json'
