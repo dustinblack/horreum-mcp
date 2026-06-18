@@ -57,7 +57,9 @@ COPY docker-entrypoint.sh ./
 
 # Create a non-root user and fix permissions (uid 10001 to match OpenShift constraints)
 USER 0
-RUN useradd -r -u 10001 appuser \ 
+# Patch OS packages to fix known CVEs in UBI9 base image RPMs
+RUN dnf update -y && dnf clean all
+RUN useradd -r -u 10001 appuser \
     && chown -R appuser:0 /app \ 
     && chmod -R g=u /app \
     && chmod +x /app/docker-entrypoint.sh
