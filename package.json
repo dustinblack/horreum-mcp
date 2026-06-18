@@ -75,8 +75,8 @@
     "@types/node": "^24.5.2",
     "@typescript-eslint/eslint-plugin": "^8.44.0",
     "@typescript-eslint/parser": "^8.44.0",
-    "@vitest/coverage-istanbul": "^1.6.1",
-    "@vitest/coverage-v8": "^1.6.1",
+    "@vitest/coverage-istanbul": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.9",
     "c8": "^10.1.2",
     "dotenv": "^17.2.2",
     "eslint": "^9.35.0",
@@ -90,6 +90,6 @@
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.44.0",
-    "vitest": "^1.6.1"
+    "vitest": "^4.1.9"
   }
 }
