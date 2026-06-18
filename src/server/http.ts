@@ -378,6 +378,90 @@ export async function startHttpServer(server: McpServer, env: Env) {
     return res.status(httpStatus).json(payload);
   };
 
+  /**
+   * Shared error handler for upstream Horreum API errors.
+   *
+   * Maps HTTP status codes from the Horreum API to Source MCP
+   * Contract error responses. Used by all REST tool endpoints.
+   *
+   * @param res - Express response object
+   * @param err - The caught error
+   * @param context - Endpoint name for logging
+   * @param notFoundMessage - Custom 404 message for the endpoint
+   */
+  function handleUpstreamError(
+    res: express.Response,
+    err: unknown,
+    context: string,
+    notFoundMessage = 'Resource not found'
+  ): void {
+    const anyErr = err as {
+      status?: number;
+      message?: string;
+      body?: unknown;
+    };
+    const status = anyErr?.status;
+
+    if (status === 404) {
+      return sendContractError(
+        res,
+        404,
+        'NOT_FOUND',
+        anyErr?.message || notFoundMessage,
+        anyErr?.body,
+        false
+      );
+    }
+    if (status === 401 || status === 403) {
+      return sendContractError(
+        res,
+        status,
+        'INVALID_REQUEST',
+        anyErr?.message || 'Authentication failed',
+        anyErr?.body,
+        false
+      );
+    }
+    if (status === 429) {
+      return sendContractError(
+        res,
+        429,
+        'RATE_LIMITED',
+        anyErr?.message || 'Rate limited by upstream Horreum API',
+        anyErr?.body,
+        true
+      );
+    }
+    if (status === 502 || status === 503) {
+      return sendContractError(
+        res,
+        status,
+        'SERVICE_UNAVAILABLE',
+        anyErr?.message || 'Upstream Horreum service unavailable',
+        anyErr?.body,
+        true
+      );
+    }
+    if (status === 504) {
+      return sendContractError(
+        res,
+        504,
+        'TIMEOUT',
+        anyErr?.message || 'Request timed out',
+        anyErr?.body,
+        true
+      );
+    }
+
+    logger.error({ err }, `Unhandled error in ${context}`);
+    return sendContractError(
+      res,
+      500,
+      'INTERNAL_ERROR',
+      anyErr?.message || 'Internal server error'
+    );
+  }
+
   // Pagination helpers for pageToken/pageSize support
   type PageCursor = {
     page: number;
@@ -607,64 +691,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
         },
       });
     } catch (err) {
-      // Map common error cases
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Test or runs not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_list_runs');
-      return sendContractError(
+      return handleUpstreamError(
         res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
+        err,
+        'horreum_list_runs',
+        'Test or runs not found'
       );
     }
   });
@@ -754,48 +785,37 @@ export async function startHttpServer(server: McpServer, env: Env) {
       // Name filter without folder: single API call instead
       // of aggregating across all folders
       if (name) {
-        const result =
-          await TestService.testServiceGetTestSummary({
-            ...(roles !== undefined ? { roles } : {}),
-            limit,
-            page,
-            ...(direction ? { direction } : {}),
-            name,
-          });
+        const result = await TestService.testServiceGetTestSummary({
+          ...(roles !== undefined ? { roles } : {}),
+          limit,
+          page,
+          ...(direction ? { direction } : {}),
+          name,
+        });
 
-        const tests = Array.isArray(
-          (result as { tests?: unknown }).tests
-        )
+        const tests = Array.isArray((result as { tests?: unknown }).tests)
           ? (result as { tests: unknown[] }).tests
           : [];
-        const total =
-          (result as { count?: number }).count ??
-          tests.length;
+        const total = (result as { count?: number }).count ?? tests.length;
         const hasMore = tests.length >= limit;
         const nextPageToken = hasMore
           ? encodePageToken({ page: page + 1, limit })
           : undefined;
 
         const testsWithId = (
-          tests as Array<
-            {
-              id?: number | string;
-              [key: string]: unknown;
-            }
-          >
+          tests as Array<{
+            id?: number | string;
+            [key: string]: unknown;
+          }>
         ).map((test) => ({
           ...test,
-          test_id: String(
-            test.id ?? test.test_id ?? ''
-          ),
+          test_id: String(test.id ?? test.test_id ?? ''),
         }));
 
         return res.status(200).json({
           tests: testsWithId,
           pagination: {
-            ...(nextPageToken
-              ? { next_page_token: nextPageToken }
-              : {}),
+            ...(nextPageToken ? { next_page_token: nextPageToken } : {}),
             has_more: hasMore,
             total_count: total,
           },
@@ -847,64 +867,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
         },
       });
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Tests not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_list_tests');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_list_tests', 'Tests not found');
     }
   });
 
@@ -941,64 +904,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Schema not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_schema');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_schema', 'Schema not found');
     }
   });
 
@@ -1022,64 +928,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Schemas not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_list_schemas');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_list_schemas', 'Schemas not found');
     }
   });
 
@@ -1135,64 +984,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       const result = await RunService.runServiceGetRun({ id: runId });
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Run not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_run');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_run', 'Run not found');
     }
   });
 
@@ -1295,63 +1087,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
       return res.status(200).json(response);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Resource not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_list_datasets');
-      return sendContractError(
+      return handleUpstreamError(
         res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
+        err,
+        'horreum_list_datasets',
+        'Resource not found'
       );
     }
   });
@@ -1396,64 +1136,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
 
       return res.status(200).json(response);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Dataset not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_dataset');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_dataset', 'Dataset not found');
     }
   });
 
@@ -1482,64 +1165,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       const result = await RunService.runServiceRunCount({ testId });
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Test not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_run_count');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_run_count', 'Test not found');
     }
   });
 
@@ -1659,64 +1285,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
         },
       });
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Runs not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_list_all_runs');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_list_all_runs', 'Runs not found');
     }
   });
 
@@ -1752,63 +1321,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
         });
         return res.status(200).json(result);
       } catch (err) {
-        const anyErr = err as { status?: number; message?: string; body?: unknown };
-        if (anyErr?.status === 404) {
-          return sendContractError(
-            res,
-            404,
-            'NOT_FOUND',
-            anyErr.message || 'Dataset not found',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 401 || anyErr?.status === 403) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'INVALID_REQUEST',
-            anyErr.message || 'Authentication failed',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 429) {
-          return sendContractError(
-            res,
-            429,
-            'RATE_LIMITED',
-            'Rate limited by upstream Horreum API',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 503 || anyErr?.status === 502) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'SERVICE_UNAVAILABLE',
-            'Upstream service unavailable',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 504) {
-          return sendContractError(
-            res,
-            504,
-            'TIMEOUT',
-            'Request timed out',
-            anyErr.body,
-            true
-          );
-        }
-        logger.error({ err }, 'Unhandled error in horreum_get_dataset_summary');
-        return sendContractError(
+        return handleUpstreamError(
           res,
-          500,
-          'INTERNAL_ERROR',
-          anyErr?.message || 'Internal server error'
+          err,
+          'horreum_get_dataset_summary',
+          'Dataset not found'
         );
       }
     }
@@ -1843,64 +1360,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       });
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Run not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_run_data');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_run_data', 'Run not found');
     }
   });
 
@@ -1933,64 +1393,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       });
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Run not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_run_metadata');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_run_metadata', 'Run not found');
     }
   });
 
@@ -2019,64 +1422,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
       const result = await RunService.runServiceGetRunSummary({ id: runId });
       return res.status(200).json(result);
     } catch (err) {
-      const anyErr = err as { status?: number; message?: string; body?: unknown };
-      if (anyErr?.status === 404) {
-        return sendContractError(
-          res,
-          404,
-          'NOT_FOUND',
-          anyErr.message || 'Run not found',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 401 || anyErr?.status === 403) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'INVALID_REQUEST',
-          anyErr.message || 'Authentication failed',
-          anyErr.body,
-          false
-        );
-      }
-      if (anyErr?.status === 429) {
-        return sendContractError(
-          res,
-          429,
-          'RATE_LIMITED',
-          'Rate limited by upstream Horreum API',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 503 || anyErr?.status === 502) {
-        return sendContractError(
-          res,
-          anyErr.status,
-          'SERVICE_UNAVAILABLE',
-          'Upstream service unavailable',
-          anyErr.body,
-          true
-        );
-      }
-      if (anyErr?.status === 504) {
-        return sendContractError(
-          res,
-          504,
-          'TIMEOUT',
-          'Request timed out',
-          anyErr.body,
-          true
-        );
-      }
-      logger.error({ err }, 'Unhandled error in horreum_get_run_summary');
-      return sendContractError(
-        res,
-        500,
-        'INTERNAL_ERROR',
-        anyErr?.message || 'Internal server error'
-      );
+      return handleUpstreamError(res, err, 'horreum_get_run_summary', 'Run not found');
     }
   });
 
@@ -2143,63 +1489,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
           },
         });
       } catch (err) {
-        const anyErr = err as { status?: number; message?: string; body?: unknown };
-        if (anyErr?.status === 404) {
-          return sendContractError(
-            res,
-            404,
-            'NOT_FOUND',
-            anyErr.message || 'Runs not found',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 401 || anyErr?.status === 403) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'INVALID_REQUEST',
-            anyErr.message || 'Authentication failed',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 429) {
-          return sendContractError(
-            res,
-            429,
-            'RATE_LIMITED',
-            'Rate limited by upstream Horreum API',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 503 || anyErr?.status === 502) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'SERVICE_UNAVAILABLE',
-            'Upstream service unavailable',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 504) {
-          return sendContractError(
-            res,
-            504,
-            'TIMEOUT',
-            'Request timed out',
-            anyErr.body,
-            true
-          );
-        }
-        logger.error({ err }, 'Unhandled error in horreum_list_runs_by_schema');
-        return sendContractError(
+        return handleUpstreamError(
           res,
-          500,
-          'INTERNAL_ERROR',
-          anyErr?.message || 'Internal server error'
+          err,
+          'horreum_list_runs_by_schema',
+          'Runs not found'
         );
       }
     }
@@ -2236,63 +1530,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
         });
         return res.status(200).json(result);
       } catch (err) {
-        const anyErr = err as { status?: number; message?: string; body?: unknown };
-        if (anyErr?.status === 404) {
-          return sendContractError(
-            res,
-            404,
-            'NOT_FOUND',
-            anyErr.message || 'Dataset or label values not found',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 401 || anyErr?.status === 403) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'INVALID_REQUEST',
-            anyErr.message || 'Authentication failed',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 429) {
-          return sendContractError(
-            res,
-            429,
-            'RATE_LIMITED',
-            'Rate limited by upstream Horreum API',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 503 || anyErr?.status === 502) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'SERVICE_UNAVAILABLE',
-            'Upstream service unavailable',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 504) {
-          return sendContractError(
-            res,
-            504,
-            'TIMEOUT',
-            'Request timed out',
-            anyErr.body,
-            true
-          );
-        }
-        logger.error({ err }, 'Unhandled error in horreum_get_dataset_label_values');
-        return sendContractError(
+        return handleUpstreamError(
           res,
-          500,
-          'INTERNAL_ERROR',
-          anyErr?.message || 'Internal server error'
+          err,
+          'horreum_get_dataset_label_values',
+          'Dataset or label values not found'
         );
       }
     }
@@ -2397,63 +1639,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
         };
         return res.status(200).json(response);
       } catch (err) {
-        const anyErr = err as { status?: number; message?: string; body?: unknown };
-        if (anyErr?.status === 404) {
-          return sendContractError(
-            res,
-            404,
-            'NOT_FOUND',
-            anyErr.message || 'Run or label values not found',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 401 || anyErr?.status === 403) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'INVALID_REQUEST',
-            anyErr.message || 'Authentication failed',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 429) {
-          return sendContractError(
-            res,
-            429,
-            'RATE_LIMITED',
-            'Rate limited by upstream Horreum API',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 503 || anyErr?.status === 502) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'SERVICE_UNAVAILABLE',
-            'Upstream service unavailable',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 504) {
-          return sendContractError(
-            res,
-            504,
-            'TIMEOUT',
-            'Request timed out',
-            anyErr.body,
-            true
-          );
-        }
-        logger.error({ err }, 'Unhandled error in horreum_get_run_label_values');
-        return sendContractError(
+        return handleUpstreamError(
           res,
-          500,
-          'INTERNAL_ERROR',
-          anyErr?.message || 'Internal server error'
+          err,
+          'horreum_get_run_label_values',
+          'Run or label values not found'
         );
       }
     }
@@ -2590,63 +1780,11 @@ export async function startHttpServer(server: McpServer, env: Env) {
         };
         return res.status(200).json(response);
       } catch (err) {
-        const anyErr = err as { status?: number; message?: string; body?: unknown };
-        if (anyErr?.status === 404) {
-          return sendContractError(
-            res,
-            404,
-            'NOT_FOUND',
-            anyErr.message || 'Test or label values not found',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 401 || anyErr?.status === 403) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'INVALID_REQUEST',
-            anyErr.message || 'Authentication failed',
-            anyErr.body,
-            false
-          );
-        }
-        if (anyErr?.status === 429) {
-          return sendContractError(
-            res,
-            429,
-            'RATE_LIMITED',
-            'Rate limited by upstream Horreum API',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 503 || anyErr?.status === 502) {
-          return sendContractError(
-            res,
-            anyErr.status,
-            'SERVICE_UNAVAILABLE',
-            'Upstream service unavailable',
-            anyErr.body,
-            true
-          );
-        }
-        if (anyErr?.status === 504) {
-          return sendContractError(
-            res,
-            504,
-            'TIMEOUT',
-            'Request timed out',
-            anyErr.body,
-            true
-          );
-        }
-        logger.error({ err }, 'Unhandled error in horreum_get_test_label_values');
-        return sendContractError(
+        return handleUpstreamError(
           res,
-          500,
-          'INTERNAL_ERROR',
-          anyErr?.message || 'Internal server error'
+          err,
+          'horreum_get_test_label_values',
+          'Test or label values not found'
         );
       }
     }

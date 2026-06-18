@@ -17,7 +17,6 @@ import { initTracing } from './observability/tracing.js';
 import { startHttpServer } from './server/http.js';
 import { logger, setLogLevel, isValidLogLevel } from './observability/logging.js';
 
-
 function parseCliLogLevel(argv: string[]): string | undefined {
   // Accept: --log-level <level>, --log-level=<level>, --debug, -d, --trace
   // Return a level string if present.
