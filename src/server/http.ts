@@ -749,7 +749,58 @@ export async function startHttpServer(server: McpServer, env: Env) {
         });
       }
 
-      // Otherwise, aggregate across top-level and all folders
+      // Name filter without folder: single API call instead
+      // of aggregating across all folders
+      if (name) {
+        const result =
+          await TestService.testServiceGetTestSummary({
+            ...(roles !== undefined ? { roles } : {}),
+            limit,
+            page,
+            ...(direction ? { direction } : {}),
+            name,
+          });
+
+        const tests = Array.isArray(
+          (result as { tests?: unknown }).tests
+        )
+          ? (result as { tests: unknown[] }).tests
+          : [];
+        const total =
+          (result as { count?: number }).count ??
+          tests.length;
+        const hasMore = tests.length >= limit;
+        const nextPageToken = hasMore
+          ? encodePageToken({ page: page + 1, limit })
+          : undefined;
+
+        const testsWithId = (
+          tests as Array<
+            {
+              id?: number | string;
+              [key: string]: unknown;
+            }
+          >
+        ).map((test) => ({
+          ...test,
+          test_id: String(
+            test.id ?? test.test_id ?? ''
+          ),
+        }));
+
+        return res.status(200).json({
+          tests: testsWithId,
+          pagination: {
+            ...(nextPageToken
+              ? { next_page_token: nextPageToken }
+              : {}),
+            has_more: hasMore,
+            total_count: total,
+          },
+        });
+      }
+
+      // No filters: aggregate across top-level and all folders
       const folders = await TestService.testServiceFolders(
         roles !== undefined ? { roles } : {}
       );
@@ -759,9 +810,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
           TestService.testServiceGetTestSummary({
             ...(roles !== undefined ? { roles } : {}),
             ...(folderName ? { folder: folderName } : {}),
-            // Omit page parameter to get all results for aggregation
             ...(direction ? { direction } : {}),
-            ...(name ? { name } : {}),
           }).catch(() => ({ tests: [], count: 0 }) as unknown as TestListing)
         )
       );
