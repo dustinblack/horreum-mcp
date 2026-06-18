@@ -2,6 +2,7 @@
  * HTTP transport implementation for the Horreum MCP server.
  */
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import { randomUUID } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -125,6 +126,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
   );
 
   app.use(express.json());
+  app.use(compression());
 
   // Correlation ID + request logging middleware (SSE-safe by route ordering)
   app.use((req, res, next) => {

@@ -51,6 +51,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.1",
     "chrono-node": "^2.9.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "pino": "9.11.0",
@@ -70,6 +71,7 @@
     "@opentelemetry/sdk-trace-node": "^2.1.0",
     "@opentelemetry/semantic-conventions": "^1.37.0",
     "@secretlint/secretlint-rule-preset-recommend": "^11.2.4",
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
