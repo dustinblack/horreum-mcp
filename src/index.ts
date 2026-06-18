@@ -16,7 +16,7 @@ import { createMetrics } from './observability/metrics.js';
 import { initTracing } from './observability/tracing.js';
 import { startHttpServer } from './server/http.js';
 import { logger, setLogLevel, isValidLogLevel } from './observability/logging.js';
-import { createLlmClient } from './llm/client.js';
+
 
 function parseCliLogLevel(argv: string[]): string | undefined {
   // Accept: --log-level <level>, --log-level=<level>, --debug, -d, --trace
@@ -85,7 +85,6 @@ async function main() {
   const server = new McpServer({
     name: 'horreum-mcp',
     version: '0.1.0',
-    inference: createLlmClient(env),
   });
 
   // Optional Prometheus metrics
