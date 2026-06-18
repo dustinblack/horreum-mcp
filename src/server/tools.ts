@@ -417,7 +417,49 @@ export async function registerTools(
         return { content: [text(JSON.stringify(res, null, 2))] };
       }
 
-      // Otherwise, aggregate across top-level and all folders
+      // Name filter without folder: single API call instead
+      // of aggregating across all folders
+      if (args.name) {
+        const res = await TestService.testServiceGetTestSummary({
+          ...(args.roles !== undefined
+            ? { roles: args.roles as string }
+            : {}),
+          ...(args.limit !== undefined
+            ? { limit: args.limit as number }
+            : {}),
+          ...(args.page !== undefined
+            ? { page: args.page as number }
+            : {}),
+          ...(args.direction
+            ? { direction: args.direction as SortDirection }
+            : {}),
+          name: args.name as string,
+        });
+        const testsWithId = (
+          (res?.tests ?? []) as Array<
+            { id?: number | string; [key: string]: unknown }
+          >
+        ).map((test) => ({
+          ...test,
+          test_id: String(test.id ?? test.test_id ?? ''),
+        }));
+        return {
+          content: [
+            text(
+              JSON.stringify(
+                {
+                  tests: testsWithId,
+                  count: res?.count ?? testsWithId.length,
+                },
+                null,
+                2
+              )
+            ),
+          ],
+        };
+      }
+
+      // No filters: aggregate across top-level and all folders
       const folders = await TestService.testServiceFolders(
         args.roles !== undefined ? { roles: args.roles as string } : {}
       );
