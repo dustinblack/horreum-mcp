@@ -708,7 +708,9 @@ export async function registerTools(
       test: z.string(),
       start: z.string().describe('Start timestamp or JSONPath'),
       stop: z.string().describe('Stop timestamp or JSONPath'),
-      data: z.union([z.string(), z.record(z.unknown())]).describe('Run JSON payload'),
+      data: z
+        .union([z.string(), z.record(z.string(), z.unknown())])
+        .describe('Run JSON payload'),
       owner: z.string().optional(),
       access: z.string().optional(),
       schema: z.string().optional().describe('Schema URI'),
@@ -932,7 +934,7 @@ export async function registerTools(
         .union([z.number().int().positive(), z.string()])
         .describe('Run ID (number or numeric string)'),
       filter: z
-        .union([z.string(), z.record(z.unknown())])
+        .union([z.string(), z.record(z.string(), z.unknown())])
         .optional()
         .describe(
           'JSON sub-document or path expression. Use arrays when multiFilter=true: ' +
@@ -1007,7 +1009,7 @@ export async function registerTools(
       filtering: z.boolean().optional().describe('Include filtering labels'),
       metrics: z.boolean().optional().describe('Include metric labels'),
       filter: z
-        .union([z.string(), z.record(z.unknown())])
+        .union([z.string(), z.record(z.string(), z.unknown())])
         .optional()
         .describe(
           'JSON sub-document or path expression. Use arrays when multiFilter=true: ' +
