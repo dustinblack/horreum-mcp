@@ -939,6 +939,7 @@ export async function startHttpServer(server: McpServer, env: Env) {
         source_type: 'horreum',
         version: '0.1.0', // From package.json
         contract_version: '1.0.0',
+        ui_url: env.HORREUM_BASE_URL,
         capabilities: {
           pagination: true,
           caching: false,
